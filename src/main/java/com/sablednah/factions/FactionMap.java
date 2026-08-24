@@ -7,7 +7,6 @@ import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.MapItem;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.material.MapColor;
 import net.minecraft.world.level.saveddata.maps.MapId;
@@ -56,23 +55,20 @@ public final class FactionMap {
      * @return the item to hand over, or empty if the map data could not be created
      */
     public static Optional<ItemStack> create(ServerPlayer player, ServerLevel level) {
-        ChunkPos centre = new ChunkPos(player.blockPosition());
-        // Map centres snap to a grid of their own; passing the player's position lets vanilla
-        // work out the nearest valid centre rather than us guessing at its arithmetic.
-        ItemStack stack = MapItem.create(level, (int) player.getX(), (int) player.getZ(),
-                CHUNK_SCALE, false, false);
-        MapItemSavedData data = MapItem.getSavedData(stack, level);
-        if (data == null) {
-            return Optional.empty();
-        }
+        // Built directly rather than through MapItem.create, which would allocate a map id we
+        // then throw away when locking — one orphaned map file per atlas, on a server where
+        // people ask for these often. createFresh does the centre-snapping arithmetic for us,
+        // which is the only part worth borrowing.
+        MapItemSavedData data = MapItemSavedData.createFresh(
+                player.getX(), player.getZ(), CHUNK_SCALE, false, false, level.dimension());
 
-        paint(data, level, centre, player);
+        // Paint before locking: locked() copies, and a locked map refuses to be drawn on.
+        paint(data, level, new ChunkPos(player.blockPosition()), player);
 
-        // Lock it, exactly as a cartography table would, so vanilla does not paint terrain over
-        // the top of it the moment the player walks anywhere.
-        MapId locked = level.getFreeMapId();
-        level.setMapData(locked, data.locked());
-        stack.set(DataComponents.MAP_ID, locked);
+        MapId id = level.getFreeMapId();
+        level.setMapData(id, data.locked());
+        ItemStack stack = new ItemStack(net.minecraft.world.item.Items.FILLED_MAP);
+        stack.set(DataComponents.MAP_ID, id);
         stack.set(DataComponents.CUSTOM_NAME,
                 com.sablednah.standards.neoforge.Feedback.colored(
                         com.sablednah.standards.neoforge.Lang.get("msg.factions.map_title")));
