@@ -1,0 +1,74 @@
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'net.neoforged.moddev'
+}
+
+version = "${factions_mod_version}+mc${minecraft_version}"
+group = factions_mod_group_id
+base.archivesName = factions_mod_id
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+neoForge {
+    version = project.neo_version
+
+    // No runs of its own. The dev server lives in the Standards project and loads both mods —
+    // testing a faction against the mod it depends on is the only test worth running, and a
+    // second server that has Standards missing would prove nothing.
+    mods {
+        "${factions_mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+dependencies {
+    // A HARD dependency, deliberately. Factions is built on Standards' groups and claims seams,
+    // its Lang catalogue, its SafeLoc, its teleport warmups and its economy — and re-implementing
+    // any of those to stay independent would be worse for both.
+    //
+    // The discipline, stated precisely because the loose version does not survive contact:
+    //
+    //   api/     — the SEAMS: groups, claims, economy, chat, switches. Everything Factions knows
+    //              that another mod might want goes out through these, and everything it asks
+    //              about somebody else's world comes back through them. They stay swappable: an
+    //              FTB Chunks bridge must be able to answer anything Factions can.
+    //   neoforge/ — shared UTILITIES: Lang, Feedback, Teleports, SafeLoc, Waypoint. Fair game for
+    //              a hard dependant, and reimplementing them would be worse for everyone — two
+    //              sets of teleport refusals drifting apart tells one player two things about the
+    //              same cooldown. What it may NOT do is reach past a public method into internal
+    //              state, which is where the rule bites.
+    //
+    // If Factions needs a SEAM to grow, the seam is wrong and should grow. If it needs a utility
+    // made public, that is ordinary library work.
+    implementation rootProject
+}
+
+var generateModMetadata = tasks.register("generateFactionsModMetadata", ProcessResources) {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            loader_version_range   : loader_version_range,
+            mod_id                 : factions_mod_id,
+            mod_name               : factions_mod_name,
+            mod_license            : mod_license,
+            mod_version            : factions_mod_version,
+            mod_authors            : mod_authors,
+            mod_description        : factions_mod_description,
+            standards_mod_id       : mod_id,
+            standards_version_range: "[${mod_version},)",
+    ]
+    inputs.properties replaceProperties
+    expand replaceProperties
+    from "src/main/templates"
+    into "build/generated/sources/modMetadata"
+}
+sourceSets.main.resources.srcDir generateModMetadata
+neoForge.ideSyncTask generateModMetadata
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}

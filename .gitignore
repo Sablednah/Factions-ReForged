@@ -1,0 +1,14 @@
+build/
+.gradle/
+run/
+runBuddy/
+runMain/
+runThird/
+build-win-*/
+.gradle-win-*/
+*.classpath
+*.project
+.settings/
+.idea/
+*.iml
+.apisrc/
