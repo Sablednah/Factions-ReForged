@@ -127,10 +127,21 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
                 .apply(i, Claim::new));
     }
 
-    private record Snapshot(List<Faction> factions, List<Claim> claims) {
+    /** One faction's bank balance. A row rather than a field on Faction, so adding it did not
+     * have to touch every place a Faction is rebuilt — the same reasoning that keeps claims out
+     * of the record. */
+    private record Bank(String faction, double balance) {
+        static final Codec<Bank> CODEC = RecordCodecBuilder.create(i -> i.group(
+                Codec.STRING.fieldOf("faction").forGetter(Bank::faction),
+                Codec.DOUBLE.fieldOf("balance").forGetter(Bank::balance))
+                .apply(i, Bank::new));
+    }
+
+    private record Snapshot(List<Faction> factions, List<Claim> claims, List<Bank> banks) {
         static final Codec<Snapshot> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Faction.CODEC.listOf().optionalFieldOf("factions", List.of()).forGetter(Snapshot::factions),
-                Claim.CODEC.listOf().optionalFieldOf("claims", List.of()).forGetter(Snapshot::claims))
+                Claim.CODEC.listOf().optionalFieldOf("claims", List.of()).forGetter(Snapshot::claims),
+                Bank.CODEC.listOf().optionalFieldOf("banks", List.of()).forGetter(Snapshot::banks))
                 .apply(i, Snapshot::new));
     }
 
@@ -154,9 +165,13 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
 
     private FactionStore() {}
 
+    /** faction id → what it is holding. Absent means zero; no row is written for an empty bank. */
+    private final Map<String, Double> banks = new LinkedHashMap<>();
+
     private FactionStore(Snapshot snapshot) {
         snapshot.factions().forEach(f -> factions.put(f.id(), f));
         snapshot.claims().forEach(c -> claims.put(key(c.dimension(), c.x(), c.z()), c.faction()));
+        snapshot.banks().forEach(b -> banks.put(b.faction(), b.balance()));
     }
 
     private Snapshot snapshot() {
@@ -165,7 +180,13 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
             String[] bits = k.split("\\|");
             out.add(new Claim(bits[0], Integer.parseInt(bits[1]), Integer.parseInt(bits[2]), faction));
         });
-        return new Snapshot(List.copyOf(factions.values()), out);
+        List<Bank> money = new ArrayList<>();
+        banks.forEach((id, balance) -> {
+            if (balance != 0.0D) {
+                money.add(new Bank(id, balance));
+            }
+        });
+        return new Snapshot(List.copyOf(factions.values()), out, money);
     }
 
     public static FactionStore get(MinecraftServer server) {
@@ -313,6 +334,9 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
         }
         // The land goes with it. Orphaned claims would keep a dead faction's fences standing.
         claims.values().removeIf(id::equals);
+        // The bank too. Money in a disbanded faction's account is money nobody can ever reach,
+        // and a recycled id inheriting it would be worse.
+        banks.remove(id);
         // And so do other factions' opinions about it, or a recycled name inherits old grudges.
         List<Faction> touched = factions.values().stream()
                 .filter(f -> f.allies().contains(id) || f.enemies().contains(id))
@@ -325,6 +349,31 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
             factions.put(f.id(), new Faction(f.id(), f.name(), f.tag(), f.leader(), f.members(),
                     Set.copyOf(allies), Set.copyOf(enemies), f.peaceful(), f.home()));
         }
+        setDirty();
+        return true;
+    }
+
+    // --- the bank ---
+
+    public double balanceOf(String id) {
+        return banks.getOrDefault(id, 0.0D);
+    }
+
+    /**
+     * Move money into or out of a faction's bank.
+     *
+     * <p>Refuses to go negative rather than clamping. A bank that silently absorbs an
+     * overdraft has spent money the faction did not have, and the caller — which has usually
+     * already taken it off a player — would never learn that the two halves disagreed.</p>
+     *
+     * @return false if there was not enough, in which case nothing moved
+     */
+    public boolean adjustBank(String id, double delta) {
+        double now = balanceOf(id);
+        if (now + delta < 0.0D) {
+            return false;
+        }
+        banks.put(id, now + delta);
         setDirty();
         return true;
     }

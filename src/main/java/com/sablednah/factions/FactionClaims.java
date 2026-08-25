@@ -28,7 +28,9 @@ public final class FactionClaims {
         /** At the per-member cap. */
         LIMIT,
         /** Does not touch land the faction already holds, and the server requires that. */
-        DISCONNECTED
+        DISCONNECTED,
+        /** The bank cannot afford it. */
+        BROKE
     }
 
     /** How many chunks this faction may hold, or -1 for no limit. */
@@ -52,8 +54,30 @@ public final class FactionClaims {
                 && !store.touchesOwnLand(dim, chunk.x, chunk.z, f.id())) {
             return Result.DISCONNECTED;
         }
+        // Paid last, after every free refusal has had its say — so a claim that was going to be
+        // turned down for some other reason never takes the money first.
+        double cost = FactionBank.claimCost(held);
+        if (cost > 0.0D && !store.adjustBank(f.id(), -cost)) {
+            return Result.BROKE;
+        }
         store.claim(dim, chunk.x, chunk.z, f.id());
         return Result.CLAIMED;
+    }
+
+    /**
+     * Release a chunk, refunding what its position cost.
+     *
+     * @return what came back, which is zero when claims are free
+     */
+    public static double release(FactionStore store, String dim, ChunkPos chunk,
+            FactionStore.Faction f) {
+        int heldBefore = store.claimCount(f.id());
+        store.unclaim(dim, chunk.x, chunk.z);
+        double back = FactionBank.refund(heldBefore);
+        if (back > 0.0D) {
+            store.adjustBank(f.id(), back);
+        }
+        return back;
     }
 
     private FactionClaims() {}

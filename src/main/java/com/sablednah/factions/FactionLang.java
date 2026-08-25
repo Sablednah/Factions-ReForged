@@ -154,6 +154,8 @@ public final class FactionLang {
                 " {term.dim}-&r &cYou declared on {term.dim}({count})&7: &f{list}");
         Lang.contribute("msg.factions.status_they_declared",
                 " {term.dim}-&r &cDeclared on you {term.dim}({count})&7: &f{list}");
+        Lang.contribute("msg.factions.status_bank",
+                " {term.dim}-&r &7Bank &a{amount}&7 {term.dim}(next chunk {next})");
         Lang.contribute("msg.factions.status_requests",
                 " {term.dim}-&r &7Waiting to join {term.dim}({count})&7: &f{list}");
         Lang.contribute("msg.factions.status_nothing",
@@ -186,6 +188,48 @@ public final class FactionLang {
         Lang.contribute("msg.factions.fixtures_row", " {term.dim}-&r &7{row}");
         Lang.contribute("msg.factions.fixtures_cleared",
                 "{term.prefix} &7Removed &f{count}&7 invented {term.factions}.");
+
+        // Talking. Green for your own and blue for allies, matching the border and map colours
+        // so one palette means the same thing everywhere in the mod.
+        Lang.contribute("msg.factions.chat_faction", "&2[&a{tag}&2] &a{player}&2: &a{message}");
+        Lang.contribute("msg.factions.chat_ally", "&3[&b{tag}&3] &b{player}&3: &b{message}");
+        Lang.contribute("msg.factions.chat_spy",
+                "{term.dim}[spy {channel} {faction}] {player}: {message}");
+        Lang.contribute("msg.factions.chat_channel.public", "everyone");
+        Lang.contribute("msg.factions.chat_channel.faction", "your {term.faction}");
+        Lang.contribute("msg.factions.chat_channel.ally", "your {term.faction} and its allies");
+        Lang.contribute("msg.factions.chat_now", "{term.prefix} &7Now talking to &f{channel}&7.");
+        Lang.contribute("msg.factions.chat_no_faction",
+                "&cYou have no {term.faction} to talk to. {term.dim}(back to public chat)");
+        Lang.contribute("msg.factions.chat_alone", "{term.dim}  Nobody else is listening.");
+        Lang.contribute("msg.factions.chatspy_on",
+                "{term.prefix} &7Watching every {term.faction} channel.");
+        Lang.contribute("msg.factions.chatspy_off", "{term.prefix} &7No longer watching.");
+
+        // The bank.
+        Lang.contribute("msg.factions.bank_balance",
+                "{term.prefix} &f{name}&7 holds &a{amount}&7.");
+        Lang.contribute("msg.factions.bank_next_claim",
+                " {term.dim}-&r &7The next chunk costs &f{amount}&7.");
+        Lang.contribute("msg.factions.bank_deposited",
+                "{term.prefix} &7Paid &a{amount}&7 into &f{name}&7.");
+        Lang.contribute("msg.factions.bank_withdrew",
+                "{term.prefix} &7Took &a{amount}&7 out of &f{name}&7.");
+        Lang.contribute("msg.factions.bank_paid",
+                "{term.prefix} &7Sent &a{amount}&7 to &f{name}&7.");
+        Lang.contribute("msg.factions.bank_received",
+                "{term.prefix} &f{name}&7 sent you &a{amount}&7.");
+        Lang.contribute("msg.factions.bank_short", "&cThere is not &f{amount}&c to move.");
+        Lang.contribute("msg.factions.bank_pay_self",
+                "&cYou already have it.");
+        Lang.contribute("msg.factions.bank_no_economy",
+                "&cThere is no economy on this server.");
+        Lang.contribute("msg.factions.bank_failed",
+                "&cThat did not go through. Nothing has moved — tell an admin.");
+        Lang.contribute("msg.factions.claim_too_dear",
+                "&cThat chunk costs &f{amount}&c and the bank holds &f{balance}&c. {term.dim}(/f money deposit)");
+        Lang.contribute("msg.factions.unclaim_refund",
+                " {term.dim}-&r &7&a{amount}&7 back into the bank.");
     }
 
     private FactionLang() {}

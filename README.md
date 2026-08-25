@@ -27,6 +27,10 @@ Requires **[SableCraft Standards](../SableCraft-Standards)**, and not optionally
 /f map [item [zoom]]     see below
 /f borders               show the edges
 /f status                where you stand with everybody
+/f chat [public|faction|ally]   or cycle with no argument
+/f c <message>           one line to your faction, without switching
+/f ca <message>          one line to your allies
+/f money [deposit|withdraw|pay] the faction bank
 /f who <name> | list
 ```
 
@@ -85,6 +89,42 @@ block is a dashed line rather than a border; the upper row only has to say "wall
 Two ways to see them: `/f borders` for surveying, or just **hold the tool** — a compass by default.
 Pick it up, see what you are doing, put it down. The same shape as vanilla's debug stick, and
 nobody leaves it on and forgets why their screen is full of dust.
+
+### Chat goes through Standards, not around it
+
+Faction and ally channels are a `ChatRouter`, which is Standards' seam for exactly this, rather
+than our own `ServerChatEvent` listener. The difference is not stylistic: a channel that cancels
+the event itself runs *before* Standards' checks, so a muted player flips to faction chat and
+talks — and a mute that silences only public chat is not a mute. Their AFK marker never clears
+either, so they stay listed as away while holding a conversation.
+
+`/ignore` deliberately does **not** apply here. The seam leaves that judgement to the channel, and
+for a small opt-in one the answer is no: you chose to be in this faction and so did they. Silently
+dropping a member's words inside their own faction chat produces a conversation where one person
+is answering questions nobody else saw asked.
+
+`/f c <message>` sends one line without moving house, which is most of what people actually want —
+and it passes the same mute and AFK gates a typed line does, or it would be the hole that makes a
+mute a suggestion.
+
+### The bank is an account, not an economy
+
+Standards' `Economy` facade decides who holds *player* money, and exactly one provider wins that:
+a balance is a single fact and two ledgers disagreeing is worse than either. A faction balance is a
+different question — it is a container, like a chest — so Factions stores it and moves money
+through the facade. A server running a dedicated economy mod keeps it, and nothing here contests
+that seam.
+
+Every transfer is two halves against two ledgers, and the interesting case is the first succeeding
+while the second fails. The fallible half always goes first and refunds if the second fails, so
+the worst outcome is a no-op rather than money that stopped existing.
+
+**Claims are paid by the faction, not the claimer**, which is what makes the bank something a
+faction uses together rather than a shared piggy bank nobody touches. Prices rise with every chunk
+held — a flat price means the largest faction, the one that needs land least, buys it most easily.
+Refunds are priced at the position the chunk occupied rather than today's price, or a faction could
+buy cheap while small, grow, and release the same chunk at a profit. Off by default
+(`claimCost = 0`), so a server without an economy mod does not find claiming silently impossible.
 
 ### Status answers the questions nothing else will
 

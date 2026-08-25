@@ -31,6 +31,7 @@ public final class FactionsEvents {
     @SubscribeEvent
     static void onServerStarted(ServerStartedEvent event) {
         FactionBridge.install(event.getServer());
+        FactionChat.install();
     }
 
     @SubscribeEvent
@@ -48,6 +49,7 @@ public final class FactionsEvents {
     static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         FactionBorders.forget(event.getEntity().getUUID());
         FactionAutoClaim.forget(event.getEntity().getUUID());
+        FactionChat.forget(event.getEntity().getUUID());
     }
 
     // --- protection ---

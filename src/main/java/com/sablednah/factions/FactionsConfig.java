@@ -18,6 +18,10 @@ public final class FactionsConfig {
     public static final ModConfigSpec.IntValue MAP_PIXELS_PER_CHUNK;
     public static final ModConfigSpec.BooleanValue OFFICERS_MAY_ACCEPT;
     public static final ModConfigSpec.BooleanValue FIXTURES;
+    public static final ModConfigSpec.DoubleValue CLAIM_COST;
+    public static final ModConfigSpec.DoubleValue CLAIM_COST_MULTIPLIER;
+    public static final ModConfigSpec.DoubleValue CLAIM_REFUND;
+    public static final ModConfigSpec.BooleanValue OFFICERS_MAY_WITHDRAW;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -72,6 +76,35 @@ public final class FactionsConfig {
                         "at the exact moment you are walking over it is the one case that",
                         "mattered. Costs a heightmap lookup per particle column.")
                 .define("followGround", true);
+        b.pop();
+
+        b.comment("The faction bank.").push("money");
+        CLAIM_COST = b
+                .comment("What the first chunk costs. 0 turns claim costs off entirely, which is",
+                        "the default — a server with no economy mod must not find claiming",
+                        "silently impossible.",
+                        "Paid by the FACTION, not the claimer. That is what makes the bank",
+                        "something a faction uses together rather than a shared piggy bank",
+                        "nobody touches.")
+                .defineInRange("claimCost", 0.0D, 0.0D, 1_000_000.0D);
+        CLAIM_COST_MULTIPLIER = b
+                .comment("How much more each further chunk costs, as a fraction of the first.",
+                        "0.5 means the 2nd costs 1.5x the 1st, the 3rd 2x, and so on.",
+                        "Rising prices are the point: a flat price means the largest faction —",
+                        "the one that needs land least — buys it most easily.")
+                .defineInRange("claimCostGrowth", 0.5D, 0.0D, 100.0D);
+        CLAIM_REFUND = b
+                .comment("Fraction of the original price returned when a chunk is released.",
+                        "Priced at the position the chunk occupied, never today's price, or a",
+                        "faction could buy cheap while small, grow, and release the same chunk",
+                        "for a profit — a money printer fuelled by claiming and unclaiming one",
+                        "square.")
+                .defineInRange("claimRefund", 0.7D, 0.0D, 1.0D);
+        OFFICERS_MAY_WITHDRAW = b
+                .comment("Officers may take money out, not only the leader.",
+                        "Depositing is never gated: a member funding the next claim should not",
+                        "need permission to give money away, and the griefing direction is out.")
+                .define("officersMayWithdraw", true);
         b.pop();
 
         b.comment("Asking to join.").push("requests");

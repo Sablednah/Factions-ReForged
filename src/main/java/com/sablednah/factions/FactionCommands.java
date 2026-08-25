@@ -101,6 +101,42 @@ public final class FactionCommands {
                                         .executes(ctx -> map(ctx, true,
                                                 com.mojang.brigadier.arguments.IntegerArgumentType
                                                         .getInteger(ctx, "zoom"))))))
+                .then(Commands.literal("chat")
+                        .executes(ctx -> chat(ctx, null))
+                        .then(Commands.literal("public").executes(ctx -> chat(ctx, FactionChat.Channel.PUBLIC)))
+                        .then(Commands.literal("faction").executes(ctx -> chat(ctx, FactionChat.Channel.FACTION)))
+                        .then(Commands.literal("ally").executes(ctx -> chat(ctx, FactionChat.Channel.ALLY))))
+                // One message without moving house. The classic shorthand, and the reason the
+                // channel switch is survivable at all — most of what people want to say to their
+                // faction is one line in the middle of a public conversation.
+                .then(Commands.literal("c")
+                        .then(Commands.argument("message", StringArgumentType.greedyString())
+                                .executes(ctx -> chatOnce(ctx, FactionChat.Channel.FACTION))))
+                .then(Commands.literal("ca")
+                        .then(Commands.argument("message", StringArgumentType.greedyString())
+                                .executes(ctx -> chatOnce(ctx, FactionChat.Channel.ALLY))))
+                .then(Commands.literal("chatspy")
+                        .requires(src -> Commands.hasPermission(Commands.LEVEL_GAMEMASTERS).test(src))
+                        .executes(FactionCommands::chatspy))
+                .then(Commands.literal("money")
+                        .executes(FactionCommands::money)
+                        .then(Commands.literal("deposit")
+                                .then(Commands.argument("amount",
+                                                com.mojang.brigadier.arguments.DoubleArgumentType
+                                                        .doubleArg(0.01D))
+                                        .executes(ctx -> moveMoney(ctx, true))))
+                        .then(Commands.literal("withdraw")
+                                .then(Commands.argument("amount",
+                                                com.mojang.brigadier.arguments.DoubleArgumentType
+                                                        .doubleArg(0.01D))
+                                        .executes(ctx -> moveMoney(ctx, false))))
+                        .then(Commands.literal("pay")
+                                .then(Commands.argument("faction", StringArgumentType.word())
+                                        .suggests(FactionCommands::suggestFactions)
+                                        .then(Commands.argument("amount",
+                                                        com.mojang.brigadier.arguments
+                                                                .DoubleArgumentType.doubleArg(0.01D))
+                                                .executes(FactionCommands::payFaction)))))
                 .then(Commands.literal("status").executes(FactionCommands::status))
                 .then(fixtures())
                 .then(Commands.literal("borders").executes(FactionCommands::borders));
@@ -495,6 +531,14 @@ public final class FactionCommands {
                 Feedback.chat(player, Lang.get("msg.factions.must_connect"));
                 return 0;
             }
+            case BROKE -> {
+                Feedback.chat(player, Lang.fmt("msg.factions.claim_too_dear",
+                        "amount", com.sablednah.standards.api.economy.Economy.format(
+                                FactionBank.claimCost(store.claimCount(f.get().id()))),
+                        "balance", com.sablednah.standards.api.economy.Economy.format(
+                                FactionBank.balance(store, f.get().id()))));
+                return 0;
+            }
             case CLAIMED -> Feedback.chat(player, Lang.fmt("msg.factions.claimed",
                     "x", chunk.x, "z", chunk.z, "held", store.claimCount(f.get().id()),
                     "limit", limit < 0 ? Lang.get("msg.factions.no_limit")
@@ -534,8 +578,12 @@ public final class FactionCommands {
             Feedback.chat(player, Lang.get("msg.factions.not_yours"));
             return 0;
         }
-        store(ctx).unclaim(dim, chunk.x, chunk.z);
+        double back = FactionClaims.release(store(ctx), dim, chunk, f.get());
         Feedback.chat(player, Lang.fmt("msg.factions.unclaimed", "x", chunk.x, "z", chunk.z));
+        if (back > 0.0D) {
+            Feedback.chat(player, Lang.fmt("msg.factions.unclaim_refund",
+                    "amount", com.sablednah.standards.api.economy.Economy.format(back)));
+        }
         return 1;
     }
 
@@ -779,6 +827,16 @@ public final class FactionCommands {
         line(player, "msg.factions.status_we_declared", weDeclared);
         line(player, "msg.factions.status_they_declared", theyDeclared);
 
+        // Money, but only when there is something to say about it — a bank line reading zero on
+        // a server with no economy is noise on every status anybody ever runs.
+        double bank = FactionBank.balance(store, mine.id());
+        if (bank > 0.0D || FactionsConfig.CLAIM_COST.get() > 0.0D) {
+            Feedback.chat(player, Lang.fmt("msg.factions.status_bank",
+                    "amount", com.sablednah.standards.api.economy.Economy.format(bank),
+                    "next", com.sablednah.standards.api.economy.Economy.format(
+                            FactionBank.claimCost(store.claimCount(mine.id())))));
+        }
+
         FactionStore.Rank rank = mine.rankOf(player.getUUID());
         if (rank != null && rank.atLeast(answerRank())) {
             List<UUID> waiting = FactionRequests.forFaction(mine.id());
@@ -794,7 +852,7 @@ public final class FactionCommands {
         }
 
         if (allies.isEmpty() && offeredToUs.isEmpty() && offeredByUs.isEmpty()
-                && weDeclared.isEmpty() && theyDeclared.isEmpty()) {
+                && weDeclared.isEmpty() && theyDeclared.isEmpty() && bank <= 0.0D) {
             // Said explicitly, because a header with nothing under it reads as a broken command
             // rather than as peace.
             Feedback.chat(player, Lang.get("msg.factions.status_nothing"));
@@ -893,6 +951,134 @@ public final class FactionCommands {
         // point of asking for a zoom is that you wanted a different one.
         Feedback.chat(player, Lang.fmt("msg.factions.map_given",
                 "chunks", 128 / Integer.highestOneBit(Math.min(8, ppc))));
+        return 1;
+    }
+
+    // --- money ---
+
+    private static int money(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Optional<FactionStore.Faction> f = store(ctx).of(player.getUUID());
+        if (f.isEmpty()) {
+            Feedback.chat(player, Lang.get("msg.factions.none"));
+            return 0;
+        }
+        double held = FactionBank.balance(store(ctx), f.get().id());
+        Feedback.chat(player, Lang.fmt("msg.factions.bank_balance",
+                "name", f.get().name(),
+                "amount", com.sablednah.standards.api.economy.Economy.format(held)));
+        if (FactionsConfig.CLAIM_COST.get() > 0.0D) {
+            Feedback.chat(player, Lang.fmt("msg.factions.bank_next_claim",
+                    "amount", com.sablednah.standards.api.economy.Economy.format(
+                            FactionBank.claimCost(store(ctx).claimCount(f.get().id())))));
+        }
+        return 1;
+    }
+
+    private static int moveMoney(CommandContext<CommandSourceStack> ctx, boolean in)
+            throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        double amount = com.mojang.brigadier.arguments.DoubleArgumentType.getDouble(ctx, "amount");
+        // Depositing is ungated on purpose; taking money out is the direction that can grief.
+        Optional<FactionStore.Faction> f = in
+                ? store(ctx).of(player.getUUID())
+                : atLeast(ctx, player, FactionsConfig.OFFICERS_MAY_WITHDRAW.get()
+                        ? FactionStore.Rank.OFFICER : FactionStore.Rank.LEADER);
+        if (f.isEmpty()) {
+            if (in) {
+                Feedback.chat(player, Lang.get("msg.factions.none"));
+            }
+            return 0;
+        }
+        FactionBank.Result result = in
+                ? FactionBank.deposit(store(ctx), player, f.get().id(), amount)
+                : FactionBank.withdraw(store(ctx), player, f.get().id(), amount);
+        return report(player, result, amount, in
+                ? "msg.factions.bank_deposited" : "msg.factions.bank_withdrew", f.get().name());
+    }
+
+    private static int payFaction(CommandContext<CommandSourceStack> ctx)
+            throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        double amount = com.mojang.brigadier.arguments.DoubleArgumentType.getDouble(ctx, "amount");
+        Optional<FactionStore.Faction> mine = atLeast(ctx, player,
+                FactionsConfig.OFFICERS_MAY_WITHDRAW.get()
+                        ? FactionStore.Rank.OFFICER : FactionStore.Rank.LEADER);
+        if (mine.isEmpty()) {
+            return 0;
+        }
+        String name = StringArgumentType.getString(ctx, "faction");
+        Optional<FactionStore.Faction> them = store(ctx).lookup(name);
+        if (them.isEmpty()) {
+            Feedback.chat(player, Lang.fmt("msg.factions.unknown", "name", name));
+            return 0;
+        }
+        if (them.get().id().equals(mine.get().id())) {
+            Feedback.chat(player, Lang.get("msg.factions.bank_pay_self"));
+            return 0;
+        }
+        FactionBank.Result result =
+                FactionBank.pay(store(ctx), mine.get().id(), them.get().id(), amount);
+        if (result == FactionBank.Result.OK) {
+            // Told to them as well. Money arriving in a bank with no explanation is
+            // indistinguishable from a bug, and this is how tribute and ransom get paid.
+            announce(ctx, them.get(), Lang.fmt("msg.factions.bank_received",
+                    "name", mine.get().name(),
+                    "amount", com.sablednah.standards.api.economy.Economy.format(amount)), null);
+        }
+        return report(player, result, amount, "msg.factions.bank_paid", them.get().name());
+    }
+
+    private static int report(ServerPlayer player, FactionBank.Result result, double amount,
+            String successKey, String name) {
+        String money = com.sablednah.standards.api.economy.Economy.format(amount);
+        switch (result) {
+            case OK -> Feedback.chat(player, Lang.fmt(successKey, "amount", money, "name", name));
+            case INSUFFICIENT -> Feedback.chat(player, Lang.fmt("msg.factions.bank_short",
+                    "amount", money));
+            case NO_ECONOMY -> Feedback.chat(player, Lang.get("msg.factions.bank_no_economy"));
+            case FAILED -> Feedback.chat(player, Lang.get("msg.factions.bank_failed"));
+        }
+        return result == FactionBank.Result.OK ? 1 : 0;
+    }
+
+    // --- talking ---
+
+    /** @param wanted the channel asked for, or null to cycle. */
+    private static int chat(CommandContext<CommandSourceStack> ctx, FactionChat.Channel wanted)
+            throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        FactionChat.Channel next = wanted != null ? wanted : FactionChat.channelOf(player).next();
+        if (next != FactionChat.Channel.PUBLIC && store(ctx).of(player.getUUID()).isEmpty()) {
+            Feedback.chat(player, Lang.get("msg.factions.chat_no_faction"));
+            return 0;
+        }
+        FactionChat.setChannel(player, next);
+        Feedback.chat(player, Lang.fmt("msg.factions.chat_now",
+                "channel", Lang.get("msg.factions.chat_channel." + next.key())));
+        return 1;
+    }
+
+    private static int chatOnce(CommandContext<CommandSourceStack> ctx, FactionChat.Channel channel)
+            throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        // Through the same gates a typed line passes, or /f c is the hole that makes a mute a
+        // suggestion. speechBlocked answers for mutes; noteActivity clears the AFK marker.
+        var blocked = com.sablednah.standards.api.chat.Chat.speechBlocked(player);
+        if (blocked.isPresent()) {
+            player.sendSystemMessage(blocked.get());
+            return 0;
+        }
+        com.sablednah.standards.api.chat.Chat.noteActivity(player);
+        FactionChat.send(player, channel, StringArgumentType.getString(ctx, "message"));
+        return 1;
+    }
+
+    private static int chatspy(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        boolean on = FactionChat.toggleSpy(player);
+        Feedback.chat(player, Lang.get(on
+                ? "msg.factions.chatspy_on" : "msg.factions.chatspy_off"));
         return 1;
     }
 
