@@ -16,11 +16,12 @@ Requires **[SableCraft Standards](../SableCraft-Standards)**, and not optionally
 /f invite <player>       officer+
 /f join <name>           take an invitation
 /f claim | unclaim       the chunk you are stood in
+/f autoclaim             take every chunk you walk into, until it runs out
 /f sethome | home        on your own land, with Standards' warmup and safe landing
 /f ally|enemy|neutral    declare towards another faction
 /f peaceful              opt out of fighting entirely
 /f tag SBL               the short label chat uses
-/f map [item]            see below
+/f map [item [zoom]]     see below
 /f borders               show the edges
 /f who <name> | list
 ```
@@ -45,6 +46,15 @@ outlined territory you can read the shape of.
 An unmodded client renders all of this. The server owns the pixels and sends them; there is no
 client mod, no resource pack and no rendering code.
 
+`/f map item <zoom>` trades coverage for detail in exact steps, because a pixel covers
+`1 << scale` blocks and there is nothing in between: **2** pixels per chunk shows 64 chunks, **4**
+shows 32, **8** shows 16. One is the default and stays right for a busy world, but a server whose
+factions hold a handful of chunks each is lost on the wide view. `map.pixelsPerChunk` sets what you
+get without asking.
+
+The edge test is per **pixel**, not per chunk — otherwise the outline would thicken with the zoom
+until a small territory was solid highlight.
+
 `/f map` on its own gives the classic chat grid, for when you have no hands free.
 
 ### Borders are only drawn where they are borders
@@ -57,9 +67,37 @@ Coloured by **relation, not identity**: colouring by faction would need a legend
 while colouring by what it means to you needs neither, and is the only question you are asking when
 you walk up to a line.
 
+They **stand on the ground**, not at your feet. Drawn at a flat height the wall is buried in the
+first hill it crosses and floating over the first valley — and being underground is worst at the
+exact moment you are walking over the line, which is the one moment the display exists for. Each
+column samples the surface beneath it, clamped to a window around you so a border running off a
+cliff does not spend its particles out of sight, and only where the chunk is already loaded:
+drawing a decoration is no reason to generate terrain.
+
+The floor row draws every block and the row above it every second one. They are doing different
+jobs — the floor row *is* the line, read at a glance and a shallow angle, where a gap every other
+block is a dashed line rather than a border; the upper row only has to say "wall".
+
 Two ways to see them: `/f borders` for surveying, or just **hold the tool** — a compass by default.
 Pick it up, see what you are doing, put it down. The same shape as vanilla's debug stick, and
 nobody leaves it on and forgets why their screen is full of dust.
+
+### Autoclaim knows when to stop
+
+Marking a base out one `/f claim` at a time is the tedious part of owning land: you know the shape
+you want and you are already walking it. `/f autoclaim` makes the walk the claim.
+
+The feature is the stopping, because that is what every version of this gets wrong. Running out of
+land **switches it off** — the limit is not a chunk you happened to stand on, it is a state that
+will refuse the next one too, and repeating that every sixteen blocks for an afternoon is how a
+convenience becomes a nuisance. Walking through somebody else's territory says **nothing at all**;
+that is a journey, not a failed claim, and the action bar already names whose land it is. A
+standing reason is given **once**, not per chunk. And it is off when you log back in — a thing you
+are doing, not a setting you have.
+
+`/f claim` and `/f autoclaim` share one decision function. The day they disagreed about the claim
+limit or the connectedness rule would be the day somebody walked a border into existence that the
+command would have refused.
 
 ### Allies agree, enemies do not
 
