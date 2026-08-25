@@ -50,20 +50,40 @@ public final class FactionMap {
     private static final int SIZE = 128;
 
     /**
+     * The map scale that gives this many pixels per chunk.
+     *
+     * <p>A pixel covers {@code 1 << scale} blocks, so a chunk occupies {@code 16 >> scale} of
+     * them — the zoom levels are 1, 2, 4, 8, 16 and nothing in between, which is why the config
+     * is a power of two rather than a percentage. Zooming in costs coverage in exact step: at two
+     * pixels per chunk the same 128-pixel map shows 64 chunks instead of 128.</p>
+     */
+    private static byte scaleFor(int pixelsPerChunk) {
+        int scale = CHUNK_SCALE;
+        for (int p = pixelsPerChunk; p > 1; p >>= 1) {
+            scale--;
+        }
+        return (byte) Math.max(0, scale);
+    }
+
+    /**
      * Build the atlas as a locked map item, centred on the player.
      *
+     * @param pixelsPerChunk 1 for the whole region, higher to zoom in. Rounded down to a power of
+     *                       two, because a map pixel has no finer setting than that.
      * @return the item to hand over, or empty if the map data could not be created
      */
-    public static Optional<ItemStack> create(ServerPlayer player, ServerLevel level) {
+    public static Optional<ItemStack> create(ServerPlayer player, ServerLevel level,
+            int pixelsPerChunk) {
+        int ppc = Integer.highestOneBit(Math.max(1, Math.min(16, pixelsPerChunk)));
         // Built directly rather than through MapItem.create, which would allocate a map id we
         // then throw away when locking — one orphaned map file per atlas, on a server where
         // people ask for these often. createFresh does the centre-snapping arithmetic for us,
         // which is the only part worth borrowing.
         MapItemSavedData data = MapItemSavedData.createFresh(
-                player.getX(), player.getZ(), CHUNK_SCALE, false, false, level.dimension());
+                player.getX(), player.getZ(), scaleFor(ppc), false, false, level.dimension());
 
         // Paint before locking: locked() copies, and a locked map refuses to be drawn on.
-        paint(data, level, new ChunkPos(player.blockPosition()), player);
+        paint(data, level, new ChunkPos(player.blockPosition()), player, ppc);
 
         MapId id = level.getFreeMapId();
         level.setMapData(id, data.locked());
@@ -75,20 +95,29 @@ public final class FactionMap {
         return Optional.of(stack);
     }
 
-    /** One pixel per chunk, coloured by what that chunk means to this player. */
+    /**
+     * Paint the grid, coloured by what each chunk means to this player.
+     *
+     * <p>At one pixel per chunk "edge" and "chunk with a differing neighbour" are the same thing.
+     * Zoomed in they are not, and painting a whole chunk bright would thicken the outline with
+     * the zoom until a small territory is solid highlight. So the test is per <em>pixel</em>: a
+     * pixel is bright when it lies on the side of its chunk that faces a different owner, which
+     * keeps the outline one pixel wide at every zoom level.</p>
+     */
     private static void paint(MapItemSavedData data, ServerLevel level,
-            ChunkPos centre, ServerPlayer viewer) {
+            ChunkPos centre, ServerPlayer viewer, int pixelsPerChunk) {
         FactionStore store = FactionStore.get(level.getServer());
         String dim = FactionBridge.dimensionOf(level);
         Optional<FactionStore.Faction> mine = store.of(viewer.getUUID());
 
-        int originX = centre.x - SIZE / 2;
-        int originZ = centre.z - SIZE / 2;
+        int chunksAcross = SIZE / pixelsPerChunk;
+        int originX = centre.x - chunksAcross / 2;
+        int originZ = centre.z - chunksAcross / 2;
 
         for (int px = 0; px < SIZE; px++) {
             for (int pz = 0; pz < SIZE; pz++) {
-                int cx = originX + px;
-                int cz = originZ + pz;
+                int cx = originX + px / pixelsPerChunk;
+                int cz = originZ + pz / pixelsPerChunk;
                 Optional<String> owner = store.ownerOf(dim, cx, cz);
 
                 MapColor colour;
@@ -98,11 +127,14 @@ public final class FactionMap {
                     brightness = MapColor.Brightness.LOWEST;
                 } else {
                     colour = colourFor(store, mine, owner.get());
-                    // Bright on the edge, dim inside: the outline is the information.
-                    boolean edge = !owner.equals(store.ownerOf(dim, cx + 1, cz))
-                            || !owner.equals(store.ownerOf(dim, cx - 1, cz))
-                            || !owner.equals(store.ownerOf(dim, cx, cz + 1))
-                            || !owner.equals(store.ownerOf(dim, cx, cz - 1));
+                    int ox = px % pixelsPerChunk;
+                    int oz = pz % pixelsPerChunk;
+                    int last = pixelsPerChunk - 1;
+                    boolean edge =
+                            (ox == 0 && !owner.equals(store.ownerOf(dim, cx - 1, cz)))
+                            || (ox == last && !owner.equals(store.ownerOf(dim, cx + 1, cz)))
+                            || (oz == 0 && !owner.equals(store.ownerOf(dim, cx, cz - 1)))
+                            || (oz == last && !owner.equals(store.ownerOf(dim, cx, cz + 1)));
                     brightness = edge ? MapColor.Brightness.HIGH : MapColor.Brightness.LOW;
                 }
                 data.setColor(px, pz, colour.getPackedId(brightness));

@@ -229,19 +229,61 @@ public final class FactionBorders {
         };
     }
 
-    /** Sixteen blocks of dust along one chunk edge, sent to one player. */
+    /**
+     * Sixteen blocks of dust along one chunk edge, sent to one player.
+     *
+     * <h3>Dense along the floor, sparse up the wall</h3>
+     *
+     * <p>The two rows are doing different jobs. The floor row is the <em>line</em> — the thing you
+     * are trying to stand on the right side of, read at a glance and at a shallow angle, where a
+     * gap every other block is a dashed line rather than a border. The upper row only has to say
+     * "this is a wall, not a stripe on the ground", and reads fine at half the density. Doubling
+     * both would double the packets to buy nothing.</p>
+     *
+     * <h3>It stands on the ground, not on you</h3>
+     *
+     * <p>Drawn at a flat height, the wall is buried in the first hill it crosses and floating over
+     * the first valley — and being underground is worst precisely when you are walking over the
+     * border, which is the one moment the display exists for. So each column starts at the surface
+     * beneath it.</p>
+     *
+     * <p>Clamped to a window around the player because a border running off a cliff would
+     * otherwise spend its particles forty blocks below, out of sight and still costing packets.
+     * Only sampled where the chunk is already loaded: a heightmap lookup on an absent chunk would
+     * generate it, and drawing a decoration is not a reason to generate terrain.</p>
+     */
     private static void line(ServerPlayer player, ServerLevel level,
             int startX, int startZ, int stepX, int stepZ, double y, int colour) {
         DustParticleOptions dust = new DustParticleOptions(colour, 1.0F);
-        for (int i = 0; i <= 16; i += 2) {
-            // Two heights, so it reads as a wall rather than a stripe on the floor.
-            for (double dy = 0; dy <= 2.0D; dy += 2.0D) {
-                level.sendParticles(player, dust, true,
-                        false,
-                        startX + stepX * i + 0.5D, y + dy, startZ + stepZ * i + 0.5D,
+        boolean follow = FactionsConfig.BORDER_FOLLOW_GROUND.get();
+        for (int i = 0; i <= 16; i++) {
+            double x = startX + stepX * i + 0.5D;
+            double z = startZ + stepZ * i + 0.5D;
+            double base = follow ? groundAt(level, x, z, y) : y;
+            level.sendParticles(player, dust, true, false, x, base, z,
+                    1, 0.0D, 0.0D, 0.0D, 0.0D);
+            // The wall, at half the density — it only has to say "wall".
+            if (i % 2 == 0) {
+                level.sendParticles(player, dust, true, false, x, base + 2.0D, z,
                         1, 0.0D, 0.0D, 0.0D, 0.0D);
             }
         }
+    }
+
+    /** How far above or below the player a border column may be drawn, in blocks. */
+    private static final double GROUND_WINDOW = 24.0D;
+
+    private static double groundAt(ServerLevel level, double x, double z, double fallback) {
+        int bx = net.minecraft.util.Mth.floor(x);
+        int bz = net.minecraft.util.Mth.floor(z);
+        if (!level.hasChunkAt(new net.minecraft.core.BlockPos(bx, level.getMinY(), bz))) {
+            return fallback;
+        }
+        double surface = level.getHeight(
+                net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                bx, bz) + 0.1D;
+        return net.minecraft.util.Mth.clamp(surface, fallback - GROUND_WINDOW,
+                fallback + GROUND_WINDOW);
     }
 
     private FactionBorders() {}

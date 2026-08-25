@@ -73,6 +73,13 @@ public final class FactionLang {
         Lang.contribute("msg.factions.unclaimed_all_others",
                 "{term.prefix} &c{player} released all &f{count}&c of your chunks.");
         Lang.contribute("msg.factions.no_limit", "unlimited");
+        Lang.contribute("msg.factions.autoclaim_on",
+                "{term.prefix} &7Claiming as you walk. {term.dim}(/f autoclaim again to stop)");
+        Lang.contribute("msg.factions.autoclaim_off", "{term.prefix} &7No longer claiming as you walk.");
+        Lang.contribute("msg.factions.autoclaim_full",
+                "&cThat is all the land you have — &f{held}&c of &f{limit}&c chunks.");
+        Lang.contribute("msg.factions.autoclaim_lost_rank",
+                "&cYou are no longer an officer of anything.");
         Lang.contribute("msg.factions.cannot_build",
                 "&cThis land belongs to &f{name}&c.");
 
@@ -134,7 +141,7 @@ public final class FactionLang {
                 "{term.dim}  &a# yours  &b# allied  &c# hostile  &f# other  &8- wilderness  &e+ you");
         Lang.contribute("msg.factions.map_title", "&bClaims Atlas");
         Lang.contribute("msg.factions.map_given",
-                "{term.prefix} &7An atlas of the land around you. {term.dim}(one pixel is one chunk)");
+                "{term.prefix} &7An atlas of the land around you. {term.dim}({chunks} chunks across)");
         Lang.contribute("msg.factions.map_failed", "&cCould not draw the atlas.");
         Lang.contribute("msg.factions.borders_on",
                 "{term.prefix} &7Borders shown. {term.dim}(or just hold the tool)");

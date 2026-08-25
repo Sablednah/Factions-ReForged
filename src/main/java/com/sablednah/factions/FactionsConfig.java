@@ -14,6 +14,8 @@ public final class FactionsConfig {
     public static final ModConfigSpec.IntValue BORDER_PARTICLE_TICKS;
     public static final ModConfigSpec.IntValue BORDER_RADIUS_CHUNKS;
     public static final ModConfigSpec.ConfigValue<String> BORDER_ITEM;
+    public static final ModConfigSpec.BooleanValue BORDER_FOLLOW_GROUND;
+    public static final ModConfigSpec.IntValue MAP_PIXELS_PER_CHUNK;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -61,6 +63,25 @@ public final class FactionsConfig {
                         "see what you are doing, and put it down again — the same way vanilla's",
                         "own debug stick works.")
                 .define("heldItem", "minecraft:compass");
+        BORDER_FOLLOW_GROUND = b
+                .comment("Stand the border on the ground rather than at your own feet.",
+                        "On by default. Drawn at a flat height it is buried in the first hill it",
+                        "meets and floating over the first valley — and a border you cannot see",
+                        "at the exact moment you are walking over it is the one case that",
+                        "mattered. Costs a heightmap lookup per particle column.")
+                .define("followGround", true);
+        b.pop();
+
+        b.comment("The claims atlas.").push("map");
+        MAP_PIXELS_PER_CHUNK = b
+                .comment("How many map pixels one chunk occupies, for /f map item.",
+                        "1 is a vanilla map at full zoom-out: 128 chunks across, the whole",
+                        "region at once, and the default because that is what an atlas is for.",
+                        "Raise it to zoom in — 2 shows 64 chunks, 4 shows 32, 8 shows 16 — for",
+                        "a server whose factions hold a handful of chunks each and get lost on",
+                        "the wide view. Must be a power of two: a map pixel covers 1 << scale",
+                        "blocks and there is nothing in between.")
+                .defineInRange("pixelsPerChunk", 1, 1, 8);
         b.pop();
 
         SPEC = b.build();

@@ -41,11 +41,13 @@ public final class FactionsEvents {
     @SubscribeEvent
     static void onTick(ServerTickEvent.Post event) {
         FactionBorders.tick(event.getServer());
+        FactionAutoClaim.tick(event.getServer());
     }
 
     @SubscribeEvent
     static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         FactionBorders.forget(event.getEntity().getUUID());
+        FactionAutoClaim.forget(event.getEntity().getUUID());
     }
 
     // --- protection ---

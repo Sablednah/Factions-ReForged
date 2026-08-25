@@ -57,6 +57,7 @@ public final class FactionCommands {
                         .then(Commands.argument("player", StringArgumentType.word())
                                 .executes(ctx -> rank(ctx, false))))
                 .then(Commands.literal("claim").executes(FactionCommands::claim))
+                .then(Commands.literal("autoclaim").executes(FactionCommands::autoclaim))
                 .then(Commands.literal("unclaim").executes(FactionCommands::unclaim))
                 .then(Commands.literal("unclaimall").executes(FactionCommands::unclaimAll))
                 .then(Commands.literal("sethome").executes(FactionCommands::setHome))
@@ -78,8 +79,15 @@ public final class FactionCommands {
                                 .executes(ctx -> who(ctx,
                                         StringArgumentType.getString(ctx, "faction")))))
                 .then(Commands.literal("map")
-                        .executes(ctx -> map(ctx, false))
-                        .then(Commands.literal("item").executes(ctx -> map(ctx, true))))
+                        .executes(ctx -> map(ctx, false, 0))
+                        .then(Commands.literal("item")
+                                .executes(ctx -> map(ctx, true, 0))
+                                .then(Commands.argument("zoom",
+                                                com.mojang.brigadier.arguments.IntegerArgumentType
+                                                        .integer(1, 8))
+                                        .executes(ctx -> map(ctx, true,
+                                                com.mojang.brigadier.arguments.IntegerArgumentType
+                                                        .getInteger(ctx, "zoom"))))))
                 .then(Commands.literal("borders").executes(FactionCommands::borders));
     }
 
@@ -255,35 +263,54 @@ public final class FactionCommands {
         ChunkPos chunk = new ChunkPos(player.blockPosition());
         FactionStore store = store(ctx);
 
-        Optional<String> owner = store.ownerOf(dim, chunk.x, chunk.z);
-        if (owner.isPresent()) {
-            Feedback.chat(player, owner.get().equals(f.get().id())
-                    ? Lang.get("msg.factions.already_yours")
-                    : Lang.fmt("msg.factions.claimed_by_other",
-                            "name", store.byId(owner.get()).map(FactionStore.Faction::name).orElse("?")));
-            return 0;
+        int limit = FactionClaims.limitFor(f.get());
+        // The decision itself lives in FactionClaims so that /f autoclaim cannot drift from it.
+        switch (FactionClaims.attempt(store, dim, chunk, f.get())) {
+            case ALREADY_YOURS -> {
+                Feedback.chat(player, Lang.get("msg.factions.already_yours"));
+                return 0;
+            }
+            case OWNED -> {
+                Feedback.chat(player, Lang.fmt("msg.factions.claimed_by_other", "name",
+                        store.ownerOf(dim, chunk.x, chunk.z).flatMap(store::byId)
+                                .map(FactionStore.Faction::name).orElse("?")));
+                return 0;
+            }
+            case LIMIT -> {
+                // Scaling with membership is what stops one person fencing off a continent, and
+                // it gives recruiting a point beyond the numbers.
+                Feedback.chat(player, Lang.fmt("msg.factions.claim_limit",
+                        "held", store.claimCount(f.get().id()), "limit", limit,
+                        "members", f.get().members().size()));
+                return 0;
+            }
+            case DISCONNECTED -> {
+                Feedback.chat(player, Lang.get("msg.factions.must_connect"));
+                return 0;
+            }
+            case CLAIMED -> Feedback.chat(player, Lang.fmt("msg.factions.claimed",
+                    "x", chunk.x, "z", chunk.z, "held", store.claimCount(f.get().id()),
+                    "limit", limit < 0 ? Lang.get("msg.factions.no_limit")
+                            : String.valueOf(limit)));
         }
+        return 1;
+    }
 
-        int held = store.claimCount(f.get().id());
-        int perMember = FactionsConfig.CLAIM_LIMIT_PER_MEMBER.get();
-        int limit = perMember < 0 ? -1 : perMember * f.get().members().size();
-        if (limit >= 0 && held >= limit) {
-            // Scaling with membership is what stops one person fencing off a continent, and it
-            // gives recruiting a point beyond the numbers.
-            Feedback.chat(player, Lang.fmt("msg.factions.claim_limit",
-                    "held", held, "limit", limit, "members", f.get().members().size()));
+    /**
+     * {@code /f autoclaim} — take every chunk you walk into.
+     *
+     * <p>Officer, exactly as {@code /f claim} is: walking is a faster way to spend the faction's
+     * land than typing, not a lower bar for spending it.</p>
+     */
+    private static int autoclaim(CommandContext<CommandSourceStack> ctx)
+            throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        if (atLeast(ctx, player, FactionStore.Rank.OFFICER).isEmpty()) {
             return 0;
         }
-        if (FactionsConfig.REQUIRE_CONNECTED_CLAIMS.get() && held > 0
-                && !store.touchesOwnLand(dim, chunk.x, chunk.z, f.get().id())) {
-            Feedback.chat(player, Lang.get("msg.factions.must_connect"));
-            return 0;
-        }
-
-        store.claim(dim, chunk.x, chunk.z, f.get().id());
-        Feedback.chat(player, Lang.fmt("msg.factions.claimed",
-                "x", chunk.x, "z", chunk.z, "held", held + 1,
-                "limit", limit < 0 ? Lang.get("msg.factions.no_limit") : String.valueOf(limit)));
+        boolean on = FactionAutoClaim.toggle(player);
+        Feedback.chat(player, Lang.get(on
+                ? "msg.factions.autoclaim_on" : "msg.factions.autoclaim_off"));
         return 1;
     }
 
@@ -519,7 +546,12 @@ public final class FactionCommands {
         return all.size();
     }
 
-    private static int map(CommandContext<CommandSourceStack> ctx, boolean asItem)
+    /**
+     * @param zoom pixels per chunk, or 0 to take the server's configured default. A number rather
+     *             than a literal because "how far in" is a quantity, and because the useful
+     *             values are decided by the size of the factions on the server rather than by us.
+     */
+    private static int map(CommandContext<CommandSourceStack> ctx, boolean asItem, int zoom)
             throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         ServerLevel level = player.level();
@@ -530,7 +562,9 @@ public final class FactionCommands {
             Feedback.chat(player, Lang.get("msg.factions.map_legend"));
             return 1;
         }
-        Optional<net.minecraft.world.item.ItemStack> atlas = FactionMap.create(player, level);
+        int ppc = zoom > 0 ? zoom : FactionsConfig.MAP_PIXELS_PER_CHUNK.get();
+        Optional<net.minecraft.world.item.ItemStack> atlas =
+                FactionMap.create(player, level, ppc);
         if (atlas.isEmpty()) {
             Feedback.chat(player, Lang.get("msg.factions.map_failed"));
             return 0;
@@ -538,7 +572,10 @@ public final class FactionCommands {
         if (!player.getInventory().add(atlas.get())) {
             player.drop(atlas.get(), false);
         }
-        Feedback.chat(player, Lang.get("msg.factions.map_given"));
+        // Says what it is showing, because two atlases in a chest look identical and the whole
+        // point of asking for a zoom is that you wanted a different one.
+        Feedback.chat(player, Lang.fmt("msg.factions.map_given",
+                "chunks", 128 / Integer.highestOneBit(Math.min(8, ppc))));
         return 1;
     }
 
