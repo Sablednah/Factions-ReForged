@@ -17,6 +17,7 @@ public final class FactionsConfig {
     public static final ModConfigSpec.BooleanValue BORDER_FOLLOW_GROUND;
     public static final ModConfigSpec.IntValue MAP_PIXELS_PER_CHUNK;
     public static final ModConfigSpec.BooleanValue OFFICERS_MAY_ACCEPT;
+    public static final ModConfigSpec.BooleanValue FIXTURES;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -93,6 +94,17 @@ public final class FactionsConfig {
                         "the wide view. Must be a power of two: a map pixel covers 1 << scale",
                         "blocks and there is nothing in between.")
                 .defineInRange("pixelsPerChunk", 1, 1, 8);
+        b.pop();
+
+        b.comment("Testing.").push("debug");
+        FIXTURES = b
+                .comment("Register /f fixture, which invents factions to have relations with.",
+                        "OFF, and it unregisters the command rather than refusing it — a server",
+                        "that will never run it should not offer it in tab-complete.",
+                        "Two people cannot test a relation system: allied, hostile, offered-but-",
+                        "not-returned and peaceful need four counterparties, and inviting six",
+                        "friends to sit still while you declare war on them is not a test plan.")
+                .define("fixtures", false);
         b.pop();
 
         SPEC = b.build();

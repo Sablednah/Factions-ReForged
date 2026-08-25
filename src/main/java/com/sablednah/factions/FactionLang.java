@@ -179,6 +179,13 @@ public final class FactionLang {
         Lang.contribute("msg.factions.borders_on",
                 "{term.prefix} &7Borders shown. {term.dim}(or just hold the tool)");
         Lang.contribute("msg.factions.borders_off", "{term.prefix} &7Borders hidden.");
+
+        // Test fixtures.
+        Lang.contribute("msg.factions.fixtures_seeded",
+                "{term.prefix} &7Invented &f{count}&7 neighbours. {term.dim}(/f fixture clear to remove them)");
+        Lang.contribute("msg.factions.fixtures_row", " {term.dim}-&r &7{row}");
+        Lang.contribute("msg.factions.fixtures_cleared",
+                "{term.prefix} &7Removed &f{count}&7 invented {term.factions}.");
     }
 
     private FactionLang() {}

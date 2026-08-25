@@ -102,7 +102,56 @@ public final class FactionCommands {
                                                 com.mojang.brigadier.arguments.IntegerArgumentType
                                                         .getInteger(ctx, "zoom"))))))
                 .then(Commands.literal("status").executes(FactionCommands::status))
+                .then(fixtures())
                 .then(Commands.literal("borders").executes(FactionCommands::borders));
+    }
+
+    /**
+     * {@code /f fixture} — invent neighbours, or take them away.
+     *
+     * <p>Registered only where the config asks for it, so a server that will never run it does
+     * not offer it in tab-complete. Op-gated on top of that: it is the one command here that can
+     * rewrite the diplomatic map in a single keystroke.</p>
+     */
+    private static LiteralArgumentBuilder<CommandSourceStack> fixtures() {
+        if (!FactionsConfig.FIXTURES.get()) {
+            // A node nobody satisfies. Brigadier hides it from tab-complete and answers an
+            // attempt with "unknown command", which is what Standards' decision 7 is after — the
+            // command is absent rather than present and arguing. A literal absence would be
+            // tidier still and costs restructuring the whole builder chain to save nothing a
+            // player could ever observe.
+            return Commands.literal("fixture").requires(src -> false);
+        }
+        return Commands.literal("fixture")
+                .requires(src -> Commands.hasPermission(Commands.LEVEL_GAMEMASTERS).test(src))
+                .then(Commands.literal("seed")
+                        .executes(ctx -> seedFixtures(ctx, 4))
+                        .then(Commands.argument("chunksEach",
+                                        com.mojang.brigadier.arguments.IntegerArgumentType
+                                                .integer(1, 16))
+                                .executes(ctx -> seedFixtures(ctx,
+                                        com.mojang.brigadier.arguments.IntegerArgumentType
+                                                .getInteger(ctx, "chunksEach")))))
+                .then(Commands.literal("clear").executes(FactionCommands::clearFixtures));
+    }
+
+    private static int seedFixtures(CommandContext<CommandSourceStack> ctx, int chunksEach)
+            throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        List<String> report = FactionFixtures.seed(player, chunksEach);
+        Feedback.chat(player, Lang.fmt("msg.factions.fixtures_seeded", "count", report.size()));
+        for (String row : report) {
+            Feedback.chat(player, Lang.fmt("msg.factions.fixtures_row", "row", row));
+        }
+        return report.size();
+    }
+
+    private static int clearFixtures(CommandContext<CommandSourceStack> ctx)
+            throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        int gone = FactionFixtures.clear(ctx.getSource().getServer());
+        Feedback.chat(player, Lang.fmt("msg.factions.fixtures_cleared", "count", gone));
+        return gone;
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> relation(
