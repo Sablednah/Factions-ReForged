@@ -15,6 +15,9 @@ Requires **[SableCraft Standards](../SableCraft-Standards)**, and not optionally
 /f create <name>         found one
 /f invite <player>       officer+
 /f join <name>           take an invitation
+/f request <name>        ask to be let in
+/f requests              who is waiting, officer+
+/f accept | decline      answer one
 /f claim | unclaim       the chunk you are stood in
 /f autoclaim             take every chunk you walk into, until it runs out
 /f sethome | home        on your own land, with Standards' warmup and safe landing
@@ -23,6 +26,7 @@ Requires **[SableCraft Standards](../SableCraft-Standards)**, and not optionally
 /f tag SBL               the short label chat uses
 /f map [item [zoom]]     see below
 /f borders               show the edges
+/f status                where you stand with everybody
 /f who <name> | list
 ```
 
@@ -81,6 +85,39 @@ block is a dashed line rather than a border; the upper row only has to say "wall
 Two ways to see them: `/f borders` for surveying, or just **hold the tool** — a compass by default.
 Pick it up, see what you are doing, put it down. The same shape as vanilla's debug stick, and
 nobody leaves it on and forgets why their screen is full of dust.
+
+### Status answers the questions nothing else will
+
+An offered alliance is announced when it is made and never mentioned again. If you were offline, or
+scrolled past it, the offer exists and nothing will tell you. The same is true of being declared
+upon: you find out there is a war on by being killed in it. Everything else is available a faction
+at a time through `/f who`, which requires knowing who to ask about — the thing you do not know.
+
+So `/f status` puts it in one place, and **splits everything by direction**. An alliance offered
+*to* you is a decision waiting on you; one offered *by* you is a thing you are waiting on. Sorting
+both into a single "pending" list would hide which is which behind a name you have to recognise.
+
+Enemies split the same way for a sharper reason: `relation()` resolves to hostile from one side's
+declaration alone — that asymmetry is deliberate — so the relation itself cannot tell a war you
+started from one started on you, and those want different responses.
+
+### You can ask, not only be asked
+
+An invite finds a specific person: an officer already knows who they want. A **request** is sent by
+somebody who does not know anybody yet — which is exactly the player the invite flow cannot help.
+Without `/f request`, joining a faction requires already being known to one: fine on a server of
+twenty friends, useless to the person who logged in an hour ago and read a tag in chat.
+
+It is shown to whoever can act on it, and only them. A request nobody sees is one that sits there
+until the asker concludes the faction ignored them.
+
+`requests.officersMayAccept` is on by default, because an officer can already `/f invite` whoever
+they like — letting them recruit a stranger but not one who asked first is a rule nobody could
+explain. Turn it off where the leader wants to vet every member personally.
+
+Membership is checked again at the moment of acceptance rather than trusted from when the request
+was made. The gap between asking and being answered is where somebody accepts an invitation
+somewhere else.
 
 ### Autoclaim knows when to stop
 

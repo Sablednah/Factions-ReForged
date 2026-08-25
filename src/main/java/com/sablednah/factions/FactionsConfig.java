@@ -16,6 +16,7 @@ public final class FactionsConfig {
     public static final ModConfigSpec.ConfigValue<String> BORDER_ITEM;
     public static final ModConfigSpec.BooleanValue BORDER_FOLLOW_GROUND;
     public static final ModConfigSpec.IntValue MAP_PIXELS_PER_CHUNK;
+    public static final ModConfigSpec.BooleanValue OFFICERS_MAY_ACCEPT;
 
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
@@ -70,6 +71,16 @@ public final class FactionsConfig {
                         "at the exact moment you are walking over it is the one case that",
                         "mattered. Costs a heightmap lookup per particle column.")
                 .define("followGround", true);
+        b.pop();
+
+        b.comment("Asking to join.").push("requests");
+        OFFICERS_MAY_ACCEPT = b
+                .comment("Officers may accept requests to join, not only the leader.",
+                        "On by default, because an officer can already /f invite whoever they",
+                        "like — letting them invite a stranger but not accept one who asked",
+                        "first is a rule nobody could explain. Turn it off on a server where",
+                        "the leader wants to vet every member personally.")
+                .define("officersMayAccept", true);
         b.pop();
 
         b.comment("The claims atlas.").push("map");

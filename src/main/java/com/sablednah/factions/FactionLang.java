@@ -44,6 +44,21 @@ public final class FactionLang {
         Lang.contribute("msg.factions.invite_received",
                 "{term.prefix} &f{player}&7 invited you to &f{name}&7. {term.dim}(/f join {name})");
         Lang.contribute("msg.factions.not_invited", "&cYou have not been invited to &f{name}&c.");
+
+        // Asking to join — the invitation, the other way round.
+        Lang.contribute("msg.factions.requested",
+                "{term.prefix} &7Asked to join &f{name}&7. {term.dim}(they will be told)");
+        Lang.contribute("msg.factions.already_asked", "&cYou have already asked &f{name}&c.");
+        Lang.contribute("msg.factions.request_received",
+                "{term.prefix} &f{player}&7 wants to join. {term.dim}(/f accept {player} — or /f decline)");
+        Lang.contribute("msg.factions.no_requests", "{term.prefix} &7Nobody is waiting to join.");
+        Lang.contribute("msg.factions.requests_header",
+                "{term.prefix} &7Waiting to join {term.dim}({count})&7: &f{list}");
+        Lang.contribute("msg.factions.no_request_from", "&c{player} has not asked to join.");
+        Lang.contribute("msg.factions.accepted", "{term.prefix} &7Let &f{player}&7 in.");
+        Lang.contribute("msg.factions.declined", "{term.prefix} &7Turned &f{player}&7 down.");
+        Lang.contribute("msg.factions.you_were_declined",
+                "{term.prefix} &f{name}&7 turned you down.");
         Lang.contribute("msg.factions.joined", "{term.prefix} &7You joined &f{name}&7.");
         Lang.contribute("msg.factions.member_joined", "{term.prefix} &f{player}&7 joined.");
         Lang.contribute("msg.factions.member_left", "{term.prefix} &f{player}&7 left.");
@@ -125,6 +140,24 @@ public final class FactionLang {
         Lang.contribute("msg.factions.peaceful_no_enemies",
                 "&cA peaceful {term.faction} has no enemies, in either direction.");
         Lang.contribute("msg.factions.is_peaceful", "&a(peaceful)");
+
+        // Where you stand with everybody, in one place.
+        Lang.contribute("msg.factions.status_header",
+                "{term.prefix} &f{name}&7 {peaceful}&7— &f{land}&7 chunks, &f{count}&7 members");
+        Lang.contribute("msg.factions.status_offered_to_us",
+                " {term.dim}-&r &bOffered you an alliance {term.dim}({count})&7: &f{list} {term.dim}(/f ally <name> to agree)");
+        Lang.contribute("msg.factions.status_offered_by_us",
+                " {term.dim}-&r &7Waiting on {term.dim}({count})&7: &f{list}");
+        Lang.contribute("msg.factions.status_allies",
+                " {term.dim}-&r &bAllied {term.dim}({count})&7: &f{list}");
+        Lang.contribute("msg.factions.status_we_declared",
+                " {term.dim}-&r &cYou declared on {term.dim}({count})&7: &f{list}");
+        Lang.contribute("msg.factions.status_they_declared",
+                " {term.dim}-&r &cDeclared on you {term.dim}({count})&7: &f{list}");
+        Lang.contribute("msg.factions.status_requests",
+                " {term.dim}-&r &7Waiting to join {term.dim}({count})&7: &f{list}");
+        Lang.contribute("msg.factions.status_nothing",
+                " {term.dim}-&r &7At peace with everyone, and nobody is waiting on you.");
         Lang.contribute("msg.factions.pvp_peaceful", "&7They are peaceful.");
         Lang.contribute("msg.factions.pvp_same_faction", "&7They are in your {term.faction}.");
         Lang.contribute("msg.factions.pvp_disabled", "&7Fighting is off on this server.");

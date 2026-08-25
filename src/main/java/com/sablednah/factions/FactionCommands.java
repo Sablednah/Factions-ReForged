@@ -46,6 +46,19 @@ public final class FactionCommands {
                         .then(Commands.argument("faction", StringArgumentType.word())
                                 .suggests(FactionCommands::suggestFactions)
                                 .executes(FactionCommands::join)))
+                .then(Commands.literal("request")
+                        .then(Commands.argument("faction", StringArgumentType.word())
+                                .suggests(FactionCommands::suggestFactions)
+                                .executes(FactionCommands::request)))
+                .then(Commands.literal("requests").executes(FactionCommands::requests))
+                .then(Commands.literal("accept")
+                        .then(Commands.argument("player", StringArgumentType.word())
+                                .suggests(FactionCommands::suggestRequesters)
+                                .executes(ctx -> answer(ctx, true))))
+                .then(Commands.literal("decline")
+                        .then(Commands.argument("player", StringArgumentType.word())
+                                .suggests(FactionCommands::suggestRequesters)
+                                .executes(ctx -> answer(ctx, false))))
                 .then(Commands.literal("leave").executes(FactionCommands::leave))
                 .then(Commands.literal("kick")
                         .then(Commands.argument("player", StringArgumentType.word())
@@ -88,6 +101,7 @@ public final class FactionCommands {
                                         .executes(ctx -> map(ctx, true,
                                                 com.mojang.brigadier.arguments.IntegerArgumentType
                                                         .getInteger(ctx, "zoom"))))))
+                .then(Commands.literal("status").executes(FactionCommands::status))
                 .then(Commands.literal("borders").executes(FactionCommands::borders));
     }
 
@@ -122,6 +136,11 @@ public final class FactionCommands {
             return 0;
         }
         announce(ctx, f.get(), Lang.fmt("msg.factions.disbanded", "name", f.get().name()), null);
+        // Both were written and neither was called. Nothing was exploitable — /f join looks the
+        // faction up first — but an offer outliving the thing that made it is a leak with a
+        // longer fuse than that.
+        FactionInvites.forgetFaction(f.get().id());
+        FactionRequests.forgetFaction(f.get().id());
         store(ctx).disband(f.get().id());
         return 1;
     }
@@ -163,10 +182,144 @@ public final class FactionCommands {
             return 0;
         }
         FactionInvites.revoke(target.get().id(), player.getUUID());
+        // Everything else you had asked for is moot; leaving it open only lets some other officer
+        // accept a member they cannot have and then be told why not.
+        FactionRequests.forgetPlayer(player.getUUID());
         Feedback.chat(player, Lang.fmt("msg.factions.joined", "name", target.get().name()));
         announce(ctx, target.get(), Lang.fmt("msg.factions.member_joined",
                 "player", player.getName().getString()), player.getUUID());
         return 1;
+    }
+
+    // --- asking to join ---
+
+    /**
+     * The rank that may answer a request.
+     *
+     * <p>Officers by default, because an officer can already {@code /f invite} whoever they like —
+     * letting them recruit a stranger but not one who asked first is a rule nobody could
+     * explain.</p>
+     */
+    private static FactionStore.Rank answerRank() {
+        return FactionsConfig.OFFICERS_MAY_ACCEPT.get()
+                ? FactionStore.Rank.OFFICER : FactionStore.Rank.LEADER;
+    }
+
+    private static int request(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        String name = StringArgumentType.getString(ctx, "faction");
+        if (store(ctx).of(player.getUUID()).isPresent()) {
+            Feedback.chat(player, Lang.get("msg.factions.already_in_one"));
+            return 0;
+        }
+        Optional<FactionStore.Faction> target = store(ctx).lookup(name);
+        if (target.isEmpty()) {
+            Feedback.chat(player, Lang.fmt("msg.factions.unknown", "name", name));
+            return 0;
+        }
+        if (FactionRequests.pending(target.get().id(), player.getUUID())) {
+            Feedback.chat(player, Lang.fmt("msg.factions.already_asked",
+                    "name", target.get().name()));
+            return 0;
+        }
+        FactionRequests.ask(target.get().id(), player.getUUID());
+        Feedback.chat(player, Lang.fmt("msg.factions.requested", "name", target.get().name()));
+
+        // Told to whoever can act on it, and only them. A request nobody is shown is a request
+        // that sits there until the asker gives up and concludes the faction ignored them.
+        String heard = Lang.fmt("msg.factions.request_received",
+                "player", player.getName().getString());
+        MinecraftServer server = ctx.getSource().getServer();
+        for (UUID member : target.get().memberIds()) {
+            FactionStore.Rank rank = target.get().rankOf(member);
+            if (rank == null || !rank.atLeast(answerRank())) {
+                continue;
+            }
+            ServerPlayer online = server.getPlayerList().getPlayer(member);
+            if (online != null) {
+                Feedback.chat(online, heard);
+            }
+        }
+        return 1;
+    }
+
+    private static int requests(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Optional<FactionStore.Faction> f = atLeast(ctx, player, answerRank());
+        if (f.isEmpty()) {
+            return 0;
+        }
+        List<UUID> waiting = FactionRequests.forFaction(f.get().id());
+        if (waiting.isEmpty()) {
+            Feedback.chat(player, Lang.get("msg.factions.no_requests"));
+            return 0;
+        }
+        MinecraftServer server = ctx.getSource().getServer();
+        com.sablednah.standards.neoforge.StandardsData names =
+                com.sablednah.standards.neoforge.StandardsData.get(server);
+        Feedback.chat(player, Lang.fmt("msg.factions.requests_header",
+                "count", waiting.size(),
+                "list", waiting.stream()
+                        .map(u -> names.nameOf(u).orElse(u.toString().substring(0, 8)))
+                        .collect(java.util.stream.Collectors.joining(", "))));
+        return 1;
+    }
+
+    private static int answer(CommandContext<CommandSourceStack> ctx, boolean accept)
+            throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        String name = StringArgumentType.getString(ctx, "player");
+        Optional<FactionStore.Faction> f = atLeast(ctx, player, answerRank());
+        if (f.isEmpty()) {
+            return 0;
+        }
+        Optional<UUID> who = lookupPlayer(ctx, name);
+        if (who.isEmpty() || !FactionRequests.pending(f.get().id(), who.get())) {
+            Feedback.chat(player, Lang.fmt("msg.factions.no_request_from", "player", name));
+            return 0;
+        }
+        FactionRequests.withdraw(f.get().id(), who.get());
+        ServerPlayer online = ctx.getSource().getServer().getPlayerList().getPlayer(who.get());
+
+        if (!accept) {
+            Feedback.chat(player, Lang.fmt("msg.factions.declined", "player", name));
+            if (online != null) {
+                Feedback.chat(online, Lang.fmt("msg.factions.you_were_declined",
+                        "name", f.get().name()));
+            }
+            return 1;
+        }
+
+        // Checked again here rather than trusted from when they asked: the gap between the two is
+        // where somebody accepts an invitation somewhere else.
+        if (!store(ctx).addMember(f.get().id(), who.get(), FactionStore.Rank.MEMBER)) {
+            Feedback.chat(player, Lang.fmt("msg.factions.they_are_in_one", "player", name));
+            return 0;
+        }
+        FactionRequests.forgetPlayer(who.get());
+        Feedback.chat(player, Lang.fmt("msg.factions.accepted", "player", name));
+        if (online != null) {
+            Feedback.chat(online, Lang.fmt("msg.factions.joined", "name", f.get().name()));
+        }
+        announce(ctx, f.get(), Lang.fmt("msg.factions.member_joined", "player", name),
+                who.get());
+        return 1;
+    }
+
+    private static java.util.concurrent.CompletableFuture<com.mojang.brigadier.suggestion.Suggestions>
+            suggestRequesters(CommandContext<CommandSourceStack> ctx,
+                    com.mojang.brigadier.suggestion.SuggestionsBuilder builder)
+            throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        MinecraftServer server = ctx.getSource().getServer();
+        com.sablednah.standards.neoforge.StandardsData names =
+                com.sablednah.standards.neoforge.StandardsData.get(server);
+        List<String> waiting = store(ctx).of(player.getUUID())
+                .map(f -> FactionRequests.forFaction(f.id()).stream()
+                        .map(u -> names.nameOf(u).orElse(u.toString().substring(0, 8)))
+                        .toList())
+                .orElse(List.of());
+        return SharedSuggestionProvider.suggest(waiting, builder);
     }
 
     private static int leave(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
@@ -493,6 +646,116 @@ public final class FactionCommands {
             return 0;
         }
         return describe(ctx, player, f.get());
+    }
+
+    /**
+     * {@code /f status} — where your faction stands with everybody else.
+     *
+     * <h3>The half that only this can tell you</h3>
+     *
+     * <p>An offered alliance is announced when it is made, and that is the whole of it: if you
+     * were offline, or scrolled past, the offer exists and nothing will ever mention it again.
+     * The same goes for being declared upon — you learn there is a war on by being killed in it.
+     * Everything else here is available a faction at a time through {@code /f who}, which means
+     * knowing who to ask about, which is the thing you do not know.</p>
+     *
+     * <p>So the offers come first and are split by direction, because they are the two ends of
+     * one word and only one of them is your move. An offer <em>to</em> you is a decision waiting
+     * on you; an offer <em>from</em> you is a thing you are waiting on. Sorting both into one
+     * "pending" list would hide which is which behind a name you have to recognise.</p>
+     *
+     * <p>Enemies are split the same way and for a sharper reason: a war you started and a war
+     * somebody started on you need different responses, and the relation itself cannot tell them
+     * apart — {@code relation()} resolves to ENEMY from one side's declaration alone, which is
+     * exactly what makes the direction worth printing.</p>
+     */
+    private static int status(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Optional<FactionStore.Faction> owned = store(ctx).of(player.getUUID());
+        if (owned.isEmpty()) {
+            Feedback.chat(player, Lang.get("msg.factions.none"));
+            return 0;
+        }
+        FactionStore store = store(ctx);
+        FactionStore.Faction mine = owned.get();
+
+        List<String> allies = new java.util.ArrayList<>();
+        List<String> offeredToUs = new java.util.ArrayList<>();
+        List<String> offeredByUs = new java.util.ArrayList<>();
+        List<String> weDeclared = new java.util.ArrayList<>();
+        List<String> theyDeclared = new java.util.ArrayList<>();
+
+        for (FactionStore.Faction other : store.all()) {
+            if (other.id().equals(mine.id())) {
+                continue;
+            }
+            switch (store.relation(mine.id(), other.id())) {
+                case ALLY -> allies.add(other.name());
+                case ENEMY -> {
+                    // Both lists when it is mutual: "we declared on them and they declared back"
+                    // is a different situation from either half alone.
+                    if (mine.enemies().contains(other.id())) {
+                        weDeclared.add(other.name());
+                    }
+                    if (other.enemies().contains(mine.id())) {
+                        theyDeclared.add(other.name());
+                    }
+                }
+                case NEUTRAL -> {
+                    if (store.allianceOffered(other.id(), mine.id())) {
+                        offeredToUs.add(other.name());
+                    }
+                    if (store.allianceOffered(mine.id(), other.id())) {
+                        offeredByUs.add(other.name());
+                    }
+                }
+            }
+        }
+
+        Feedback.chat(player, Lang.fmt("msg.factions.status_header",
+                "name", mine.name(),
+                "peaceful", mine.peaceful() ? Lang.get("msg.factions.is_peaceful") : "",
+                "land", store.claimCount(mine.id()),
+                "count", mine.members().size()));
+
+        // Yours to answer, so it goes first.
+        line(player, "msg.factions.status_offered_to_us", offeredToUs);
+        line(player, "msg.factions.status_offered_by_us", offeredByUs);
+        line(player, "msg.factions.status_allies", allies);
+        line(player, "msg.factions.status_we_declared", weDeclared);
+        line(player, "msg.factions.status_they_declared", theyDeclared);
+
+        FactionStore.Rank rank = mine.rankOf(player.getUUID());
+        if (rank != null && rank.atLeast(answerRank())) {
+            List<UUID> waiting = FactionRequests.forFaction(mine.id());
+            if (!waiting.isEmpty()) {
+                var names = com.sablednah.standards.neoforge.StandardsData.get(
+                        ctx.getSource().getServer());
+                Feedback.chat(player, Lang.fmt("msg.factions.status_requests",
+                        "count", waiting.size(),
+                        "list", waiting.stream()
+                                .map(u -> names.nameOf(u).orElse(u.toString().substring(0, 8)))
+                                .collect(java.util.stream.Collectors.joining(", "))));
+            }
+        }
+
+        if (allies.isEmpty() && offeredToUs.isEmpty() && offeredByUs.isEmpty()
+                && weDeclared.isEmpty() && theyDeclared.isEmpty()) {
+            // Said explicitly, because a header with nothing under it reads as a broken command
+            // rather than as peace.
+            Feedback.chat(player, Lang.get("msg.factions.status_nothing"));
+        }
+        return 1;
+    }
+
+    /** One line of the status, or none at all when there is nothing to say. */
+    private static void line(ServerPlayer player, String key, List<String> names) {
+        if (names.isEmpty()) {
+            return;
+        }
+        names.sort(String.CASE_INSENSITIVE_ORDER);
+        Feedback.chat(player, Lang.fmt(key,
+                "count", names.size(), "list", String.join(", ", names)));
     }
 
     private static int who(CommandContext<CommandSourceStack> ctx, String name)
