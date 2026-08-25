@@ -125,6 +125,11 @@ public final class FactionCommands {
                     : Lang.fmt("msg.factions.name_taken", "name", name));
             return 0;
         }
+        // Founding your own answers the question you were asking everybody else. Left pending,
+        // an officer somewhere still sees you in /f requests and can accept a member they cannot
+        // have — the same reason joining clears them, arriving through the other door out of
+        // being factionless.
+        FactionRequests.forgetPlayer(player.getUUID());
         Feedback.chat(player, Lang.fmt("msg.factions.created", "name", made.get().name()));
         return 1;
     }
