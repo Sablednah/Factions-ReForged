@@ -109,7 +109,10 @@ public final class FactionsEvents {
             return;
         }
         event.setCanceled(true);
-        refuse(player, level, event.getPos());
+        // The exact face they clicked, so the refusal appears under the cursor rather than
+        // inside the block — which for a lever on a wall is where nobody can see it.
+        refuse(player, level, event.getPos(),
+                event.getHitVec() != null ? event.getHitVec().getLocation() : null);
     }
 
     /**
@@ -181,11 +184,66 @@ public final class FactionsEvents {
      */
     private static void refuse(ServerPlayer player, ServerLevel level,
             net.minecraft.core.BlockPos pos) {
+        refuse(player, level, pos, null);
+    }
+
+    private static void refuse(ServerPlayer player, ServerLevel level,
+            net.minecraft.core.BlockPos pos, net.minecraft.world.phys.Vec3 at) {
         String name = Claims.owner(level, new ChunkPos(pos))
                 .map(com.sablednah.standards.api.groups.Group::name)
                 .orElse("?");
         player.displayClientMessage(Feedback.colored(
                 Lang.fmt("msg.factions.cannot_build", "name", name)), true);
+        deny(player, level, pos, at);
+    }
+
+    /** The same red the borders and the map use for an enemy. One palette, one meaning. */
+    private static final int DENIED = 0xFF5555;
+
+    /**
+     * A puff of red where they clicked, and a correction for what their client already drew.
+     *
+     * <p>Two problems, and the first one told us about the second. A cancelled interaction is
+     * <b>silent at the point of contact</b>: the action bar says whose land it is, but the action
+     * bar is at the top of the screen and the disappointment is under the cursor, so the first
+     * instinct is to click again — and the second, and the third — before anybody reads anything.
+     * That is the same failure a teleport with no countdown has, and it wants the same answer:
+     * say no <em>where the no happened</em>.</p>
+     *
+     * <p>The second problem is that the client has usually already drawn a <em>yes</em>. Minecraft
+     * predicts an interaction locally before the server rules on it, which is why a denied lever
+     * still throws its redstone spark — and can be left looking flipped when it is not. A block
+     * that lies about its own state is worse than either a refusal or a lag spike, so the real
+     * state is resent to that player alone. Neighbours too, because a door is two blocks and only
+     * one of them was clicked.</p>
+     *
+     * <p>Sent to the one player. Everybody else watching a stranger fail to open a door should see
+     * exactly what happened in the world, which is nothing.</p>
+     */
+    private static void deny(ServerPlayer player, ServerLevel level,
+            net.minecraft.core.BlockPos pos, net.minecraft.world.phys.Vec3 at) {
+        net.minecraft.world.phys.Vec3 where = at != null
+                ? at
+                : net.minecraft.world.phys.Vec3.atCenterOf(pos);
+        level.sendParticles(player,
+                new net.minecraft.core.particles.DustParticleOptions(DENIED, 1.0F),
+                true, false, where.x, where.y, where.z, 8, 0.15D, 0.15D, 0.15D, 0.0D);
+        // To this player only — a sound played into the level would tell the landowner's
+        // neighbours that somebody is rattling their door, which is a different feature.
+        player.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
+                net.minecraft.core.Holder.direct(
+                        net.minecraft.sounds.SoundEvents.NOTE_BLOCK_BASS.value()),
+                net.minecraft.sounds.SoundSource.BLOCKS,
+                where.x, where.y, where.z, 0.4F, 0.8F, 0L));
+
+        // Undo whatever the client predicted, for the block and the ones a door or a bed shares
+        // its state with.
+        player.connection.send(new net.minecraft.network.protocol.game
+                .ClientboundBlockUpdatePacket(level, pos));
+        for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.values()) {
+            player.connection.send(new net.minecraft.network.protocol.game
+                    .ClientboundBlockUpdatePacket(level, pos.relative(dir)));
+        }
     }
 
     /**
