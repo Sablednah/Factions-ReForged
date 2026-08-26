@@ -257,6 +257,60 @@ seam exists so the gate cannot be skipped, and being its first consumer means pr
 
 ---
 
+## 4. The standard
+
+Taking an enemy's flag is the oldest thing in warfare and no faction plugin has ever done it. It is
+also, done carelessly, a hole in the protection with a story attached — so the shape matters more
+than the idea.
+
+**Not "banners are unprotected".** That is a grief vector: an enemy walks through a build stripping
+decorations, and hours of somebody's work goes in a backpack. Every banner being takeable makes
+banners something nobody places.
+
+**One standard per faction.** `/f standard` designates the banner you are looking at, in your own
+land. That banner — and only that banner — can be taken by a **declared enemy**. Everything else in
+your territory stays as protected as it is now. An objective, not a category.
+
+### It must see the sky
+
+The rule that turns this from a mechanic into a game:
+
+> **A standard may only be placed where it has open sky above it.**
+
+Because enemies cannot break your blocks and cannot open your doors, the only way anyone reaches
+your standard is a path you left. Without the sky rule everybody entombs their flag in a sealed
+box, it is unreachable by construction, and the feature is dead on arrival. With it, the standard
+is necessarily *outside*, visible, and defended by **architecture and people** rather than by
+burial.
+
+That makes placing it a real decision with a real trade: high on a tower where the whole server can
+see whose land this is, or tucked in a walled courtyard where it is duller but harder to reach. It
+also means a raid has a shape — get in, get to the flag, get out — instead of being a chest hunt.
+
+### What taking it does
+
+**Symbolic, and that is enough.** The thief holds your banner. It is announced to the whole server,
+because the entire value is that everyone knows. `/f status` carries the standing line — *"your
+standard is held by Ashfell"* — which is a humiliation that sits there until somebody does
+something about it, and that is the engine of the feud.
+
+**And it is always recoverable.** The thief can plant it as a trophy in their own land, at which
+point it is a standard in *their* territory, subject to the same rules, and you can take it back.
+Losing your flag permanently ends a story; losing it temporarily starts one.
+
+**Resist wiring it to power**, at least at first. A mechanical penalty turns a symbol into a
+resource, and then the correct play is to never place one — which is the same failure as the sealed
+box, reached from the other direction. If it later wants teeth, the honest place is a *bonus* to
+the holder rather than a penalty to the loser: carrying an enemy standard should be something you
+want to do, not something they must prevent.
+
+### Worth having anyway
+
+A faction banner is a good idea even with nobody stealing anything. It is a real item a vanilla
+client renders, it can be the map legend and the chat colour, and `/f standard` gives a faction a
+visual identity that a three-letter tag cannot. The theft is what makes it matter; the flag is
+worth having first.
+
 ## Worth stealing from the archive
 
 Read for intent, not lifted — the standing rule.
