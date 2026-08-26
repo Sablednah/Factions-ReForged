@@ -4,6 +4,21 @@ plugins {
     id 'net.neoforged.moddev'
 }
 
+// A Windows-side dev client must not build into the same directory the running WSL dev server
+// has its jars open from. Standards' root build does this for itself; the subproject needs it
+// too, or :factions:jar fails with "Unable to delete file ... factions-<version>.jar" and it
+// reads like a build fault rather than a file lock.
+//
+// It has to be here and not in the root script: layout.buildDirectory is per-project, and the
+// root's redirection says nothing about ours. The -P property reaches every project in the
+// build, so testing for it here is enough.
+//
+// On /mnt/d this bites in BOTH directions — drvfs goes through Windows file APIs, so a file a
+// Windows process holds open cannot be replaced from Linux either. See CLAUDE.md.
+if (project.hasProperty('winClient')) {
+    layout.buildDirectory = layout.projectDirectory.dir("build-win-${project.winClient}")
+}
+
 version = "${factions_mod_version}+mc${minecraft_version}"
 group = factions_mod_group_id
 base.archivesName = factions_mod_id
