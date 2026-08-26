@@ -305,6 +305,7 @@ cd ../SableCraft-Standards
 ## Where to look next
 
 - [`CHANGELOG.md`](CHANGELOG.md) — what is in this release, and what is knowingly missing from it.
+- [`CURSEFORGE.md`](CURSEFORGE.md) — the project description, versioned alongside the mod.
 - [`POWER.md`](POWER.md) — **power, the faction bank's other half, and the standard**: designed in
   full and not built. Four land-control modes, why `fixed` is the ceiling and power the erosion,
   and what the 2012 numbers actually were rather than what everyone remembers them as.
