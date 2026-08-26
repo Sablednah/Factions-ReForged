@@ -155,7 +155,11 @@ public final class FactionsConfig {
                         "Priced at the position the chunk occupied, never today's price, or a",
                         "faction could buy cheap while small, grow, and release the same chunk",
                         "for a profit — a money printer fuelled by claiming and unclaiming one",
-                        "square.")
+                        "square.",
+                        "Priced by POSITION, not by receipt — nothing records what an individual",
+                        "chunk cost, so land claimed while this was 0 still refunds once you",
+                        "turn it on. Best set on a fresh world: an established faction on 67",
+                        "chunks at cost 30 / growth 0.5 can release its way to about 25,000.")
                 .defineInRange("claimRefund", 0.7D, 0.0D, 1.0D);
         OFFICERS_MAY_WITHDRAW = b
                 .comment("Officers may take money out, not only the leader.",

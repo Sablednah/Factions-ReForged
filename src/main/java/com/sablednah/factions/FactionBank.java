@@ -114,6 +114,18 @@ public final class FactionBank {
      * then release the same chunk for more than it paid — a money printer whose fuel is claiming
      * and unclaiming the same square. So the refund is priced at the position the chunk occupied:
      * releasing your 20th chunk refunds a fraction of what the 20th cost.</p>
+     *
+     * <p><b>Position, not receipt.</b> Nothing records what any individual chunk actually cost,
+     * which means land claimed while {@code claimCost} was zero still refunds when it is turned
+     * on. That is a deliberate trade rather than an oversight: a per-chunk purchase price is a
+     * second number stored against every claim on the server — the hottest and most numerous data
+     * this mod holds — to make an edge case exact that occurs once in a world's life.</p>
+     *
+     * <p>It does have a size, though, and an owner should know it before flipping the switch. The
+     * one-off exposure is the whole refund curve for the land already out there: a faction sitting
+     * on 67 chunks at {@code claimCost = 30} and {@code claimCostGrowth = 0.5} can release its way
+     * to roughly <b>25,000</b>. <b>Turn claim costs on for a fresh world, or expect established
+     * landholders to be able to cash out once.</b></p>
      */
     public static double refund(int heldBefore) {
         return claimCost(heldBefore - 1) * FactionsConfig.CLAIM_REFUND.get();
