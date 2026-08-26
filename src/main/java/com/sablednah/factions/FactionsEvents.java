@@ -92,6 +92,87 @@ public final class FactionsEvents {
     }
 
     /**
+     * Doors, buttons, levers, chests, furnaces — everything a right-click reaches.
+     *
+     * <p>Cancelled outright rather than only denying the block half, so an item used against the
+     * block cannot slip through either: a bucket, a flint and steel and a bone meal are all
+     * "interaction" by any reading a landowner cares about.</p>
+     */
+    @SubscribeEvent
+    static void onRightClickBlock(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent
+            .RightClickBlock event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)
+                || !(event.getLevel() instanceof ServerLevel level)) {
+            return;
+        }
+        if (FactionProtection.mayInteract(player, level, event.getPos())) {
+            return;
+        }
+        event.setCanceled(true);
+        refuse(player, level, event.getPos());
+    }
+
+    /**
+     * Item frames, armour stands, and the paintings somebody always takes.
+     *
+     * <p>Worth its own listener because none of these are blocks, so every block-shaped guard
+     * misses them — and they are the first thing a visitor walks off with. An armour stand full
+     * of diamond is a chest that forgot to be one.</p>
+     */
+    @SubscribeEvent
+    static void onEntityInteract(net.neoforged.neoforge.event.entity.player.PlayerInteractEvent
+            .EntityInteract event) {
+        guardEntity(event, event.getTarget());
+    }
+
+    @SubscribeEvent
+    static void onEntityInteractSpecific(net.neoforged.neoforge.event.entity.player
+            .PlayerInteractEvent.EntityInteractSpecific event) {
+        guardEntity(event, event.getTarget());
+    }
+
+    /** Breaking a frame is a left-click, so it arrives as an attack rather than an interaction. */
+    @SubscribeEvent
+    static void onAttackEntity(net.neoforged.neoforge.event.entity.player.AttackEntityEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)
+                || !(player.level() instanceof ServerLevel level)) {
+            return;
+        }
+        // Only the furniture. Fighting is the pvp listener's business, and cancelling an attack
+        // here would quietly disarm everybody standing in a claim.
+        net.minecraft.world.entity.Entity target = event.getTarget();
+        if (!(target instanceof net.minecraft.world.entity.decoration.HangingEntity)
+                && !(target instanceof net.minecraft.world.entity.decoration.ArmorStand)) {
+            return;
+        }
+        if (FactionProtection.mayBuild(player, level, target.blockPosition())) {
+            return;
+        }
+        event.setCanceled(true);
+        refuse(player, level, target.blockPosition());
+    }
+
+    private static void guardEntity(net.neoforged.bus.api.ICancellableEvent event,
+            net.minecraft.world.entity.Entity target) {
+        if (!(event instanceof net.neoforged.neoforge.event.entity.player.PlayerInteractEvent e)
+                || !(e.getEntity() instanceof ServerPlayer player)
+                || !(e.getLevel() instanceof ServerLevel level)) {
+            return;
+        }
+        // Animals are left alone: a claim is not a reason a wandering cow cannot be fed, and
+        // leads and boats are how people get about.
+        if (!(target instanceof net.minecraft.world.entity.decoration.HangingEntity)
+                && !(target instanceof net.minecraft.world.entity.decoration.ArmorStand)) {
+            return;
+        }
+        if (FactionProtection.mayInteract(player, level, target.blockPosition())) {
+            return;
+        }
+        event.setCanceled(true);
+        refuse(player, level, target.blockPosition());
+    }
+
+    /**
      * Say whose land it is rather than just refusing.
      *
      * <p>A block that silently refuses to break reads as lag, and the player tries again — half a

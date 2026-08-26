@@ -132,21 +132,10 @@ public final class FactionBridge implements GroupProvider, ClaimProvider {
      */
     @Override
     public boolean mayModify(ServerPlayer player, ServerLevel level, BlockPos pos) {
-        FactionStore store = store();
-        Optional<String> ownerId = store.ownerOf(dimensionOf(level),
-                pos.getX() >> 4, pos.getZ() >> 4);
-        if (ownerId.isEmpty()) {
-            return true; // wilderness
-        }
-        Optional<FactionStore.Faction> mine = store.of(player.getUUID());
-        if (mine.isEmpty()) {
-            return false;
-        }
-        String id = mine.get().id();
-        if (id.equals(ownerId.get())) {
-            return true;
-        }
-        return store.relation(id, ownerId.get()) == FactionStore.Relation.ALLY;
+        // One answer, in one place. This is the seam ZombieMod and CityWorld will ask through,
+        // and our own listeners ask the same method, so the two can never drift into disagreeing
+        // about who may touch what.
+        return FactionProtection.mayBuild(player, level, pos);
     }
 
     // --- shared ---

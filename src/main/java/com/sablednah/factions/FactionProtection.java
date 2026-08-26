@@ -1,0 +1,81 @@
+package com.sablednah.factions;
+
+import java.util.Optional;
+
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+
+/**
+ * Who may touch what, in whose land.
+ *
+ * <h2>Building and touching are different questions</h2>
+ *
+ * <p>An ally is somebody you have agreed not to fight, and usually somebody you want walking
+ * through your front door. That is not the same as somebody who may take your walls down. The two
+ * got answered together at first, which quietly made every alliance a demolition permit — so they
+ * are separate now, and they default differently:</p>
+ *
+ * <ul>
+ *   <li><b>Building and breaking: members only.</b> The original's default, and the safer one. An
+ *       alliance is a diplomatic position, and diplomatic positions change; the blocks should not
+ *       be hostage to the week somebody fell out.</li>
+ *   <li><b>Interacting: members and allies.</b> Doors, buttons, levers, chests. An ally who cannot
+ *       open your gate is an ally who stands outside it.</li>
+ * </ul>
+ *
+ * <h2>Interaction is the protection that actually matters</h2>
+ *
+ * <p>Guarding block-breaking alone protects the walls and leaves everything behind them open. A
+ * stranger who cannot mine your chest can still <em>open</em> it, which is the theft the claim was
+ * bought to prevent — and can flip your levers, open your doors, and empty your furnaces on the
+ * way out.</p>
+ *
+ * <p>So the rule is the blunt one: <b>right-clicking a block in somebody's claim does nothing.</b>
+ * Not a list of protected materials, which is a list somebody has to maintain and which every
+ * modded block is missing from by default. The original shipped exactly that list — door,
+ * trapdoor, chest, furnace, dispenser, repeater — and it was already incomplete for vanilla by the
+ * time anyone read it.</p>
+ *
+ * <p>The escape hatch it leaves is deliberate and dates back just as far: <b>pressure plates still
+ * work</b>, because standing on one is not a right-click. A landowner who wants visitors puts a
+ * plate outside the door. Protection you can deliberately open a hole in beats protection you have
+ * to switch off.</p>
+ */
+public final class FactionProtection {
+
+    /** Break, place, and anything else that changes the world's blocks. */
+    public static boolean mayBuild(ServerPlayer player, ServerLevel level, BlockPos pos) {
+        return may(player, level, pos, FactionsConfig.ALLIES_MAY_BUILD.get());
+    }
+
+    /** Right-clicking: doors, buttons, containers, item frames. */
+    public static boolean mayInteract(ServerPlayer player, ServerLevel level, BlockPos pos) {
+        if (!FactionsConfig.PROTECT_INTERACTION.get()) {
+            return true;
+        }
+        return may(player, level, pos, FactionsConfig.ALLIES_MAY_INTERACT.get());
+    }
+
+    private static boolean may(ServerPlayer player, ServerLevel level, BlockPos pos,
+            boolean alliesToo) {
+        FactionStore store = FactionStore.get(level.getServer());
+        Optional<String> owner = store.ownerOf(FactionBridge.dimensionOf(level),
+                pos.getX() >> 4, pos.getZ() >> 4);
+        if (owner.isEmpty()) {
+            return true; // wilderness belongs to nobody and is defended by nobody
+        }
+        Optional<FactionStore.Faction> mine = store.of(player.getUUID());
+        if (mine.isEmpty()) {
+            return false;
+        }
+        String id = mine.get().id();
+        if (id.equals(owner.get())) {
+            return true;
+        }
+        return alliesToo
+                && store.relation(id, owner.get()) == FactionStore.Relation.ALLY;
+    }
+
+    private FactionProtection() {}
+}

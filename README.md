@@ -90,6 +90,27 @@ Two ways to see them: `/f borders` for surveying, or just **hold the tool** — 
 Pick it up, see what you are doing, put it down. The same shape as vanilla's debug stick, and
 nobody leaves it on and forgets why their screen is full of dust.
 
+### Protection is about right-clicks, not just pickaxes
+
+Guarding block-breaking alone protects the walls and leaves everything behind them open. A stranger
+who cannot mine your chest can still **open** it, which is the theft the claim was bought to
+prevent — and flip your levers, open your doors and empty your furnaces on the way out. So
+right-clicking a block in somebody's claim does nothing at all.
+
+Deliberately not a list of protected materials. A list is something somebody has to maintain, and
+every modded block is missing from it by default; the original shipped exactly such a list — door,
+trapdoor, chest, furnace, dispenser, repeater — and it was already incomplete for vanilla by the
+time anyone read it. Item frames, armour stands and paintings are covered separately, because none
+of them are blocks and every block-shaped guard misses them.
+
+**Pressure plates still work**, because standing on one is not a right-click. A landowner who wants
+visitors puts a plate outside the door — protection you can deliberately open a hole in beats
+protection you have to switch off. That trick is as old as the plugin and still the right answer.
+
+Allies may **interact** by default and may **not build** by default, and the split is on purpose.
+An ally who cannot open your gate stands outside it; an ally who can take your walls down is a
+demolition permit you issued for a diplomatic position that can change next week.
+
 ### Chat goes through Standards, not around it
 
 Faction and ally channels are a `ChatRouter`, which is Standards' seam for exactly this, rather

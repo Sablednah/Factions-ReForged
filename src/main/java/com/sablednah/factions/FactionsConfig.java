@@ -9,6 +9,9 @@ public final class FactionsConfig {
 
     public static final ModConfigSpec.IntValue CLAIM_LIMIT_PER_MEMBER;
     public static final ModConfigSpec.BooleanValue REQUIRE_CONNECTED_CLAIMS;
+    public static final ModConfigSpec.BooleanValue PROTECT_INTERACTION;
+    public static final ModConfigSpec.BooleanValue ALLIES_MAY_INTERACT;
+    public static final ModConfigSpec.BooleanValue ALLIES_MAY_BUILD;
     public static final ModConfigSpec.BooleanValue PVP_BETWEEN_FACTIONS;
     public static final ModConfigSpec.BooleanValue PVP_IN_OWN_LAND;
     public static final ModConfigSpec.IntValue BORDER_PARTICLE_TICKS;
@@ -39,6 +42,27 @@ public final class FactionsConfig {
                         "land-grab tactic rather than a place.",
                         "The first claim is exempt, obviously.")
                 .define("mustBeConnected", true);
+        PROTECT_INTERACTION = b
+                .comment("Right-clicking a block in somebody's claim does nothing.",
+                        "On by default, and it is the protection that matters: guarding only",
+                        "block-breaking protects the walls and leaves everything behind them",
+                        "open. A stranger who cannot mine your chest can still OPEN it.",
+                        "Deliberately not a list of protected blocks — a list is something",
+                        "somebody has to maintain, and every modded block is missing from it.",
+                        "Pressure plates still work, because standing on one is not a",
+                        "right-click. Put a plate outside the door for visitors: protection you",
+                        "can open a hole in beats protection you have to switch off.")
+                .define("protectInteraction", true);
+        ALLIES_MAY_INTERACT = b
+                .comment("Allies may open your doors, chests and buttons.",
+                        "On by default — an ally who cannot open your gate stands outside it.")
+                .define("alliesMayInteract", true);
+        ALLIES_MAY_BUILD = b
+                .comment("Allies may build and break in your land.",
+                        "OFF by default, and separate from interaction on purpose. An alliance",
+                        "is a diplomatic position and those change; your walls should not be",
+                        "hostage to the week somebody fell out.")
+                .define("alliesMayBuild", false);
         b.pop();
 
         b.comment("Fighting.").push("pvp");

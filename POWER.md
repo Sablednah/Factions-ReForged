@@ -145,12 +145,33 @@ CityWorld a natural hook without either of them knowing what a faction is.
   under a naive implementation. One death, one deduction, attributed to whoever the combat API
   says was behind it.
 
-### XP is the wrong currency
+### XP is the right *rate*, and the wrong *balance*
 
-The owner floated tying power to XP. It is the obvious idea and it should be turned down: **XP is
-spent.** Tying power to an XP balance means enchanting a sword costs your faction land, and every
-player learns to choose between their gear and their borders for no thematic reason at all. Use
-kills directly.
+Two different ideas wear the same words, and only one of them is bad.
+
+**Power tied to your XP balance** would be wrong, and obviously so once stated: XP is *spent*, so
+enchanting a sword would cost your faction land and every player would learn to choose between
+their gear and their borders for no thematic reason at all.
+
+**Power restored in proportion to XP *earned*** is a different proposal and a much better one than
+the mob table I was going to write. The experience a mob drops is already Minecraft's own opinion
+about how hard it was to kill, maintained by Mojang, and — the part that matters here — **extended
+for free by every mod on the server.** A ZombieMod tank is worth more than a walker without
+ZombieMod telling us anything, without a registry of mob ids, and without us being wrong about
+some modpack's boss the day it is added.
+
+So: take the drop from `LivingExperienceDropEvent`, not from the player's balance. Spending XP
+costs nothing. Two consequences worth stating:
+
+- **It must be the mob's drop, not XP picked up**, or smelting and mining and breeding all become
+  power, and a furnace full of iron is a land claim.
+- **Scale is a config, not a constant.** Experience is denominated for enchanting, not for
+  territory, so `power.xpPerPower` converts — and it is the dial a server tunes to decide whether
+  recovering from a bad night takes an evening or a week.
+
+This also folds the two active modes together neatly. `pvp` restores from kills that drop XP
+because a player drops XP; `pve` restores from mobs for the same reason; the rule is one sentence
+and the modes only differ in what they *lose* power to.
 
 ### The seam
 

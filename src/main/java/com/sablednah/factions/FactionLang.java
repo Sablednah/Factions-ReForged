@@ -97,6 +97,8 @@ public final class FactionLang {
                 "&cYou are no longer an officer of anything.");
         Lang.contribute("msg.factions.cannot_build",
                 "&cThis land belongs to &f{name}&c.");
+        Lang.contribute("msg.factions.cannot_touch",
+                "&cThat belongs to &f{name}&c.");
 
         // Territory, on the action bar
         Lang.contribute("msg.factions.entered", "{colour}{name}");
