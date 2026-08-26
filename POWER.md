@@ -314,6 +314,23 @@ It also works identically in every mode, because it multiplies **restoration** w
 `pvp` regains from kills, `pve` from experience, both from time; the standard makes all of it
 faster and needs no separate rule per mode.
 
+#### Bonus or baseline — the same arithmetic, a different feeling
+
+Worth writing down because it will come up again: dropping the base rate so a standard restores you
+to "normal" is the *same numbers* as raising the bonus above a normal base. One dial and one
+multiplier either way, so **a server chooses the framing in config and we do not have to choose in
+code.**
+
+Only the default is ours to pick, and there the two differ in one place: **who lives in the penalty
+state.** With a low base it is the brand-new one-person faction — precisely the group that can
+least afford to stand a flag in the open where a real faction can walk over and take it. "Expose a
+target or regenerate slowly forever" is a harsh thing to say to somebody on their first evening.
+
+So the default base stays generous and a hard server dials it down. If the *feeling* of a low base
+is what is wanted — that a standard is essential and losing one is a disaster — **raise the
+multiplier instead of lowering the floor.** A 2× standard produces the same gap and leaves a
+flagless faction merely slow rather than broken.
+
 ### The thief must plant it, in the open, in their own land
 
 A captured standard is worth a smaller bonus — but **only while it is planted in the thief's own
