@@ -190,6 +190,49 @@ public final class FactionsEvents {
     }
 
     /**
+     * Explosions stop at the fence.
+     *
+     * <h3>Filtered, not cancelled</h3>
+     *
+     * <p>The affected-block list is edited rather than the event being called off, because an
+     * explosion does not respect the border it straddles: a creeper on the wilderness side of your
+     * wall should crater the wilderness and leave the wall standing. Cancelling the whole thing
+     * would protect land nobody claimed, and would do it invisibly.</p>
+     *
+     * <h3>Blocks only</h3>
+     *
+     * <p>The entity list is left completely alone. Standing next to a creeper in your own base is
+     * still a mistake, and a claim that made its owners immune to explosions would be a PvP
+     * mechanic smuggled in as a building one.</p>
+     *
+     * <h3>Whose claim, not whose creeper</h3>
+     *
+     * <p>Every affected block is tested against the chunk it is in, one at a time, and the answer
+     * does not depend on who lit it. That matters for TNT: a raider cannot get a cheaper result by
+     * standing outside and throwing it in, which is exactly the workaround somebody finds within a
+     * day of the first wall going up.</p>
+     */
+    @SubscribeEvent
+    static void onExplosion(net.neoforged.neoforge.event.level.ExplosionEvent.Detonate event) {
+        if (!(event.getLevel() instanceof ServerLevel level)) {
+            return;
+        }
+        boolean tnt = isTnt(event.getExplosion().getDirectSourceEntity());
+        if (tnt ? !FactionsConfig.BLOCK_TNT.get() : !FactionsConfig.BLOCK_MOB_EXPLOSIONS.get()) {
+            return;
+        }
+        FactionStore store = FactionStore.get(level.getServer());
+        String dim = FactionBridge.dimensionOf(level);
+        event.getAffectedBlocks().removeIf(pos ->
+                store.ownerOf(dim, pos.getX() >> 4, pos.getZ() >> 4).isPresent());
+    }
+
+    private static boolean isTnt(net.minecraft.world.entity.Entity source) {
+        return source instanceof net.minecraft.world.entity.item.PrimedTnt
+                || source instanceof net.minecraft.world.entity.vehicle.minecart.MinecartTNT;
+    }
+
+    /**
      * Say whose land it is rather than just refusing.
      *
      * <p>A block that silently refuses to break reads as lag, and the player tries again — half a

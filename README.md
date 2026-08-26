@@ -103,6 +103,18 @@ trapdoor, chest, furnace, dispenser, repeater — and it was already incomplete 
 time anyone read it. Item frames, armour stands and paintings are covered separately, because none
 of them are blocks and every block-shaped guard misses them.
 
+**Explosions stop at the fence**, and the list of affected blocks is *filtered* rather than the
+explosion being cancelled — a creeper on the wilderness side of your wall should crater the
+wilderness and leave the wall standing. Entities are untouched: standing next to a creeper in your
+own base is still a mistake, and a claim that made its owners bomb-proof would be a PvP mechanic
+smuggled in as a building one. Every block is judged by the chunk it sits in and never by who lit
+the fuse, so throwing TNT in from outside buys a raider nothing.
+
+`blockTnt` is the one genuine choice there. On a PvP faction server **TNT is the raid tool** — it is
+how a siege gets through a wall, and disabling it means a well-built base can never be taken. On a
+PvE or build server it is purely how somebody erases your evening. It defaults to on because this
+is a PvE-leaning mod; a war server should turn it off and expect cannons.
+
 **`anyoneMayRotateFrames`** is worth knowing about, because the right answer differs by server.
 Turning a frame that already holds something takes nothing and changes nothing that cannot be
 turned back — but it is unmistakable evidence somebody stood there. On a build server that is petty

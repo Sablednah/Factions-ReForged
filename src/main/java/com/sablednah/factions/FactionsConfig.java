@@ -13,6 +13,8 @@ public final class FactionsConfig {
     public static final ModConfigSpec.BooleanValue ALLIES_MAY_INTERACT;
     public static final ModConfigSpec.BooleanValue ALLIES_MAY_BUILD;
     public static final ModConfigSpec.BooleanValue ANYONE_MAY_ROTATE_FRAMES;
+    public static final ModConfigSpec.BooleanValue BLOCK_MOB_EXPLOSIONS;
+    public static final ModConfigSpec.BooleanValue BLOCK_TNT;
     public static final ModConfigSpec.BooleanValue PVP_BETWEEN_FACTIONS;
     public static final ModConfigSpec.BooleanValue PVP_IN_OWN_LAND;
     public static final ModConfigSpec.IntValue BORDER_PARTICLE_TICKS;
@@ -75,6 +77,23 @@ public final class FactionsConfig {
                         "Taking the item is still refused either way — this permits turning it,",
                         "never emptying it, and never filling an empty frame.")
                 .define("anyoneMayRotateFrames", false);
+        BLOCK_MOB_EXPLOSIONS = b
+                .comment("Creepers, ghasts, withers and end crystals cannot crater claimed land.",
+                        "On by default. A creeper is not a raid — nobody decided it, nobody",
+                        "gains from it, and a claim that stops a person walking in but not a mob",
+                        "wandering in is protection with a hole shaped like a Tuesday evening.",
+                        "Players still take the damage. Only the blocks are spared.")
+                .define("blockMobExplosions", true);
+        BLOCK_TNT = b
+                .comment("TNT cannot break blocks in claimed land either.",
+                        "On by default, and this one is a genuine choice rather than an obvious",
+                        "one. On a PvP faction server TNT IS the raid tool: it is how a siege",
+                        "gets through a wall, and turning it off means a well-built base can",
+                        "never be taken. On a PvE or build server it is purely how somebody",
+                        "erases your evening.",
+                        "Default reflects this being a PvE-leaning mod. A war server should turn",
+                        "it off and expect cannons.")
+                .define("blockTnt", true);
         b.pop();
 
         b.comment("Fighting.").push("pvp");
