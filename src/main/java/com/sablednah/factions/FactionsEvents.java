@@ -298,6 +298,13 @@ public final class FactionsEvents {
                 net.minecraft.sounds.SoundSource.BLOCKS,
                 where.x, where.y, where.z, 1.0F, 0.5F, 0L));
 
+        // And whatever it predicted about the player's own hands. Placing a block consumes it
+        // client-side before the server rules, so a refused pressure plate vanished from the
+        // hotbar and stayed gone until relog — which reads as the mod eating your items, and is
+        // the single most alarming thing a protection plugin can appear to do. The inventory is
+        // authoritative on the server the whole time; only the picture was wrong.
+        player.containerMenu.sendAllDataToRemote();
+
         // Undo whatever the client predicted, for the block and the ones a door or a bed shares
         // its state with.
         player.connection.send(new net.minecraft.network.protocol.game
