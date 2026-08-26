@@ -152,7 +152,10 @@ public final class FactionsEvents {
             return;
         }
         event.setCanceled(true);
-        refuse(player, level, target.blockPosition());
+        // Aimed at the entity rather than the block it is standing in. An armour stand's
+        // blockPosition is the floor under its feet, so the refusal appeared at ankle height —
+        // out of shot for anybody stood close enough to have clicked it.
+        refuse(player, level, target.blockPosition(), target.getBoundingBox().getCenter());
     }
 
     private static void guardEntity(net.neoforged.bus.api.ICancellableEvent event,
@@ -183,7 +186,7 @@ public final class FactionsEvents {
             return;
         }
         event.setCanceled(true);
-        refuse(player, level, target.blockPosition());
+        refuse(player, level, target.blockPosition(), target.getBoundingBox().getCenter());
     }
 
     /**
