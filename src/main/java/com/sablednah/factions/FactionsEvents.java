@@ -230,11 +230,16 @@ public final class FactionsEvents {
                 true, false, where.x, where.y, where.z, 8, 0.15D, 0.15D, 0.15D, 0.0D);
         // To this player only — a sound played into the level would tell the landowner's
         // neighbours that somebody is rattling their door, which is a different feature.
+        //
+        // Full volume and pitched right down. At 0.4 it arrived, showed up in the subtitles, and
+        // was inaudible under a door that was making its own noise at the same moment — which is
+        // precisely when it needed to be heard. A cue that competes with the thing it is
+        // explaining has to win.
         player.connection.send(new net.minecraft.network.protocol.game.ClientboundSoundPacket(
                 net.minecraft.core.Holder.direct(
                         net.minecraft.sounds.SoundEvents.NOTE_BLOCK_BASS.value()),
                 net.minecraft.sounds.SoundSource.BLOCKS,
-                where.x, where.y, where.z, 0.4F, 0.8F, 0L));
+                where.x, where.y, where.z, 1.0F, 0.5F, 0L));
 
         // Undo whatever the client predicted, for the block and the ones a door or a bed shares
         // its state with.
