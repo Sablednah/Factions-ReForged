@@ -110,6 +110,15 @@ own base is still a mistake, and a claim that made its owners bomb-proof would b
 smuggled in as a building one. Every block is judged by the chunk it sits in and never by who lit
 the fuse, so throwing TNT in from outside buys a raider nothing.
 
+**Placing is building; landing is not.** The place guard is absolute whatever `blockTnt` says — you
+may never put a block down in somebody's claim, TNT included. So with TNT allowed, the way through
+a wall is to *deliver* a charge rather than to stand there and stack it: primed TNT flung over the
+border by a second charge is a moving entity, and where it lands is governed by `blockTnt` alone.
+
+That is the 2012 raiding meta arriving without anyone designing it, and it is worth keeping on
+purpose. Anybody can walk up to a wall with a stack; building something that lobs a charge over it
+is a different evening, so a siege stays a skill rather than a formality.
+
 `blockTnt` is the one genuine choice there. On a PvP faction server **TNT is the raid tool** — it is
 how a siege gets through a wall, and disabling it means a well-built base can never be taken. On a
 PvE or build server it is purely how somebody erases your evening. It defaults to on because this

@@ -92,7 +92,9 @@ public final class FactionsConfig {
                         "never be taken. On a PvE or build server it is purely how somebody",
                         "erases your evening.",
                         "Default reflects this being a PvE-leaning mod. A war server should turn",
-                        "it off and expect cannons.")
+                        "it off and expect cannons — literally: placing a block in somebody's",
+                        "claim is refused whatever this says, so with TNT allowed the way",
+                        "through a wall is to deliver a charge rather than stack one against it.")
                 .define("blockTnt", true);
         b.pop();
 
