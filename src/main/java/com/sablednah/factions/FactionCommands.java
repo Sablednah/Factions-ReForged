@@ -136,7 +136,12 @@ public final class FactionCommands {
                                         .then(Commands.argument("amount",
                                                         com.mojang.brigadier.arguments
                                                                 .DoubleArgumentType.doubleArg(0.01D))
-                                                .executes(FactionCommands::payFaction)))))
+                                                .executes(FactionCommands::payFaction)
+                                                // A ransom that cannot state its terms is a
+                                                // donation nobody can act on.
+                                                .then(Commands.argument("reason",
+                                                                StringArgumentType.greedyString())
+                                                        .executes(FactionCommands::payFaction))))))
                 .then(Commands.literal("status").executes(FactionCommands::status))
                 .then(fixtures())
                 .then(Commands.literal("borders").executes(FactionCommands::borders));
@@ -775,8 +780,13 @@ public final class FactionCommands {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         Optional<FactionStore.Faction> owned = store(ctx).of(player.getUUID());
         if (owned.isEmpty()) {
-            Feedback.chat(player, Lang.get("msg.factions.none"));
-            return 0;
+            // Not an error. Somebody with no faction has a status too — it is just made of the
+            // things they are waiting on rather than the things they hold, and those are exactly
+            // the two lists nothing else will show them: an invitation is announced once and
+            // never mentioned again, and a request they made is invisible from their side
+            // entirely. Answering "you have no faction" to the one person who most needs a list
+            // is the least helpful thing this command could do.
+            return statusOfNobody(ctx, player);
         }
         FactionStore store = store(ctx);
         FactionStore.Faction mine = owned.get();
@@ -856,6 +866,31 @@ public final class FactionCommands {
             // Said explicitly, because a header with nothing under it reads as a broken command
             // rather than as peace.
             Feedback.chat(player, Lang.get("msg.factions.status_nothing"));
+        }
+        return 1;
+    }
+
+    /** What a factionless player is waiting on: who has asked them, and who they have asked. */
+    private static int statusOfNobody(CommandContext<CommandSourceStack> ctx, ServerPlayer player)
+            throws CommandSyntaxException {
+        FactionStore store = store(ctx);
+        Feedback.chat(player, Lang.get("msg.factions.status_none_header"));
+
+        List<String> invited = FactionInvites.forPlayer(player.getUUID()).stream()
+                .map(store::byId)
+                .flatMap(Optional::stream)
+                .map(FactionStore.Faction::name)
+                .collect(java.util.stream.Collectors.toCollection(java.util.ArrayList::new));
+        List<String> asked = store.all().stream()
+                .filter(f -> FactionRequests.pending(f.id(), player.getUUID()))
+                .map(FactionStore.Faction::name)
+                .collect(java.util.stream.Collectors.toCollection(java.util.ArrayList::new));
+
+        // Invitations first: those are the ones you can act on this second.
+        line(player, "msg.factions.status_invited", invited);
+        line(player, "msg.factions.status_asked", asked);
+        if (invited.isEmpty() && asked.isEmpty()) {
+            Feedback.chat(player, Lang.get("msg.factions.status_none_pending"));
         }
         return 1;
     }
@@ -1020,11 +1055,20 @@ public final class FactionCommands {
         FactionBank.Result result =
                 FactionBank.pay(store(ctx), mine.get().id(), them.get().id(), amount);
         if (result == FactionBank.Result.OK) {
+            String note = "";
+            try {
+                // Their words, so the same rule chat follows: text, never formatting.
+                note = Feedback.stripCodes(StringArgumentType.getString(ctx, "reason")).trim();
+            } catch (IllegalArgumentException noReason) {
+                // Optional, and usually absent.
+            }
             // Told to them as well. Money arriving in a bank with no explanation is
             // indistinguishable from a bug, and this is how tribute and ransom get paid.
             announce(ctx, them.get(), Lang.fmt("msg.factions.bank_received",
                     "name", mine.get().name(),
-                    "amount", com.sablednah.standards.api.economy.Economy.format(amount)), null);
+                    "amount", com.sablednah.standards.api.economy.Economy.format(amount),
+                    "note", note.isEmpty() ? ""
+                            : Lang.fmt("msg.eco.pay_note", "reason", note)), null);
         }
         return report(player, result, amount, "msg.factions.bank_paid", them.get().name());
     }

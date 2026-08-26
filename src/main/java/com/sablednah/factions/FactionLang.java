@@ -156,6 +156,14 @@ public final class FactionLang {
                 " {term.dim}-&r &cYou declared on {term.dim}({count})&7: &f{list}");
         Lang.contribute("msg.factions.status_they_declared",
                 " {term.dim}-&r &cDeclared on you {term.dim}({count})&7: &f{list}");
+        Lang.contribute("msg.factions.status_none_header",
+                "{term.prefix} &7You are in no {term.faction}. {term.dim}(/f list — or /f create <name>)");
+        Lang.contribute("msg.factions.status_invited",
+                " {term.dim}-&r &bInvited by {term.dim}({count})&7: &f{list} {term.dim}(/f join <name>)");
+        Lang.contribute("msg.factions.status_asked",
+                " {term.dim}-&r &7You have asked {term.dim}({count})&7: &f{list} {term.dim}(waiting on them)");
+        Lang.contribute("msg.factions.status_none_pending",
+                " {term.dim}-&r &7Nobody has invited you, and you have asked nobody.");
         Lang.contribute("msg.factions.status_bank",
                 " {term.dim}-&r &7Bank &a{amount}&7 {term.dim}(next chunk {next})");
         Lang.contribute("msg.factions.status_requests",
@@ -220,7 +228,7 @@ public final class FactionLang {
         Lang.contribute("msg.factions.bank_paid",
                 "{term.prefix} &7Sent &a{amount}&7 to &f{name}&7.");
         Lang.contribute("msg.factions.bank_received",
-                "{term.prefix} &f{name}&7 sent you &a{amount}&7.");
+                "{term.prefix} &f{name}&7 sent you &a{amount}&7{note}&7.");
         Lang.contribute("msg.factions.bank_short", "&cThere is not &f{amount}&c to move.");
         Lang.contribute("msg.factions.bank_pay_self",
                 "&cYou already have it.");
