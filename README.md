@@ -1,4 +1,4 @@
-# Factions ReForged
+<img src="docs/banner.png" alt="Factions ReForged" width="640">
 
 Land, allegiance, and the people you hold it with.
 

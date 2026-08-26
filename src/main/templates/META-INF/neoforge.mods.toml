@@ -8,6 +8,10 @@ version = "${mod_version}"
 displayName = "${mod_name}"
 authors = "${mod_authors}"
 description = '''${mod_description}'''
+displayURL = "https://github.com/Sablednah/Factions-ReForged"
+# 256x256 — what the mods list actually draws at. A larger source is jar weight for pixels
+# nobody sees.
+logoFile = "factions.png"
 
 # Standards is a HARD dependency: the groups seam, the claims seam, Lang, SafeLoc and the
 # teleport warmups are all borrowed rather than reimplemented.
