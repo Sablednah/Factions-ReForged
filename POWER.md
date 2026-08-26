@@ -289,8 +289,8 @@ also means a raid has a shape — get in, get to the flag, get out — instead o
 
 ### What taking it does
 
-**Symbolic, and that is enough.** The thief holds your banner. It is announced to the whole server,
-because the entire value is that everyone knows. `/f status` carries the standing line — *"your
+The thief holds your banner. It is announced to the whole server, because the entire value is that
+everyone knows. `/f status` carries the standing line — *"your
 standard is held by Ashfell"* — which is a humiliation that sits there until somebody does
 something about it, and that is the engine of the feud.
 
@@ -298,11 +298,50 @@ something about it, and that is the engine of the feud.
 point it is a standard in *their* territory, subject to the same rules, and you can take it back.
 Losing your flag permanently ends a story; losing it temporarily starts one.
 
-**Resist wiring it to power**, at least at first. A mechanical penalty turns a symbol into a
-resource, and then the correct play is to never place one — which is the same failure as the sealed
-box, reached from the other direction. If it later wants teeth, the honest place is a *bonus* to
-the holder rather than a penalty to the loser: carrying an enemy standard should be something you
-want to do, not something they must prevent.
+### The teeth: a standard makes power come back faster
+
+The owner's answer, and it is better than the one above. A planted standard multiplies your power
+restoration — `power.standardBonus`, say 1.5×. Taking it denies the enemy that.
+
+**It escapes the trap because the worst case of placing one is the case of never having placed
+one.** A faction with no standard regenerates at the base rate; a faction whose standard was stolen
+regenerates at the base rate. There is no state below baseline, so putting your flag up is never
+mechanically worse than leaving it down — the only thing you have spent is the opportunity you gave
+an enemy. That is exactly the shape a symbol needs: it can be *lost*, but it cannot be turned into
+a stick to beat you with.
+
+It also works identically in every mode, because it multiplies **restoration** whatever the source.
+`pvp` regains from kills, `pve` from experience, both from time; the standard makes all of it
+faster and needs no separate rule per mode.
+
+### The thief must plant it, in the open, in their own land
+
+A captured standard is worth a smaller bonus — but **only while it is planted in the thief's own
+territory, under the sky, by the same rule that governs their own.**
+
+This is the part that stops it snowballing. Power exists to make a careless faction vulnerable, so
+a mechanic where winning straightforwardly produces more winning would invert the whole point. Here
+the reward requires **exposure**: to profit from somebody's flag you must stand it up where they
+can come and take it back, and where taking it back is now *their* raid. A captured standard is a
+liability with a dividend.
+
+**Hoarding earns nothing.** A standard in a chest or an ender chest pays no bonus to anybody. The
+mechanic rewards *use*, not possession, and a flag in a box is a flag out of the game.
+
+### Denial must not be permanent
+
+The one genuinely unresolved bit, so it is written down rather than discovered later. If a thief
+simply hides your standard forever, they have permanently removed your bonus for the price of one
+raid and no further play. Options, in order of preference:
+
+1. **A hoarded standard can be re-designated by its owner after a cooldown** — days, configurable.
+   A *planted* one cannot: they have earned that, and the answer is to go and take it back.
+2. A hoarded standard decays home after a while.
+3. Nothing; theft is permanent until recovered. Simple, and the most likely to end in somebody
+   quitting.
+
+Option 1 reads best: it makes the difference between a *raid* and a *sulk* mechanical. Plant it and
+you keep it; sit on it and it goes home.
 
 ### Worth having anyway
 
