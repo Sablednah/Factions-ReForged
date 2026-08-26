@@ -12,6 +12,7 @@ public final class FactionsConfig {
     public static final ModConfigSpec.BooleanValue PROTECT_INTERACTION;
     public static final ModConfigSpec.BooleanValue ALLIES_MAY_INTERACT;
     public static final ModConfigSpec.BooleanValue ALLIES_MAY_BUILD;
+    public static final ModConfigSpec.BooleanValue ANYONE_MAY_ROTATE_FRAMES;
     public static final ModConfigSpec.BooleanValue PVP_BETWEEN_FACTIONS;
     public static final ModConfigSpec.BooleanValue PVP_IN_OWN_LAND;
     public static final ModConfigSpec.IntValue BORDER_PARTICLE_TICKS;
@@ -63,6 +64,17 @@ public final class FactionsConfig {
                         "is a diplomatic position and those change; your walls should not be",
                         "hostage to the week somebody fell out.")
                 .define("alliesMayBuild", false);
+        ANYONE_MAY_ROTATE_FRAMES = b
+                .comment("Anybody may turn an item frame that already holds something.",
+                        "Off by default. Rotation carries meaning where frames are used as",
+                        "signage or sorting labels, and a stranger spinning those is petty",
+                        "griefing rather than fun.",
+                        "Turn it ON for a roleplay server, where it is the opposite: coming back",
+                        "to find your frames turned is proof somebody walked through your base,",
+                        "and a way to say 'I was here' that breaks nothing and starts wars.",
+                        "Taking the item is still refused either way — this permits turning it,",
+                        "never emptying it, and never filling an empty frame.")
+                .define("anyoneMayRotateFrames", false);
         b.pop();
 
         b.comment("Fighting.").push("pvp");

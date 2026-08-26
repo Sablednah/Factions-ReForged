@@ -171,6 +171,17 @@ public final class FactionsEvents {
         if (FactionProtection.mayInteract(player, level, target.blockPosition())) {
             return;
         }
+        // The calling card. Turning a frame that already holds something takes nothing and
+        // changes nothing that cannot be turned back — but it is unmistakable evidence somebody
+        // stood there, which on a roleplay server is worth more than anything they could steal.
+        //
+        // Only a frame that is already occupied: an EMPTY one is not being turned, it is being
+        // filled, and putting your own item into somebody's wall is a change to their base.
+        if (FactionsConfig.ANYONE_MAY_ROTATE_FRAMES.get()
+                && target instanceof net.minecraft.world.entity.decoration.ItemFrame frame
+                && !frame.getItem().isEmpty()) {
+            return;
+        }
         event.setCanceled(true);
         refuse(player, level, target.blockPosition());
     }

@@ -103,6 +103,13 @@ trapdoor, chest, furnace, dispenser, repeater — and it was already incomplete 
 time anyone read it. Item frames, armour stands and paintings are covered separately, because none
 of them are blocks and every block-shaped guard misses them.
 
+**`anyoneMayRotateFrames`** is worth knowing about, because the right answer differs by server.
+Turning a frame that already holds something takes nothing and changes nothing that cannot be
+turned back — but it is unmistakable evidence somebody stood there. On a build server that is petty
+griefing of your sorting labels; on a roleplay server it is a calling card, a way to say *I was
+here* that breaks nothing and starts wars. Off by default, and taking the item is refused either
+way.
+
 **Pressure plates still work**, because standing on one is not a right-click. A landowner who wants
 visitors puts a plate outside the door — protection you can deliberately open a hole in beats
 protection you have to switch off. That trick is as old as the plugin and still the right answer.
