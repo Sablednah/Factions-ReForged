@@ -12,26 +12,49 @@ Requires **[SableCraft Standards](../SableCraft-Standards)**, and not optionally
 ## What it does
 
 ```
-/f create <name>         found one
-/f invite <player>       officer+
-/f join <name>           take an invitation
-/f request <name>        ask to be let in
-/f requests              who is waiting, officer+
-/f accept | decline      answer one
-/f claim | unclaim       the chunk you are stood in
-/f autoclaim             take every chunk you walk into, until it runs out
-/f sethome | home        on your own land, with Standards' warmup and safe landing
-/f ally|enemy|neutral    declare towards another faction
-/f peaceful              opt out of fighting entirely
-/f tag SBL               the short label chat uses
-/f map [item [zoom]]     see below
-/f borders               show the edges
-/f status                where you stand with everybody
-/f chat [public|faction|ally]   or cycle with no argument
-/f c <message>           one line to your faction, without switching
-/f ca <message>          one line to your allies
-/f money [deposit|withdraw|pay] the faction bank
+  joining and leaving
+/f create <name>              found one
+/f invite <player>            officer+
+/f join <name>                take an invitation
+/f request <name>             ask to be let in
+/f requests                   who is waiting, officer+
+/f accept | decline <player>  answer one
+/f leave                      alone, or after handing it on
+/f disband                    a leader ending it for everybody
+/f kick <player>              officer+
+/f promote | demote <player>  leader
+
+  land
+/f claim | unclaim            the chunk you are stood in
+/f autoclaim                  take every chunk you walk into, until it runs out
+/f unclaimall                 release the lot
+/f sethome | home             on your own land, with Standards' warmup and safe landing
+/f map [item [zoom]]          see below
+/f borders                    show the edges
+
+  who you are, and to whom
+/f tag SBL | -                the short label chat uses
+/f rename <name>              keeps the id, so nothing else moves
+/f ally | enemy | neutral     declare towards another faction
+/f peaceful                   opt out of fighting entirely
+/f status                     where you stand with everybody
 /f who <name> | list
+
+  talking
+/f chat [public|faction|ally] or cycle with no argument
+/f c <message>                one line to your faction, without switching
+/f ca <message>               one line to your allies
+/f chatspy                    staff, watching every channel
+
+  money
+/f money                      the bank, and what the next chunk costs
+/f money deposit <n>          anyone
+/f money withdraw <n>         officer+
+/f money pay <faction> <n> [reason]
+
+  testing
+/f fixture seed [chunks]      invent neighbours to have relations with
+/f fixture clear              take them away
 ```
 
 ## Three things worth the read
@@ -278,3 +301,17 @@ cd ../SableCraft-Standards
 ./gradlew :factions:build
 ./gradlew runServer          # loads both mods
 ```
+
+## Where to look next
+
+- [`CHANGELOG.md`](CHANGELOG.md) — what is in this release, and what is knowingly missing from it.
+- [`POWER.md`](POWER.md) — **power, the faction bank's other half, and the standard**: designed in
+  full and not built. Four land-control modes, why `fixed` is the ceiling and power the erosion,
+  and what the 2012 numbers actually were rather than what everyone remembers them as.
+- [SableCraft Standards](https://github.com/Sablednah/SableCraft-Standards) — the mod underneath.
+  Its `GROUPS-API.md`, `CHAT-API.md` and `ECONOMY-API.md` describe the seams this one is built on,
+  and `COMBAT-API.md` is where the combat tag will live when it arrives.
+
+## Licence
+
+MIT. All original work — read the old plugin for intent, then build it better.
