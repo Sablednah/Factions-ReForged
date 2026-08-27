@@ -172,6 +172,7 @@ public final class FactionLang {
                 " {term.dim}-&r &7At peace with everyone, and nobody is waiting on you.");
         Lang.contribute("msg.factions.pvp_peaceful", "&7They are peaceful.");
         Lang.contribute("msg.factions.pvp_same_faction", "&7They are in your {term.faction}.");
+        Lang.contribute("msg.factions.pvp_ally", "&7They are your ally.");
         Lang.contribute("msg.factions.pvp_disabled", "&7Fighting is off on this server.");
 
         // Looking

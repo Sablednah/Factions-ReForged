@@ -17,6 +17,7 @@ public final class FactionsConfig {
     public static final ModConfigSpec.BooleanValue BLOCK_TNT;
     public static final ModConfigSpec.BooleanValue PVP_BETWEEN_FACTIONS;
     public static final ModConfigSpec.BooleanValue PVP_IN_OWN_LAND;
+    public static final ModConfigSpec.BooleanValue PVP_BETWEEN_ALLIES;
     public static final ModConfigSpec.IntValue BORDER_PARTICLE_TICKS;
     public static final ModConfigSpec.IntValue BORDER_RADIUS_CHUNKS;
     public static final ModConfigSpec.ConfigValue<String> BORDER_ITEM;
@@ -109,6 +110,13 @@ public final class FactionsConfig {
                         "Off by default — friendly fire inside your own faction is almost always",
                         "an accident, and the one time it is not, there is a /f kick for that.")
                 .define("withinAFaction", false);
+        PVP_BETWEEN_ALLIES = b
+                .comment("Allied factions may fight each other.",
+                        "Off by default. Friendly fire between allies is off in every version of",
+                        "this game anybody remembers, and an alliance that stops you being",
+                        "overclaimed while doing nothing to stop you being shot is not much of",
+                        "an alliance.")
+                .define("betweenAllies", false);
         b.pop();
 
         b.comment("Showing the border.").push("borders");

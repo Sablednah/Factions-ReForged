@@ -11,6 +11,7 @@ import com.sablednah.standards.api.groups.Group;
 import com.sablednah.standards.api.groups.GroupKind;
 import com.sablednah.standards.api.groups.GroupProvider;
 import com.sablednah.standards.api.groups.Groups;
+import com.sablednah.standards.neoforge.Feedback;
 import com.sablednah.standards.neoforge.Lang;
 
 import net.minecraft.core.BlockPos;
@@ -66,6 +67,9 @@ public final class FactionBridge implements GroupProvider, ClaimProvider {
     }
 
     public static void install(MinecraftServer server) {
+        // Who may fight whom now goes through Standards, so a hostile SKILL is refused for the
+        // same reasons a sword is. Cancelling damage ourselves only ever stopped swords.
+        com.sablednah.standards.api.combat.Harm.register(new Pvp());
         FactionBridge bridge = new FactionBridge(server);
         Groups.register(bridge);
         Claims.register(bridge);
@@ -181,5 +185,58 @@ public final class FactionBridge implements GroupProvider, ClaimProvider {
                 return faction.memberIds();
             }
         };
+    }
+
+    /**
+     * Who may fight whom, answered through Standards rather than by cancelling damage ourselves.
+     *
+     * <h3>Why it moved</h3>
+     *
+     * <p>Cancelling {@code LivingIncomingDamageEvent} stops swords and stops nothing else. A
+     * hostile <b>skill</b> — a curse, a snare, a summon aimed at somebody — is not a damage event,
+     * so a faction that declared itself peaceful was peaceful against arrows and defenceless
+     * against spells. That is not what {@code /f peaceful} promises, and no amount of care in this
+     * file could have fixed it: the mod casting the spell has to be able to ask.</p>
+     */
+    public static final class Pvp implements com.sablednah.standards.api.combat.HarmProvider {
+
+        @Override
+        public String id() {
+            return "factions:pvp";
+        }
+
+        @Override
+        public Optional<net.minecraft.network.chat.Component> forbids(ServerPlayer attacker,
+                ServerPlayer victim) {
+            FactionStore store = FactionStore.get(victim.level().getServer());
+            Optional<FactionStore.Faction> mine = store.of(attacker.getUUID());
+            Optional<FactionStore.Faction> theirs = store.of(victim.getUUID());
+
+            String key = null;
+            // Peaceful first, and in both directions, because it is a promise rather than a
+            // preference: a faction that has opted out must not be draggable back in by somebody
+            // else's declaration.
+            if (mine.map(FactionStore.Faction::peaceful).orElse(false)
+                    || theirs.map(FactionStore.Faction::peaceful).orElse(false)) {
+                key = "msg.factions.pvp_peaceful";
+            } else if (mine.isPresent() && theirs.isPresent()
+                    && mine.get().id().equals(theirs.get().id())) {
+                if (!FactionsConfig.PVP_IN_OWN_LAND.get()) {
+                    key = "msg.factions.pvp_same_faction";
+                }
+            } else if (mine.isPresent() && theirs.isPresent()
+                    && store.relation(mine.get().id(), theirs.get().id())
+                            == FactionStore.Relation.ALLY
+                    && !FactionsConfig.PVP_BETWEEN_ALLIES.get()) {
+                // Allies. Missing until 1.1, which meant an alliance stopped you being overclaimed
+                // and did nothing whatever to stop you being shot — friendly fire is off between
+                // allies in every version of this game anybody remembers.
+                key = "msg.factions.pvp_ally";
+            } else if (!FactionsConfig.PVP_BETWEEN_FACTIONS.get()) {
+                key = "msg.factions.pvp_disabled";
+            }
+            return key == null ? Optional.empty()
+                    : Optional.of(Feedback.colored(Lang.get(key)));
+        }
     }
 }

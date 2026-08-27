@@ -11,7 +11,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
-import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
@@ -315,46 +314,6 @@ public final class FactionsEvents {
         }
     }
 
-    /**
-     * Who may hit whom.
-     *
-     * <p>Peaceful is checked first and in both directions, because it is a promise rather than a
-     * preference: a faction that has declared itself out of the fighting should not be draggable
-     * back in by somebody else's declaration.</p>
-     */
-    @SubscribeEvent
-    static void onDamage(LivingIncomingDamageEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer victim)) {
-            return;
-        }
-        if (!(event.getSource().getEntity() instanceof ServerPlayer attacker)) {
-            return;
-        }
-        if (attacker.getUUID().equals(victim.getUUID())) {
-            return;
-        }
-        FactionStore store = FactionStore.get(victim.level().getServer());
-        Optional<FactionStore.Faction> mine = store.of(attacker.getUUID());
-        Optional<FactionStore.Faction> theirs = store.of(victim.getUUID());
-
-        String refusal = null;
-        if (mine.map(FactionStore.Faction::peaceful).orElse(false)
-                || theirs.map(FactionStore.Faction::peaceful).orElse(false)) {
-            refusal = "msg.factions.pvp_peaceful";
-        } else if (mine.isPresent() && theirs.isPresent()
-                && mine.get().id().equals(theirs.get().id())) {
-            if (!FactionsConfig.PVP_IN_OWN_LAND.get()) {
-                refusal = "msg.factions.pvp_same_faction";
-            }
-        } else if (!FactionsConfig.PVP_BETWEEN_FACTIONS.get()) {
-            refusal = "msg.factions.pvp_disabled";
-        }
-
-        if (refusal != null) {
-            event.setCanceled(true);
-            attacker.displayClientMessage(Feedback.colored(Lang.get(refusal)), true);
-        }
-    }
 
     private FactionsEvents() {}
 }
