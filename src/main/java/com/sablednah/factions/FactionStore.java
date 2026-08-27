@@ -137,11 +137,34 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
                 .apply(i, Bank::new));
     }
 
-    private record Snapshot(List<Faction> factions, List<Claim> claims, List<Bank> banks) {
+    /**
+     * One player's power.
+     *
+     * <p>Kept per <b>player</b> and not per faction, because that is what it is: leaving a faction
+     * does not restore the power you lost dying, and joining one does not lend you somebody
+     * else's. A faction's power is the sum of the people currently in it, which is also what makes
+     * recruiting worth something and losing members cost something.</p>
+     *
+     * <p>Stored for everyone, including players in no faction — they may join one tomorrow, and a
+     * player who could wipe their losses by leaving for an afternoon would.</p>
+     */
+    private record Power(UUID player, double power) {
+        static final Codec<Power> CODEC = RecordCodecBuilder.create(i -> i.group(
+                UUIDUtil.STRING_CODEC.fieldOf("player").forGetter(Power::player),
+                Codec.DOUBLE.fieldOf("power").forGetter(Power::power))
+                .apply(i, Power::new));
+    }
+
+    private record Snapshot(List<Faction> factions, List<Claim> claims, List<Bank> banks,
+            List<Power> power) {
         static final Codec<Snapshot> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Faction.CODEC.listOf().optionalFieldOf("factions", List.of()).forGetter(Snapshot::factions),
                 Claim.CODEC.listOf().optionalFieldOf("claims", List.of()).forGetter(Snapshot::claims),
-                Bank.CODEC.listOf().optionalFieldOf("banks", List.of()).forGetter(Snapshot::banks))
+                Bank.CODEC.listOf().optionalFieldOf("banks", List.of()).forGetter(Snapshot::banks),
+                // Optional with an empty default, so a world saved before power existed loads
+                // with everybody at full rather than failing to decode and taking the factions
+                // with it.
+                Power.CODEC.listOf().optionalFieldOf("power", List.of()).forGetter(Snapshot::power))
                 .apply(i, Snapshot::new));
     }
 
@@ -168,10 +191,22 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
     /** faction id → what it is holding. Absent means zero; no row is written for an empty bank. */
     private final Map<String, Double> banks = new LinkedHashMap<>();
 
+    /**
+     * player → current power. Absent means <b>full</b>, not zero.
+     *
+     * <p>Which is the opposite of the original, and deliberate: it starts new players at maximum
+     * rather than at nothing. MassiveCraft began everybody at zero, so a new faction could claim
+     * nothing for the best part of an hour — defensible on a server where that is the ritual, and
+     * simply baffling on one where somebody has installed this expecting it to behave like the
+     * claim limit it replaces. A server that wants the old feel sets {@code startAtZero}.</p>
+     */
+    private final Map<UUID, Double> power = new LinkedHashMap<>();
+
     private FactionStore(Snapshot snapshot) {
         snapshot.factions().forEach(f -> factions.put(f.id(), f));
         snapshot.claims().forEach(c -> claims.put(key(c.dimension(), c.x(), c.z()), c.faction()));
         snapshot.banks().forEach(b -> banks.put(b.faction(), b.balance()));
+        snapshot.power().forEach(row -> power.put(row.player(), row.power()));
     }
 
     private Snapshot snapshot() {
@@ -186,7 +221,9 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
                 money.add(new Bank(id, balance));
             }
         });
-        return new Snapshot(List.copyOf(factions.values()), out, money);
+        List<Power> powers = new ArrayList<>();
+        power.forEach((id, value) -> powers.add(new Power(id, value)));
+        return new Snapshot(List.copyOf(factions.values()), out, money, powers);
     }
 
     public static FactionStore get(MinecraftServer server) {
@@ -337,6 +374,8 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
         // The bank too. Money in a disbanded faction's account is money nobody can ever reach,
         // and a recycled id inheriting it would be worse.
         banks.remove(id);
+        // Power is NOT cleared: it belongs to the players, not to the faction they were in, and
+        // disbanding to wipe your losses would be the first thing anybody tried.
         // And so do other factions' opinions about it, or a recycled name inherits old grudges.
         List<Faction> touched = factions.values().stream()
                 .filter(f -> f.allies().contains(id) || f.enemies().contains(id))
@@ -351,6 +390,59 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
         }
         setDirty();
         return true;
+    }
+
+    /**
+     * Whether this chunk is on the edge of that faction's territory.
+     *
+     * <p>A chunk they own with at least one orthogonal neighbour they do not. Used by overclaiming
+     * so a raid has to start at the outside and work in, rather than reaching over a wall for the
+     * one chunk somebody keeps their things in.</p>
+     */
+    public boolean isBorderOf(String dimension, int x, int z, String factionId) {
+        if (!ownerOf(dimension, x, z).map(factionId::equals).orElse(false)) {
+            return false;
+        }
+        return !ownerOf(dimension, x + 1, z).map(factionId::equals).orElse(false)
+                || !ownerOf(dimension, x - 1, z).map(factionId::equals).orElse(false)
+                || !ownerOf(dimension, x, z + 1).map(factionId::equals).orElse(false)
+                || !ownerOf(dimension, x, z - 1).map(factionId::equals).orElse(false);
+    }
+
+    // --- power ---
+
+    /** Somebody's current power. Absent means they have not lost any. */
+    public double powerOf(UUID player) {
+        return power.getOrDefault(player, FactionsConfig.POWER_MAX.get());
+    }
+
+    /**
+     * Move somebody's power, clamped to the configured range.
+     *
+     * @return what it ended up at
+     */
+    public double adjustPower(UUID player, double delta) {
+        double min = FactionsConfig.POWER_MIN.get();
+        double max = FactionsConfig.POWER_MAX.get();
+        double now = Math.max(min, Math.min(max, powerOf(player) + delta));
+        power.put(player, now);
+        setDirty();
+        return now;
+    }
+
+    /**
+     * A faction's power: the sum of the people currently in it.
+     *
+     * <p>Offline members count. Their power is a fact about them rather than about their presence,
+     * and a faction that became raidable every time its members went to work would teach people to
+     * log in at 3am rather than to play well.</p>
+     */
+    public double powerOf(Faction f) {
+        double total = 0;
+        for (UUID member : f.memberIds()) {
+            total += powerOf(member);
+        }
+        return total;
     }
 
     // --- the bank ---

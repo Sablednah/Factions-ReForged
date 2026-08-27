@@ -142,6 +142,11 @@ public final class FactionCommands {
                                                 .then(Commands.argument("reason",
                                                                 StringArgumentType.greedyString())
                                                         .executes(FactionCommands::payFaction))))))
+                .then(Commands.literal("power")
+                        .executes(ctx -> power(ctx, null))
+                        .then(Commands.argument("player", StringArgumentType.word())
+                                .executes(ctx -> power(ctx,
+                                        StringArgumentType.getString(ctx, "player")))))
                 .then(Commands.literal("status").executes(FactionCommands::status))
                 .then(fixtures())
                 .then(Commands.literal("borders").executes(FactionCommands::borders));
@@ -512,6 +517,12 @@ public final class FactionCommands {
         FactionStore store = store(ctx);
 
         int limit = FactionClaims.limitFor(f.get());
+        // Read BEFORE the attempt: once the chunk changes hands the old owner is no longer the
+        // owner, and both the message and the announcement would name the raider.
+        Optional<FactionStore.Faction> victim = store.ownerOf(dim, chunk.x, chunk.z)
+                .flatMap(store::byId)
+                .filter(other -> !other.id().equals(f.get().id()));
+        String victimName = victim.map(FactionStore.Faction::name).orElse("?");
         // The decision itself lives in FactionClaims so that /f autoclaim cannot drift from it.
         switch (FactionClaims.attempt(store, dim, chunk, f.get())) {
             case ALREADY_YOURS -> {
@@ -543,6 +554,35 @@ public final class FactionCommands {
                         "balance", com.sablednah.standards.api.economy.Economy.format(
                                 FactionBank.balance(store, f.get().id()))));
                 return 0;
+            }
+            case THEIRS_AND_HELD -> {
+                Feedback.chat(player, Lang.fmt("msg.factions.claim_held", "name",
+                        store.ownerOf(dim, chunk.x, chunk.z).flatMap(store::byId)
+                                .map(FactionStore.Faction::name).orElse("?")));
+                return 0;
+            }
+            case NOT_AT_WAR -> {
+                Feedback.chat(player, Lang.fmt("msg.factions.claim_not_at_war", "name",
+                        store.ownerOf(dim, chunk.x, chunk.z).flatMap(store::byId)
+                                .map(FactionStore.Faction::name).orElse("?")));
+                return 0;
+            }
+            case PEACEFUL -> {
+                Feedback.chat(player, Lang.get("msg.factions.peaceful_no_enemies"));
+                return 0;
+            }
+            case NOT_THEIR_BORDER -> {
+                Feedback.chat(player, Lang.get("msg.factions.claim_not_border"));
+                return 0;
+            }
+            case TAKEN -> {
+                Feedback.chat(player, Lang.fmt("msg.factions.claim_taken",
+                        "x", chunk.x, "z", chunk.z, "name", victimName));
+                // Told to the victim, and it must be. Land quietly changing hands is the one thing
+                // a claim system cannot do silently: they would find out by walking home, and by
+                // then the raid is over and nobody was there to answer it.
+                victim.ifPresent(loser -> announce(ctx, loser, Lang.fmt("msg.factions.claim_lost",
+                        "name", f.get().name(), "x", chunk.x, "z", chunk.z), null));
             }
             case CLAIMED -> Feedback.chat(player, Lang.fmt("msg.factions.claimed",
                     "x", chunk.x, "z", chunk.z, "held", store.claimCount(f.get().id()),
@@ -837,6 +877,25 @@ public final class FactionCommands {
         line(player, "msg.factions.status_we_declared", weDeclared);
         line(player, "msg.factions.status_they_declared", theyDeclared);
 
+        // Power, and specifically the EXPOSURE. "You hold 22 chunks on an entitlement of 18" is
+        // the line that earns the whole feature: a raid you did not know was possible is
+        // indistinguishable from a bug.
+        if (FactionPower.Mode.of(FactionsConfig.POWER_MODE.get()).active()) {
+            int held = store.claimCount(mine.id());
+            int entitled = FactionPower.entitlement(mine.members().size(), store.powerOf(mine),
+                    FactionsConfig.POWER_MAX.get(), FactionsConfig.CLAIM_LIMIT_PER_MEMBER.get());
+            Feedback.chat(player, Lang.fmt("msg.factions.status_power",
+                    "power", FactionPowerEvents.trim(store.powerOf(mine)),
+                    "held", held,
+                    "entitled", entitled < 0 ? Lang.get("msg.factions.no_limit")
+                            : String.valueOf(entitled)));
+            int over = FactionPower.overreach(held, entitled);
+            if (over > 0) {
+                Feedback.chat(player, Lang.fmt("msg.factions.power_exposed",
+                        "over", over, "held", held, "entitled", entitled));
+            }
+        }
+
         // Money, but only when there is something to say about it — a bank line reading zero on
         // a server with no economy is noise on every status anybody ever runs.
         double bank = FactionBank.balance(store, mine.id());
@@ -986,6 +1045,50 @@ public final class FactionCommands {
         // point of asking for a zoom is that you wanted a different one.
         Feedback.chat(player, Lang.fmt("msg.factions.map_given",
                 "chunks", 128 / Integer.highestOneBit(Math.min(8, ppc))));
+        return 1;
+    }
+
+    /** {@code /f power [player]} — yours, or theirs, and what it entitles your faction to. */
+    private static int power(CommandContext<CommandSourceStack> ctx, String who)
+            throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        if (!FactionPower.Mode.of(FactionsConfig.POWER_MODE.get()).active()) {
+            Feedback.chat(player, Lang.get("msg.factions.power_off"));
+            return 0;
+        }
+        FactionStore store = store(ctx);
+        UUID subject = player.getUUID();
+        String name = player.getName().getString();
+        if (who != null) {
+            Optional<UUID> found = lookupPlayer(ctx, who);
+            if (found.isEmpty()) {
+                Feedback.chat(player, Lang.fmt("msg.factions.unknown_player", "player", who));
+                return 0;
+            }
+            subject = found.get();
+            name = who;
+        }
+        Feedback.chat(player, Lang.fmt("msg.factions.power_mine",
+                "player", name,
+                "power", FactionPowerEvents.trim(store.powerOf(subject)),
+                "max", FactionPowerEvents.trim(FactionsConfig.POWER_MAX.get())));
+
+        store.of(subject).ifPresent(f -> {
+            int held = store.claimCount(f.id());
+            int entitled = FactionPower.entitlement(f.members().size(), store.powerOf(f),
+                    FactionsConfig.POWER_MAX.get(), FactionsConfig.CLAIM_LIMIT_PER_MEMBER.get());
+            Feedback.chat(player, Lang.fmt("msg.factions.power_faction",
+                    "name", f.name(),
+                    "power", FactionPowerEvents.trim(store.powerOf(f)),
+                    "held", held,
+                    "entitled", entitled < 0 ? Lang.get("msg.factions.no_limit")
+                            : String.valueOf(entitled)));
+            int over = FactionPower.overreach(held, entitled);
+            if (over > 0) {
+                Feedback.chat(player, Lang.fmt("msg.factions.power_exposed",
+                        "over", over, "held", held, "entitled", entitled));
+            }
+        });
         return 1;
     }
 

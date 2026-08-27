@@ -25,6 +25,15 @@ public final class FactionsConfig {
     public static final ModConfigSpec.IntValue MAP_PIXELS_PER_CHUNK;
     public static final ModConfigSpec.BooleanValue OFFICERS_MAY_ACCEPT;
     public static final ModConfigSpec.BooleanValue FIXTURES;
+    public static final ModConfigSpec.ConfigValue<String> POWER_MODE;
+    public static final ModConfigSpec.DoubleValue POWER_MAX;
+    public static final ModConfigSpec.DoubleValue POWER_MIN;
+    public static final ModConfigSpec.DoubleValue POWER_PER_DEATH;
+    public static final ModConfigSpec.DoubleValue POWER_PER_MINUTE;
+    public static final ModConfigSpec.DoubleValue POWER_PER_XP;
+    public static final ModConfigSpec.BooleanValue POWER_START_AT_ZERO;
+    public static final ModConfigSpec.BooleanValue OVERCLAIM_ENEMIES_ONLY;
+    public static final ModConfigSpec.IntValue POWER_FREEZE_SECONDS;
     public static final ModConfigSpec.DoubleValue CLAIM_COST;
     public static final ModConfigSpec.DoubleValue CLAIM_COST_MULTIPLIER;
     public static final ModConfigSpec.DoubleValue CLAIM_REFUND;
@@ -196,6 +205,86 @@ public final class FactionsConfig {
                         "the wide view. Must be a power of two: a map pixel covers 1 << scale",
                         "blocks and there is nothing in between.")
                 .defineInRange("pixelsPerChunk", 1, 1, 8);
+        b.pop();
+
+        b.comment("Power: how much of its entitlement a faction is actually holding onto.",
+                        "",
+                        "FIXED IS THE CEILING; POWER IS THE EROSION. chunksPerMember still decides",
+                        "what a faction is entitled to, and power decides how much of that it is",
+                        "currently holding. Power can only ever take entitlement AWAY — never",
+                        "grant more than the fixed rule would. So turning this on does not hand",
+                        "out or confiscate anybody's land, it adds a way to lose land by playing",
+                        "badly. It also means farming power cannot inflate land, because the",
+                        "ceiling is membership.",
+                        "",
+                        "AND THE POINT IS THE OVERCLAIMING. A faction holding more land than its",
+                        "power covers can have the difference taken by an enemy. Without that,",
+                        "power is a claim limit with extra steps and you already have one.")
+                .push("power");
+        POWER_MODE = b
+                .comment("What drains power. The modes differ in NOTHING else — restoration is",
+                        "the same rule throughout, so a mode only says what counts as losing.",
+                        "  fixed - power is inert. Today's behaviour, and the default, so an",
+                        "          upgrade never rearranges a running server.",
+                        "  pvp   - being killed by a player drains.",
+                        "  pve   - being killed by a mob drains. Territory shrinks when the WORLD",
+                        "          beats you, which no faction plugin has ever expressed and is",
+                        "          the actual fiction of a survival or apocalypse server.",
+                        "  both  - either.")
+                .define("mode", "fixed");
+        POWER_MAX = b
+                .comment("A player's maximum power. The original used 10.")
+                .defineInRange("maxPerPlayer", 10.0D, 1.0D, 10_000.0D);
+        POWER_MIN = b
+                .comment("The floor. Negative is allowed and is a real state: a player who keeps",
+                        "dying can drag their faction's entitlement below what its membership",
+                        "alone would give, which is the difference between a bad night and a",
+                        "liability.")
+                .defineInRange("minPerPlayer", 0.0D, -10_000.0D, 10_000.0D);
+        POWER_PER_DEATH = b
+                .comment("Power lost per qualifying death. The original took 4 of 10.",
+                        "Environmental deaths NEVER count — falling in your own lava is not a",
+                        "raid, nobody decided it and nobody gains from it. Standards' combat API",
+                        "answers who was really behind a kill, through arrows and pets.")
+                .defineInRange("perDeath", 2.0D, 0.0D, 10_000.0D);
+        POWER_PER_MINUTE = b
+                .comment("Power regained per minute ONLINE. The original gave 0.2 — fifty minutes",
+                        "from empty to full.",
+                        "This single number sets how the server feels more than any other: fifty",
+                        "minutes makes a raid window something you exploit that evening, five",
+                        "hours makes it something you plan a week around.")
+                .defineInRange("perMinuteOnline", 0.2D, 0.0D, 100.0D);
+        POWER_PER_XP = b
+                .comment("Power regained per point of experience a mob DROPS when you kill it.",
+                        "The elegant half: the drop value is already Minecraft's own opinion of",
+                        "how hard something was to kill, maintained by Mojang and extended for",
+                        "free by every mod on the server. A ZombieMod tank outweighs a walker",
+                        "without ZombieMod telling us anything, with no registry of mob ids to",
+                        "keep and nothing to be wrong about the day a modpack adds a boss.",
+                        "Read from the mob's drop, never from your XP balance — otherwise",
+                        "smelting is a land claim and enchanting costs you territory.",
+                        "0 disables it and leaves recovery purely time-based.")
+                .defineInRange("perExperience", 0.02D, 0.0D, 100.0D);
+        POWER_FREEZE_SECONDS = b
+                .comment("Seconds after a death during which that player regains no power.",
+                        "Stops a raid being outrun by the clock. Resets on each further death",
+                        "rather than stacking.")
+                .defineInRange("freezeSecondsAfterDeath", 30, 0, 3600);
+        POWER_START_AT_ZERO = b
+                .comment("New players start at zero power rather than full.",
+                        "OFF, unlike the original. Starting at zero means a brand-new faction can",
+                        "claim nothing for the best part of an hour, which is a ritual on a server",
+                        "built around it and simply baffling on one where somebody installed this",
+                        "expecting it to behave like the claim limit it replaces.")
+                .define("startAtZero", false);
+        OVERCLAIM_ENEMIES_ONLY = b
+                .comment("Only a DECLARED ENEMY may take land from an over-extended faction.",
+                        "On by default, and a deliberate divergence: the original let anybody who",
+                        "was not your ally do it. Requiring a declaration makes /f peaceful follow",
+                        "from one rule instead of two, and makes a raid something somebody said",
+                        "out loud — a warning, a public record, and a line in the victim's",
+                        "/f status before anything is taken.")
+                .define("overclaimEnemiesOnly", true);
         b.pop();
 
         b.comment("Testing.").push("debug");

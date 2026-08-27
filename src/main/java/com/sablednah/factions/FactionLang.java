@@ -88,6 +88,33 @@ public final class FactionLang {
         Lang.contribute("msg.factions.unclaimed_all_others",
                 "{term.prefix} &c{player} released all &f{count}&c of your chunks.");
         Lang.contribute("msg.factions.no_limit", "unlimited");
+
+        // Power.
+        Lang.contribute("msg.factions.power_off", "&7Power is not in use on this server.");
+        Lang.contribute("msg.factions.power_mine",
+                "{term.prefix} &f{player}&7 has &f{power}&7 of &f{max}&7 power.");
+        Lang.contribute("msg.factions.power_faction",
+                " {term.dim}-&r &f{name}&7 holds &f{held}&7 chunks on an entitlement of &f{entitled}&7.");
+        Lang.contribute("msg.factions.power_lost",
+                "&cYou lost &f{lost}&c power. {term.dim}({power}/{max})");
+        // The line the whole feature earns its keep with. A raid nobody knew was possible is
+        // indistinguishable from a bug.
+        Lang.contribute("msg.factions.power_exposed",
+                "&c&lExposed. &r&cYou hold &f{held}&c on an entitlement of &f{entitled}&c — &f{over}&c chunks can be taken.");
+        Lang.contribute("msg.factions.status_power",
+                " {term.dim}-&r &7Power &f{power}&7 {term.dim}({held} chunks held, {entitled} entitled)");
+        Lang.contribute("msg.factions.claim_held",
+                "&f{name}&c owns this land and is strong enough to keep it.");
+        Lang.contribute("msg.factions.claim_not_at_war",
+                "&cYou are not at war with &f{name}&c. {term.dim}(/f enemy {name})");
+        Lang.contribute("msg.factions.claim_not_border",
+                "&cStart at the edge of their territory, not the middle of it.");
+        Lang.contribute("msg.factions.claim_taken",
+                "{term.prefix} &aTaken &f{x}, {z}&a from &f{name}&a.");
+        Lang.contribute("msg.factions.claim_lost",
+                "&c&lLand lost. &r&c&f{name}&c has taken &f{x}, {z}&c from you.");
+        Lang.contribute("msg.factions.unknown_player",
+                "&cNo player called &f{player}&c has been seen on this server.");
         Lang.contribute("msg.factions.autoclaim_on",
                 "{term.prefix} &7Claiming as you walk. {term.dim}(/f autoclaim again to stop)");
         Lang.contribute("msg.factions.autoclaim_off", "{term.prefix} &7No longer claiming as you walk.");

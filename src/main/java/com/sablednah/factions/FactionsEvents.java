@@ -42,6 +42,7 @@ public final class FactionsEvents {
     static void onTick(ServerTickEvent.Post event) {
         FactionBorders.tick(event.getServer());
         FactionAutoClaim.tick(event.getServer());
+        FactionPowerEvents.tick(event.getServer());
     }
 
     @SubscribeEvent
@@ -49,6 +50,7 @@ public final class FactionsEvents {
         FactionBorders.forget(event.getEntity().getUUID());
         FactionAutoClaim.forget(event.getEntity().getUUID());
         FactionChat.forget(event.getEntity().getUUID());
+        FactionPowerEvents.forget(event.getEntity().getUUID());
     }
 
     // --- protection ---
@@ -316,4 +318,28 @@ public final class FactionsEvents {
 
 
     private FactionsEvents() {}
+
+    /**
+     * A death costs power, if the mode says this kind of death counts.
+     *
+     * <p>Attribution comes from Standards' combat API rather than being worked out again here:
+     * "was a player behind this" is exactly what it answers, arrows and pets included, and a
+     * second implementation would eventually disagree with the first in a way that depended on
+     * whether an arrow was involved.</p>
+     */
+    @SubscribeEvent
+    static void onPlayerDeath(net.neoforged.neoforge.event.entity.living.LivingDeathEvent event) {
+        if (event.getEntity() instanceof ServerPlayer player) {
+            FactionPowerEvents.onDeath(player, event.getSource());
+        }
+    }
+
+    /** A mob dropping experience restores power to whoever killed it. */
+    @SubscribeEvent
+    static void onExperienceDrop(
+            net.neoforged.neoforge.event.entity.living.LivingExperienceDropEvent event) {
+        if (event.getAttackingPlayer() instanceof ServerPlayer killer) {
+            FactionPowerEvents.onExperience(killer, event.getOriginalExperience());
+        }
+    }
 }
