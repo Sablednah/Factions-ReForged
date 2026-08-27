@@ -32,6 +32,7 @@ public final class FactionsSelfTest {
         checkEntitlement();
         checkOverreach();
         checkModes();
+        checkStandardColours();
         if (failed == 0) {
             Factions.LOGGER.info("=== Factions self-test PASSED ({} checks) ===", passed);
         } else {
@@ -113,6 +114,26 @@ public final class FactionsSelfTest {
                 FactionPower.Mode.of("nonsense") == FactionPower.Mode.FIXED);
         check("mode names round-trip",
                 FactionPower.Mode.of("pve") == pve && FactionPower.Mode.of("PVE") == pve);
+    }
+
+    /**
+     * Every dye has a chat colour, and the identity palette is not the relation palette.
+     *
+     * <p>The switch is exhaustive by construction, but a new dye colour in a future Minecraft
+     * would break it silently at runtime rather than at compile time, and a faction whose flag
+     * threw on being printed would be an odd bug to chase.</p>
+     */
+    private void checkStandardColours() {
+        for (net.minecraft.world.item.DyeColor dye : net.minecraft.world.item.DyeColor.values()) {
+            String code = FactionStandards.chatColour(dye);
+            check("dye " + dye.getName() + " has a chat colour",
+                    code != null && code.length() == 2 && code.charAt(0) == '&');
+        }
+        // The two palettes are separate on purpose: identity comes from your banner, relation
+        // stays green-for-yours / blue-for-allied / red-for-hostile so nothing can make an
+        // enemy's land look friendly.
+        check("a faction with no standard is plain white",
+                FactionStandards.chatColour(net.minecraft.world.item.DyeColor.WHITE).equals("&f"));
     }
 
     private void check(String what, boolean ok) {

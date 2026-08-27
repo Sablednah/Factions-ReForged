@@ -162,6 +162,34 @@ Allies may **interact** by default and may **not build** by default, and the spl
 An ally who cannot open your gate stands outside it; an ally who can take your walls down is a
 demolition permit you issued for a diplomatic position that can change next week.
 
+### The standard is a banner somebody can take
+
+A faction designs a banner in a loom, plants it on its own land, and `/f standard` makes it the
+faction's flag. **The colour and the pattern are its own**, so a faction is personalised by an
+object it made rather than a setting it typed — and its name is printed in that colour wherever its
+*identity* appears. Relation stays green-for-yours, blue-for-allied, red-for-hostile on the map and
+the borders, because no amount of personalisation should make an enemy's land look friendly.
+
+**It must see the sky.** That single rule is what turns this from a mechanic into a game. Enemies
+cannot break your blocks or open your doors, so the only way anyone reaches your flag is a path you
+left — and without the sky rule everybody entombs theirs in a sealed box, it is unreachable by
+construction, and the feature is dead on arrival. With it, the standard is necessarily outside,
+visible, and defended by architecture and people.
+
+**A planted standard is the difference between recovering at full speed and recovering slowly.**
+That is a reason to have one and a reason to take somebody else's, which is the same number seen
+from two sides. Breaking a standard is the one deliberate hole in claim protection: an enemy may
+take your flag where they can take nothing else.
+
+**And it is always recoverable.** The banner drops carrying its owner's name, and a thief who plants
+it on their own land under sky flies it as a trophy for a smaller bonus — where you can see exactly
+where it is, and coming for it is now your raid. Hoarding one in a chest pays nothing at all: the
+mechanic rewards flying a flag, not owning one, and a flag in a box is a flag out of the game.
+
+The worst case of planting one is the case of never having planted one. There is no state below not
+having a flag, so putting yours up is never mechanically worse than leaving it down — it can be
+lost, but it cannot be turned into a stick to beat you with.
+
 ### Chat goes through Standards, not around it
 
 Faction and ally channels are a `ChatRouter`, which is Standards' seam for exactly this, rather

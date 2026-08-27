@@ -46,7 +46,40 @@ public final class FactionProtection {
 
     /** Break, place, and anything else that changes the world's blocks. */
     public static boolean mayBuild(ServerPlayer player, ServerLevel level, BlockPos pos) {
+        // The one deliberate hole in the protection, and the whole reason a standard is worth
+        // planting: an enemy may take your flag. Without this the banner would be as unbreakable
+        // as every other block you own, and the feature would be a decoration.
+        //
+        // Only a standard, only an enemy, and only where it stands — which is out in the open,
+        // because a standard must see the sky. So the flag is defended by architecture and by
+        // people, and never by being unbreakable.
+        if (mayTakeStandard(player, level, pos)) {
+            return true;
+        }
         return may(player, level, pos, FactionsConfig.ALLIES_MAY_BUILD.get());
+    }
+
+    /** Whether this player is an enemy of whoever is flying a standard at this exact block. */
+    public static boolean mayTakeStandard(ServerPlayer player, ServerLevel level, BlockPos pos) {
+        if (!FactionPower.Mode.of(FactionsConfig.POWER_MODE.get()).active()) {
+            return false;
+        }
+        FactionStore store = FactionStore.get(level.getServer());
+        Optional<String> flying = store.standardAt(FactionBridge.dimensionOf(level), pos);
+        if (flying.isEmpty()) {
+            return false;
+        }
+        Optional<FactionStore.Faction> mine = store.of(player.getUUID());
+        if (mine.isEmpty() || mine.get().id().equals(flying.get())) {
+            return false;
+        }
+        // Peaceful, both ways. A faction that opted out of fighting neither raids nor is raided,
+        // and its flag is part of that promise.
+        Optional<FactionStore.Faction> theirs = store.byId(flying.get());
+        if (mine.get().peaceful() || theirs.map(FactionStore.Faction::peaceful).orElse(false)) {
+            return false;
+        }
+        return store.relation(mine.get().id(), flying.get()) == FactionStore.Relation.ENEMY;
     }
 
     /** Right-clicking: doors, buttons, containers, item frames. */

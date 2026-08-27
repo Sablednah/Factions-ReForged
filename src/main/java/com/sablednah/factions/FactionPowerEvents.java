@@ -114,7 +114,7 @@ public final class FactionPowerEvents {
         if (perMinute <= 0) {
             return;
         }
-        double share = perMinute / 12.0D; // five seconds of a minute
+        double baseShare = perMinute / 12.0D; // five seconds of a minute
         double max = FactionsConfig.POWER_MAX.get();
         FactionStore store = FactionStore.get(server);
 
@@ -123,12 +123,33 @@ public final class FactionPowerEvents {
             if (frozen(id) || store.powerOf(id) >= max) {
                 continue;
             }
-            double owed = PENDING.merge(id, share, Double::sum);
+            double owed = PENDING.merge(id, baseShare * standardMultiplier(store, id), Double::sum);
             if (owed >= 0.05D) {
                 PENDING.remove(id);
                 store.adjustPower(id, owed);
             }
         }
+    }
+
+    /**
+     * How fast this player's faction recovers, given what it is flying.
+     *
+     * <p>A flag is worth having and worth taking, and those are the same number seen from two
+     * sides. The captured bonus only counts while the trophy is <b>planted</b> — a standard in a
+     * chest pays nobody, because the mechanic rewards use rather than possession and a flag in a
+     * box is a flag out of the game.</p>
+     */
+    private static double standardMultiplier(FactionStore store, UUID player) {
+        Optional<FactionStore.Faction> mine = store.of(player);
+        if (mine.isEmpty()) {
+            return FactionsConfig.REGEN_WITHOUT_STANDARD.get();
+        }
+        String id = mine.get().id();
+        boolean captured = store.standardCapturedFrom(id).isPresent();
+        double own = store.hasStandard(id) && !captured
+                ? FactionsConfig.REGEN_WITH_STANDARD.get()
+                : FactionsConfig.REGEN_WITHOUT_STANDARD.get();
+        return own + (captured ? FactionsConfig.REGEN_WITH_CAPTURED.get() : 0.0D);
     }
 
     private static boolean frozen(UUID player) {

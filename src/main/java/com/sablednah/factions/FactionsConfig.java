@@ -34,6 +34,9 @@ public final class FactionsConfig {
     public static final ModConfigSpec.BooleanValue POWER_START_AT_ZERO;
     public static final ModConfigSpec.BooleanValue OVERCLAIM_ENEMIES_ONLY;
     public static final ModConfigSpec.IntValue POWER_FREEZE_SECONDS;
+    public static final ModConfigSpec.DoubleValue REGEN_WITH_STANDARD;
+    public static final ModConfigSpec.DoubleValue REGEN_WITHOUT_STANDARD;
+    public static final ModConfigSpec.DoubleValue REGEN_WITH_CAPTURED;
     public static final ModConfigSpec.DoubleValue CLAIM_COST;
     public static final ModConfigSpec.DoubleValue CLAIM_COST_MULTIPLIER;
     public static final ModConfigSpec.DoubleValue CLAIM_REFUND;
@@ -277,6 +280,30 @@ public final class FactionsConfig {
                         "built around it and simply baffling on one where somebody installed this",
                         "expecting it to behave like the claim limit it replaces.")
                 .define("startAtZero", false);
+        REGEN_WITH_STANDARD = b
+                .comment("Power regen multiplier while your own standard is planted.",
+                        "1.0 — a faction flying its flag recovers at the NORMAL rate. The bonus is",
+                        "framed as the baseline on purpose: raise this instead if you would rather",
+                        "a standard feel like a reward than a requirement.")
+                .defineInRange("regenWithStandard", 1.0D, 0.0D, 10.0D);
+        REGEN_WITHOUT_STANDARD = b
+                .comment("Power regen multiplier with no standard planted.",
+                        "Below 1.0, so flying a flag is how you recover at full speed and taking",
+                        "one is worth doing. That is a reason to have one AND a reason to steal",
+                        "one, which is the whole point of the object.",
+                        "Note who lives here: a brand-new one-person faction, which is also who",
+                        "can least afford to stand a flag in the open. Do not set it so low that",
+                        "somebody's first evening is spent unable to claim anything.")
+                .defineInRange("regenWithoutStandard", 0.5D, 0.0D, 10.0D);
+        REGEN_WITH_CAPTURED = b
+                .comment("Extra regen multiplier for flying an ENEMY's captured standard.",
+                        "Added to your own. Small on purpose, and it only pays while the flag is",
+                        "PLANTED in your land under the sky — where its owner can come and take it",
+                        "back, and where taking it back is now their raid.",
+                        "A captured standard is a liability with a dividend. Hoarding one in a",
+                        "chest pays nothing at all: the mechanic rewards use, not possession, and",
+                        "a flag in a box is a flag out of the game.")
+                .defineInRange("regenWithCapturedStandard", 0.25D, 0.0D, 10.0D);
         OVERCLAIM_ENEMIES_ONLY = b
                 .comment("Only a DECLARED ENEMY may take land from an over-extended faction.",
                         "On by default, and a deliberate divergence: the original let anybody who",

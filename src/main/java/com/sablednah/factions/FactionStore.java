@@ -155,8 +155,40 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
                 .apply(i, Power::new));
     }
 
+    /**
+     * A faction's standard: a real banner, standing somewhere, that an enemy can come and take.
+     *
+     * <p>The <b>colour and pattern are stored, not just the position</b>, which is what makes it a
+     * flag rather than a marker. A faction designs its own banner in a loom and that design becomes
+     * its identity — the colour it wears in chat, and the thing an enemy carries home.</p>
+     *
+     * @param faction   whose it is
+     * @param dimension where it stands
+     * @param capturedFrom the faction it was taken from, if this is somebody else's flag being
+     *                     flown as a trophy. Empty for your own.
+     */
+    private record Standard(String faction, String dimension, int x, int y, int z,
+            net.minecraft.world.item.DyeColor colour,
+            net.minecraft.world.level.block.entity.BannerPatternLayers patterns,
+            java.util.Optional<String> capturedFrom) {
+        static final Codec<Standard> CODEC = RecordCodecBuilder.create(i -> i.group(
+                Codec.STRING.fieldOf("faction").forGetter(Standard::faction),
+                Codec.STRING.fieldOf("dimension").forGetter(Standard::dimension),
+                Codec.INT.fieldOf("x").forGetter(Standard::x),
+                Codec.INT.fieldOf("y").forGetter(Standard::y),
+                Codec.INT.fieldOf("z").forGetter(Standard::z),
+                net.minecraft.world.item.DyeColor.CODEC.optionalFieldOf("colour",
+                        net.minecraft.world.item.DyeColor.WHITE).forGetter(Standard::colour),
+                net.minecraft.world.level.block.entity.BannerPatternLayers.CODEC
+                        .optionalFieldOf("patterns",
+                                net.minecraft.world.level.block.entity.BannerPatternLayers.EMPTY)
+                        .forGetter(Standard::patterns),
+                Codec.STRING.optionalFieldOf("capturedFrom").forGetter(Standard::capturedFrom))
+                .apply(i, Standard::new));
+    }
+
     private record Snapshot(List<Faction> factions, List<Claim> claims, List<Bank> banks,
-            List<Power> power) {
+            List<Power> power, List<Standard> standards) {
         static final Codec<Snapshot> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Faction.CODEC.listOf().optionalFieldOf("factions", List.of()).forGetter(Snapshot::factions),
                 Claim.CODEC.listOf().optionalFieldOf("claims", List.of()).forGetter(Snapshot::claims),
@@ -164,7 +196,9 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
                 // Optional with an empty default, so a world saved before power existed loads
                 // with everybody at full rather than failing to decode and taking the factions
                 // with it.
-                Power.CODEC.listOf().optionalFieldOf("power", List.of()).forGetter(Snapshot::power))
+                Power.CODEC.listOf().optionalFieldOf("power", List.of()).forGetter(Snapshot::power),
+                Standard.CODEC.listOf().optionalFieldOf("standards", List.of())
+                        .forGetter(Snapshot::standards))
                 .apply(i, Snapshot::new));
     }
 
@@ -202,11 +236,15 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
      */
     private final Map<UUID, Double> power = new LinkedHashMap<>();
 
+    /** faction id → the flag it is flying. Its own, or one it has taken. */
+    private final Map<String, Standard> standards = new LinkedHashMap<>();
+
     private FactionStore(Snapshot snapshot) {
         snapshot.factions().forEach(f -> factions.put(f.id(), f));
         snapshot.claims().forEach(c -> claims.put(key(c.dimension(), c.x(), c.z()), c.faction()));
         snapshot.banks().forEach(b -> banks.put(b.faction(), b.balance()));
         snapshot.power().forEach(row -> power.put(row.player(), row.power()));
+        snapshot.standards().forEach(st -> standards.put(st.faction(), st));
     }
 
     private Snapshot snapshot() {
@@ -223,7 +261,8 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
         });
         List<Power> powers = new ArrayList<>();
         power.forEach((id, value) -> powers.add(new Power(id, value)));
-        return new Snapshot(List.copyOf(factions.values()), out, money, powers);
+        return new Snapshot(List.copyOf(factions.values()), out, money, powers,
+                List.copyOf(standards.values()));
     }
 
     public static FactionStore get(MinecraftServer server) {
@@ -376,6 +415,11 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
         banks.remove(id);
         // Power is NOT cleared: it belongs to the players, not to the faction they were in, and
         // disbanding to wipe your losses would be the first thing anybody tried.
+        standards.remove(id);
+        // And anybody flying THIS faction's captured flag stops flying it — the trophy was a
+        // trophy because its owner existed to want it back.
+        standards.entrySet().removeIf(e -> e.getValue().capturedFrom()
+                .map(id::equals).orElse(false));
         // And so do other factions' opinions about it, or a recycled name inherits old grudges.
         List<Faction> touched = factions.values().stream()
                 .filter(f -> f.allies().contains(id) || f.enemies().contains(id))
@@ -443,6 +487,65 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
             total += powerOf(member);
         }
         return total;
+    }
+
+    // --- the standard ---
+
+    /** Where this faction's flag stands, if it has planted one. */
+    public Optional<net.minecraft.core.BlockPos> standardPos(String factionId) {
+        Standard st = standards.get(factionId);
+        return st == null ? Optional.empty()
+                : Optional.of(new net.minecraft.core.BlockPos(st.x(), st.y(), st.z()));
+    }
+
+    public Optional<String> standardDimension(String factionId) {
+        return Optional.ofNullable(standards.get(factionId)).map(Standard::dimension);
+    }
+
+    /** The colour a faction wears, taken from its own banner. White until it plants one. */
+    public net.minecraft.world.item.DyeColor colourOf(String factionId) {
+        Standard st = standards.get(factionId);
+        // A captured flag is somebody else's identity, so it does not become yours. You are flying
+        // it, not wearing it.
+        if (st == null || st.capturedFrom().isPresent()) {
+            return net.minecraft.world.item.DyeColor.WHITE;
+        }
+        return st.colour();
+    }
+
+    public boolean hasStandard(String factionId) {
+        return standards.containsKey(factionId);
+    }
+
+    /** Whether the flag this faction is flying was taken from somebody. */
+    public Optional<String> standardCapturedFrom(String factionId) {
+        return Optional.ofNullable(standards.get(factionId)).flatMap(Standard::capturedFrom);
+    }
+
+    /** Whoever is flying a standard at this exact spot, if anybody. */
+    public Optional<String> standardAt(String dimension, net.minecraft.core.BlockPos pos) {
+        for (Standard st : standards.values()) {
+            if (st.dimension().equals(dimension) && st.x() == pos.getX()
+                    && st.y() == pos.getY() && st.z() == pos.getZ()) {
+                return Optional.of(st.faction());
+            }
+        }
+        return Optional.empty();
+    }
+
+    public void setStandard(String factionId, String dimension, net.minecraft.core.BlockPos pos,
+            net.minecraft.world.item.DyeColor colour,
+            net.minecraft.world.level.block.entity.BannerPatternLayers patterns,
+            Optional<String> capturedFrom) {
+        standards.put(factionId, new Standard(factionId, dimension, pos.getX(), pos.getY(),
+                pos.getZ(), colour, patterns, capturedFrom));
+        setDirty();
+    }
+
+    public void clearStandard(String factionId) {
+        if (standards.remove(factionId) != null) {
+            setDirty();
+        }
     }
 
     // --- the bank ---

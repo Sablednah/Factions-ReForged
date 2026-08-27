@@ -70,6 +70,11 @@ public final class FactionsEvents {
         if (!(event.getLevel() instanceof ServerLevel level)) {
             return;
         }
+        // Before the permission check, because taking a standard is allowed precisely where
+        // breaking things is not, and the bookkeeping has to happen while the block still exists.
+        if (FactionStandards.onBroken(level, event.getPos(), player)) {
+            return;
+        }
         if (Claims.mayModify(player, level, event.getPos())) {
             return;
         }

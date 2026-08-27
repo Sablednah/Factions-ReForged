@@ -142,6 +142,7 @@ public final class FactionCommands {
                                                 .then(Commands.argument("reason",
                                                                 StringArgumentType.greedyString())
                                                         .executes(FactionCommands::payFaction))))))
+                .then(Commands.literal("standard").executes(FactionCommands::standard))
                 .then(Commands.literal("power")
                         .executes(ctx -> power(ctx, null))
                         .then(Commands.argument("player", StringArgumentType.word())
@@ -865,7 +866,7 @@ public final class FactionCommands {
         }
 
         Feedback.chat(player, Lang.fmt("msg.factions.status_header",
-                "name", mine.name(),
+                "name", FactionStandards.chatColour(store, mine.id()) + mine.name(),
                 "peaceful", mine.peaceful() ? Lang.get("msg.factions.is_peaceful") : "",
                 "land", store.claimCount(mine.id()),
                 "count", mine.members().size()));
@@ -987,7 +988,9 @@ public final class FactionCommands {
         FactionStore.Relation rel = mine.map(m -> store(ctx).relation(m.id(), f.id()))
                 .orElse(FactionStore.Relation.NEUTRAL);
         Feedback.chat(viewer, Lang.fmt("msg.factions.who",
-                "name", f.name(),
+                // Its own colour, from its own banner. Identity, not relation — the relation is
+                // the separate field below and stays green/blue/red.
+                "name", FactionStandards.chatColour(store(ctx), f.id()) + f.name(),
                 "tag", f.tag().isEmpty() ? Lang.get("msg.factions.no_tag") : f.tag(),
                 "relation", Lang.get("msg.factions.relation." + rel.key()),
                 "peaceful", f.peaceful() ? Lang.get("msg.factions.is_peaceful") : "",
@@ -1007,7 +1010,7 @@ public final class FactionCommands {
         Feedback.chat(player, Lang.fmt("msg.factions.list_header", "count", all.size()));
         for (FactionStore.Faction f : all) {
             Feedback.chat(player, Lang.fmt("msg.factions.list_row",
-                    "name", f.name(),
+                    "name", FactionStandards.chatColour(store(ctx), f.id()) + f.name(),
                     "tag", f.tag().isEmpty() ? "" : "[" + f.tag() + "]",
                     "count", f.members().size(),
                     "land", store(ctx).claimCount(f.id())));
@@ -1045,6 +1048,43 @@ public final class FactionCommands {
         // point of asking for a zoom is that you wanted a different one.
         Feedback.chat(player, Lang.fmt("msg.factions.map_given",
                 "chunks", 128 / Integer.highestOneBit(Math.min(8, ppc))));
+        return 1;
+    }
+
+    /**
+     * {@code /f standard} — designate the banner you are looking at, or report on the one you fly.
+     *
+     * <p>Looked at rather than named, because the thing being designated is a specific block in a
+     * specific place, and pointing at it is unambiguous in a way coordinates are not.</p>
+     */
+    private static int standard(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        Optional<FactionStore.Faction> f = atLeast(ctx, player, FactionStore.Rank.OFFICER);
+        if (f.isEmpty()) {
+            return 0;
+        }
+        ServerLevel level = player.level();
+        FactionStore store = store(ctx);
+
+        var hit = player.pick(6.0D, 0.0F, false);
+        if (hit instanceof net.minecraft.world.phys.BlockHitResult block
+                && FactionStandards.isBanner(level, block.getBlockPos())) {
+            return FactionStandards.designate(player, level, block.getBlockPos(), f.get()) ? 1 : 0;
+        }
+
+        // Nothing in front of them: report instead of refusing. "Where is my flag" is at least as
+        // common a question as "make this my flag", and the same word should answer both.
+        Optional<net.minecraft.core.BlockPos> where = store.standardPos(f.get().id());
+        if (where.isEmpty()) {
+            Feedback.chat(player, Lang.get("msg.factions.standard_none"));
+            return 0;
+        }
+        Optional<String> captured = store.standardCapturedFrom(f.get().id());
+        Feedback.chat(player, Lang.fmt(captured.isPresent()
+                        ? "msg.factions.standard_where_captured" : "msg.factions.standard_where",
+                "x", where.get().getX(), "y", where.get().getY(), "z", where.get().getZ(),
+                "world", store.standardDimension(f.get().id()).orElse("?"),
+                "name", captured.flatMap(store::byId).map(FactionStore.Faction::name).orElse("?")));
         return 1;
     }
 

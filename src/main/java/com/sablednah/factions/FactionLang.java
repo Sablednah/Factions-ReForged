@@ -91,6 +91,32 @@ public final class FactionLang {
 
         // Power.
         Lang.contribute("msg.factions.power_off", "&7Power is not in use on this server.");
+
+        // The standard.
+        Lang.contribute("msg.factions.standard_set",
+                "{term.prefix} &7Your standard is raised. {term.dim}({colour} — it must keep seeing the sky)");
+        Lang.contribute("msg.factions.standard_not_banner",
+                "&cLook at a banner you have placed, and run this again.");
+        Lang.contribute("msg.factions.standard_not_your_land",
+                "&cA standard stands on land you hold.");
+        Lang.contribute("msg.factions.standard_needs_sky",
+                "&cIt must stand under open sky. {term.dim}(a flag nobody can reach is a flag nobody can take — and yours would be the same)");
+        Lang.contribute("msg.factions.standard_already", "&cThat banner is already a standard.");
+        Lang.contribute("msg.factions.standard_none",
+                "&7You fly no standard. {term.dim}(place a banner on your land under open sky, look at it, and /f standard)");
+        Lang.contribute("msg.factions.standard_where",
+                "{term.prefix} &7Your standard stands at &f{x}, {y}, {z}&7 in &f{world}&7.");
+        Lang.contribute("msg.factions.standard_where_captured",
+                "{term.prefix} &7You are flying &f{name}&7's captured standard at &f{x}, {y}, {z}&7.");
+        Lang.contribute("msg.factions.standard_taken",
+                "&c&l⚑ &r&f{taker}&c has taken &f{name}&c's standard.");
+        Lang.contribute("msg.factions.standard_item", "&f{name}&7's standard");
+        Lang.contribute("msg.factions.standard_planted_trophy",
+                "{term.prefix} &6You are flying &f{name}&6's standard. {term.dim}(they can see where — and come for it)");
+        Lang.contribute("msg.factions.standard_trophy_seen",
+                "&c&l⚑ &r&f{name}&c is flying your standard at &f{x}, {y}, {z}&c.");
+        Lang.contribute("msg.factions.standard_lost",
+                "&c&lYour standard has fallen. &r&cPower comes back slower until you raise another.");
         Lang.contribute("msg.factions.power_mine",
                 "{term.prefix} &f{player}&7 has &f{power}&7 of &f{max}&7 power.");
         Lang.contribute("msg.factions.power_faction",
