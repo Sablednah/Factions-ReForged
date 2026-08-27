@@ -46,15 +46,21 @@ RELEASE_TYPE="${4:-release}"
 api() { curl -sS --max-time 120 -H "X-Api-Token: $CURSEFORGE_TOKEN" "$@"; }
 
 echo ">> Resolving CurseForge version IDs for Minecraft $MC_VERSION"
-VERSIONS_JSON="$(api "$BASE/api/game/versions")"
+# Straight to a file, never through a shell variable or an environment one. CurseForge's version
+# list is a megabyte or so of JSON, which is comfortably past the environment size limit — passing
+# it that way fails with "Argument list too long" from python rather than from the shell, which
+# reads like a broken script instead of an oversized value.
+VERSIONS_FILE="$(mktemp)"
+trap 'rm -f "$VERSIONS_FILE"' EXIT
+api "$BASE/api/game/versions" > "$VERSIONS_FILE"
 
 # Everything CurseForge needs to file the upload, worked out in one pass so a missing tag is
 # reported once with the near misses listed rather than as a bare rejection later.
-# The JSON goes in by environment, not by pipe: `python3 - <<EOF` already uses stdin for the
-# script itself, so a pipe into it is silently discarded.
-IDS="$(MC="$MC_VERSION" VERSIONS_JSON="$VERSIONS_JSON" python3 - <<'PY'
-import json, os, sys
-raw = os.environ["VERSIONS_JSON"]
+# The file path goes in by environment; a pipe would not work at all, because `python3 - <<EOF`
+# already uses stdin for the script itself.
+IDS="$(MC="$MC_VERSION" VERSIONS_FILE="$VERSIONS_FILE" python3 - <<'PY'
+import json, os, sys, pathlib
+raw = pathlib.Path(os.environ["VERSIONS_FILE"]).read_text()
 try:
     versions = json.loads(raw)
 except json.JSONDecodeError:
