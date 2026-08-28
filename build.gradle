@@ -23,7 +23,7 @@ version = "${factions_mod_version}+mc${minecraft_version}"
 group = factions_mod_group_id
 base.archivesName = factions_mod_id
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 
 neoForge {
     version = project.neo_version
@@ -85,5 +85,8 @@ neoForge.ideSyncTask generateModMetadata
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
-    options.release = 21
+    // Tracks Minecraft, like the toolchain above. Hardcoding it here made the subproject ask for
+    // a JVM 21 artefact from a root project already on 25, which fails at dependency resolution
+    // with no mention of Java versions being the problem.
+    options.release = java.toolchain.languageVersion.get().asInt()
 }

@@ -91,7 +91,7 @@ public final class FactionFixtures {
         StandardsData names = StandardsData.get(server);
         String dim = FactionBridge.dimensionOf(level);
         Optional<FactionStore.Faction> mine = store.of(player.getUUID());
-        ChunkPos centre = new ChunkPos(player.blockPosition());
+        ChunkPos centre = ChunkPos.containing(player.blockPosition());
 
         List<String> report = new ArrayList<>();
         int ring = 3;
@@ -117,8 +117,8 @@ public final class FactionFixtures {
             // Spread around the player at a distance, each faction in its own direction, so the
             // borders are walkable and the map has something with a shape on it.
             double angle = 2 * Math.PI * i / SEEDS.size();
-            int baseX = centre.x + (int) Math.round(Math.cos(angle) * ring);
-            int baseZ = centre.z + (int) Math.round(Math.sin(angle) * ring);
+            int baseX = centre.x() + (int) Math.round(Math.cos(angle) * ring);
+            int baseZ = centre.z() + (int) Math.round(Math.sin(angle) * ring);
             int took = 0;
             for (int n = 0; n < chunksEach * 3 && took < chunksEach; n++) {
                 int cx = baseX + (n % 3);

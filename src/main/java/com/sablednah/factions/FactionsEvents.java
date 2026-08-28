@@ -63,7 +63,7 @@ public final class FactionsEvents {
      * first and we find out immediately rather than when somebody else reports it.</p>
      */
     @SubscribeEvent
-    static void onBreak(BlockEvent.BreakEvent event) {
+    static void onBreak(net.neoforged.neoforge.event.level.block.BreakBlockEvent event) {
         if (!(event.getPlayer() instanceof ServerPlayer player)) {
             return;
         }
@@ -256,11 +256,10 @@ public final class FactionsEvents {
 
     private static void refuse(ServerPlayer player, ServerLevel level,
             net.minecraft.core.BlockPos pos, net.minecraft.world.phys.Vec3 at) {
-        String name = Claims.owner(level, new ChunkPos(pos))
+        String name = Claims.owner(level, ChunkPos.containing(pos))
                 .map(com.sablednah.standards.api.groups.Group::name)
                 .orElse("?");
-        player.displayClientMessage(Feedback.colored(
-                Lang.fmt("msg.factions.cannot_build", "name", name)), true);
+        Feedback.actionBar(player, Lang.fmt("msg.factions.cannot_build", "name", name));
         deny(player, level, pos, at);
     }
 
@@ -294,7 +293,7 @@ public final class FactionsEvents {
                 : net.minecraft.world.phys.Vec3.atCenterOf(pos);
         level.sendParticles(player,
                 new net.minecraft.core.particles.DustParticleOptions(DENIED, 1.0F),
-                true, false, where.x, where.y, where.z, 8, 0.15D, 0.15D, 0.15D, 0.0D);
+                true, false, where.x(), where.y, where.z(), 8, 0.15D, 0.15D, 0.15D, 0.0D);
         // To this player only — a sound played into the level would tell the landowner's
         // neighbours that somebody is rattling their door, which is a different feature.
         //
@@ -306,7 +305,7 @@ public final class FactionsEvents {
                 net.minecraft.core.Holder.direct(
                         net.minecraft.sounds.SoundEvents.NOTE_BLOCK_BASS.value()),
                 net.minecraft.sounds.SoundSource.BLOCKS,
-                where.x, where.y, where.z, 1.0F, 0.5F, 0L));
+                where.x(), where.y, where.z(), 1.0F, 0.5F, 0L));
 
         // And whatever it predicted about the player's own hands. Placing a block consumes it
         // client-side before the server rules, so a refused pressure plate vanished from the
@@ -361,6 +360,6 @@ public final class FactionsEvents {
      */
     @SubscribeEvent
     static void onBlockDrops(net.neoforged.neoforge.event.level.BlockDropsEvent event) {
-        FactionStandards.renameDrops(event.getPos(), event.getDrops());
+        FactionStandards.renameDrops(event.getLevel(), event.getPos(), event.getDrops());
     }
 }

@@ -83,7 +83,7 @@ public final class FactionMap {
                 player.getX(), player.getZ(), scaleFor(ppc), false, false, level.dimension());
 
         // Paint before locking: locked() copies, and a locked map refuses to be drawn on.
-        paint(data, level, new ChunkPos(player.blockPosition()), player, ppc);
+        paint(data, level, ChunkPos.containing(player.blockPosition()), player, ppc);
 
         MapId id = level.getFreeMapId();
         level.setMapData(id, data.locked());
@@ -111,8 +111,8 @@ public final class FactionMap {
         Optional<FactionStore.Faction> mine = store.of(viewer.getUUID());
 
         int chunksAcross = SIZE / pixelsPerChunk;
-        int originX = centre.x - chunksAcross / 2;
-        int originZ = centre.z - chunksAcross / 2;
+        int originX = centre.x() - chunksAcross / 2;
+        int originZ = centre.z() - chunksAcross / 2;
 
         for (int px = 0; px < SIZE; px++) {
             for (int pz = 0; pz < SIZE; pz++) {
@@ -168,14 +168,14 @@ public final class FactionMap {
         FactionStore store = FactionStore.get(level.getServer());
         String dim = FactionBridge.dimensionOf(level);
         Optional<FactionStore.Faction> mine = store.of(player.getUUID());
-        ChunkPos centre = new ChunkPos(player.blockPosition());
+        ChunkPos centre = ChunkPos.containing(player.blockPosition());
 
         List<String> rows = new java.util.ArrayList<>();
         for (int dz = -radius; dz <= radius; dz++) {
             StringBuilder row = new StringBuilder();
             for (int dx = -radius; dx <= radius; dx++) {
-                int cx = centre.x + dx;
-                int cz = centre.z + dz;
+                int cx = centre.x() + dx;
+                int cz = centre.z() + dz;
                 boolean you = dx == 0 && dz == 0;
                 Optional<String> owner = store.ownerOf(dim, cx, cz);
                 if (you) {

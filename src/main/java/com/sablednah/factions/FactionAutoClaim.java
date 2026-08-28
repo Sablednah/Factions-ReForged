@@ -94,8 +94,8 @@ public final class FactionAutoClaim {
             return;
         }
         String dim = FactionBridge.dimensionOf(level);
-        ChunkPos here = new ChunkPos(player.blockPosition());
-        String key = FactionStore.key(dim, here.x, here.z);
+        ChunkPos here = ChunkPos.containing(player.blockPosition());
+        String key = FactionStore.key(dim, here.x(), here.z());
         if (key.equals(LAST_CHUNK.put(player.getUUID(), key))) {
             return;
         }
@@ -116,7 +116,7 @@ public final class FactionAutoClaim {
                 LAST_REASON.remove(player.getUUID());
                 int limit = FactionClaims.limitFor(f.get());
                 Feedback.chat(player, Lang.fmt("msg.factions.claimed",
-                        "x", here.x, "z", here.z, "held", store.claimCount(f.get().id()),
+                        "x", here.x(), "z", here.z(), "held", store.claimCount(f.get().id()),
                         "limit", limit < 0 ? Lang.get("msg.factions.no_limit")
                                 : String.valueOf(limit)));
             }

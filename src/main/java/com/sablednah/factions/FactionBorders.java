@@ -129,9 +129,9 @@ public final class FactionBorders {
         if (!(player.level() instanceof ServerLevel level)) {
             return;
         }
-        ChunkPos here = new ChunkPos(player.blockPosition());
+        ChunkPos here = ChunkPos.containing(player.blockPosition());
         String dim = FactionBridge.dimensionOf(level);
-        String key = FactionStore.key(dim, here.x, here.z);
+        String key = FactionStore.key(dim, here.x(), here.z());
         String previous = LAST_CHUNK.put(player.getUUID(), key);
         if (key.equals(previous)) {
             return;
@@ -156,8 +156,9 @@ public final class FactionBorders {
                 : com.sablednah.standards.neoforge.Lang.fmt("msg.factions.entered",
                         "colour", relationColour(store, mine, now),
                         "name", now.get().name());
-        player.displayClientMessage(
-                com.sablednah.standards.neoforge.Feedback.colored(message), true);
+        // Through Standards' Feedback, which is the one place in either mod that talks to the
+        // player-message API — it moved in 26.1 and will move again.
+        com.sablednah.standards.neoforge.Feedback.actionBar(player, message);
     }
 
     private static String relationColour(FactionStore store,
@@ -184,13 +185,13 @@ public final class FactionBorders {
         String dim = FactionBridge.dimensionOf(level);
         Optional<FactionStore.Faction> mine = store.of(player.getUUID());
         int radius = FactionsConfig.BORDER_RADIUS_CHUNKS.get();
-        ChunkPos centre = new ChunkPos(player.blockPosition());
+        ChunkPos centre = ChunkPos.containing(player.blockPosition());
         double y = player.getY() + 0.1D;
 
         for (int dx = -radius; dx <= radius; dx++) {
             for (int dz = -radius; dz <= radius; dz++) {
-                int cx = centre.x + dx;
-                int cz = centre.z + dz;
+                int cx = centre.x() + dx;
+                int cz = centre.z() + dz;
                 Optional<String> owner = store.ownerOf(dim, cx, cz);
                 if (owner.isEmpty()) {
                     continue; // wilderness has no edge of its own; its neighbours draw theirs

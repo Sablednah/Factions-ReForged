@@ -528,7 +528,8 @@ public final class FactionStandards {
      *
      * @return true if this position was a standard
      */
-    public static boolean renameDrops(BlockPos pos, java.util.List<?> drops) {
+    public static boolean renameDrops(ServerLevel level, BlockPos pos,
+            java.util.List<?> drops) {
         String[] owner = JUST_TAKEN.remove(pos.immutable());
         if (owner == null) {
             return false;
@@ -539,7 +540,7 @@ public final class FactionStandards {
             }
             ItemStack stack = item.getItem();
             if (stack.getItem() instanceof net.minecraft.world.item.BannerItem) {
-                item.setItem(asTrophy(stack, owner[0], owner[1]));
+                item.setItem(asTrophy(stack, owner[0], owner[1], level));
                 // It does not despawn. A flag that quietly evaporated five minutes into the
                 // journey home would end a raid with nobody having done anything, and neither
                 // side would know why.
@@ -559,7 +560,23 @@ public final class FactionStandards {
     /** The NBT key our marker lives under, inside the item's custom data. */
     private static final String MARKER = "factions_standard";
 
-    public static ItemStack asTrophy(ItemStack banner, String ownerName, String ownerId) {
+    /**
+     * Make a captured flag survive fire and lava.
+     *
+     * <p>Its own method because the component's shape moved: 1.21.11 took a {@code TagKey}, 26.1
+     * takes a {@code HolderSet}, which has to be resolved out of the level's registries — so this
+     * needs a level where the old form needed nothing.</p>
+     */
+    private static void fireproof(ItemStack stack, ServerLevel level) {
+        stack.set(net.minecraft.core.component.DataComponents.DAMAGE_RESISTANT,
+                new net.minecraft.world.item.component.DamageResistant(
+                        level.registryAccess()
+                                .lookupOrThrow(net.minecraft.core.registries.Registries.DAMAGE_TYPE)
+                                .getOrThrow(net.minecraft.tags.DamageTypeTags.IS_FIRE)));
+    }
+
+    public static ItemStack asTrophy(ItemStack banner, String ownerName, String ownerId,
+            ServerLevel level) {
         ItemStack copy = banner.copy();
         copy.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
                 Feedback.colored(Lang.fmt("msg.factions.standard_item", "name", ownerName)));
@@ -574,9 +591,7 @@ public final class FactionStandards {
         // Fireproof, because a captured flag should be lost to somebody taking it off you rather
         // than to the lava you happened to fight over. The return journey is meant to be the
         // dangerous part of a raid; losing the prize to terrain is not danger, it is a shrug.
-        copy.set(net.minecraft.core.component.DataComponents.DAMAGE_RESISTANT,
-                new net.minecraft.world.item.component.DamageResistant(
-                        net.minecraft.tags.DamageTypeTags.IS_FIRE));
+        fireproof(copy, level);
         return copy;
     }
 

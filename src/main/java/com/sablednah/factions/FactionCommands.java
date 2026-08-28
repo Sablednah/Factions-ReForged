@@ -514,13 +514,13 @@ public final class FactionCommands {
         }
         ServerLevel level = player.level();
         String dim = FactionBridge.dimensionOf(level);
-        ChunkPos chunk = new ChunkPos(player.blockPosition());
+        ChunkPos chunk = ChunkPos.containing(player.blockPosition());
         FactionStore store = store(ctx);
 
         int limit = FactionClaims.limitFor(f.get());
         // Read BEFORE the attempt: once the chunk changes hands the old owner is no longer the
         // owner, and both the message and the announcement would name the raider.
-        Optional<FactionStore.Faction> victim = store.ownerOf(dim, chunk.x, chunk.z)
+        Optional<FactionStore.Faction> victim = store.ownerOf(dim, chunk.x(), chunk.z())
                 .flatMap(store::byId)
                 .filter(other -> !other.id().equals(f.get().id()));
         String victimName = victim.map(FactionStore.Faction::name).orElse("?");
@@ -532,7 +532,7 @@ public final class FactionCommands {
             }
             case OWNED -> {
                 Feedback.chat(player, Lang.fmt("msg.factions.claimed_by_other", "name",
-                        store.ownerOf(dim, chunk.x, chunk.z).flatMap(store::byId)
+                        store.ownerOf(dim, chunk.x(), chunk.z()).flatMap(store::byId)
                                 .map(FactionStore.Faction::name).orElse("?")));
                 return 0;
             }
@@ -558,13 +558,13 @@ public final class FactionCommands {
             }
             case THEIRS_AND_HELD -> {
                 Feedback.chat(player, Lang.fmt("msg.factions.claim_held", "name",
-                        store.ownerOf(dim, chunk.x, chunk.z).flatMap(store::byId)
+                        store.ownerOf(dim, chunk.x(), chunk.z()).flatMap(store::byId)
                                 .map(FactionStore.Faction::name).orElse("?")));
                 return 0;
             }
             case NOT_AT_WAR -> {
                 Feedback.chat(player, Lang.fmt("msg.factions.claim_not_at_war", "name",
-                        store.ownerOf(dim, chunk.x, chunk.z).flatMap(store::byId)
+                        store.ownerOf(dim, chunk.x(), chunk.z()).flatMap(store::byId)
                                 .map(FactionStore.Faction::name).orElse("?")));
                 return 0;
             }
@@ -578,15 +578,15 @@ public final class FactionCommands {
             }
             case TAKEN -> {
                 Feedback.chat(player, Lang.fmt("msg.factions.claim_taken",
-                        "x", chunk.x, "z", chunk.z, "name", victimName));
+                        "x", chunk.x(), "z", chunk.z(), "name", victimName));
                 // Told to the victim, and it must be. Land quietly changing hands is the one thing
                 // a claim system cannot do silently: they would find out by walking home, and by
                 // then the raid is over and nobody was there to answer it.
                 victim.ifPresent(loser -> announce(ctx, loser, Lang.fmt("msg.factions.claim_lost",
-                        "name", f.get().name(), "x", chunk.x, "z", chunk.z), null));
+                        "name", f.get().name(), "x", chunk.x(), "z", chunk.z()), null));
             }
             case CLAIMED -> Feedback.chat(player, Lang.fmt("msg.factions.claimed",
-                    "x", chunk.x, "z", chunk.z, "held", store.claimCount(f.get().id()),
+                    "x", chunk.x(), "z", chunk.z(), "held", store.claimCount(f.get().id()),
                     "limit", limit < 0 ? Lang.get("msg.factions.no_limit")
                             : String.valueOf(limit)));
         }
@@ -618,14 +618,14 @@ public final class FactionCommands {
             return 0;
         }
         String dim = FactionBridge.dimensionOf(player.level());
-        ChunkPos chunk = new ChunkPos(player.blockPosition());
-        Optional<String> owner = store(ctx).ownerOf(dim, chunk.x, chunk.z);
+        ChunkPos chunk = ChunkPos.containing(player.blockPosition());
+        Optional<String> owner = store(ctx).ownerOf(dim, chunk.x(), chunk.z());
         if (owner.isEmpty() || !owner.get().equals(f.get().id())) {
             Feedback.chat(player, Lang.get("msg.factions.not_yours"));
             return 0;
         }
         double back = FactionClaims.release(store(ctx), dim, chunk, f.get());
-        Feedback.chat(player, Lang.fmt("msg.factions.unclaimed", "x", chunk.x, "z", chunk.z));
+        Feedback.chat(player, Lang.fmt("msg.factions.unclaimed", "x", chunk.x(), "z", chunk.z()));
         if (back > 0.0D) {
             Feedback.chat(player, Lang.fmt("msg.factions.unclaim_refund",
                     "amount", com.sablednah.standards.api.economy.Economy.format(back)));
@@ -656,8 +656,8 @@ public final class FactionCommands {
             return 0;
         }
         String dim = FactionBridge.dimensionOf(player.level());
-        ChunkPos chunk = new ChunkPos(player.blockPosition());
-        Optional<String> owner = store(ctx).ownerOf(dim, chunk.x, chunk.z);
+        ChunkPos chunk = ChunkPos.containing(player.blockPosition());
+        Optional<String> owner = store(ctx).ownerOf(dim, chunk.x(), chunk.z());
         if (owner.isEmpty() || !owner.get().equals(f.get().id())) {
             // A home outside your own land is a home an enemy can camp with impunity.
             Feedback.chat(player, Lang.get("msg.factions.home_must_be_claimed"));

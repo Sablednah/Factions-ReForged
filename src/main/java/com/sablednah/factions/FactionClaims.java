@@ -51,7 +51,7 @@ public final class FactionClaims {
 
     public static Result attempt(FactionStore store, String dim, ChunkPos chunk,
             FactionStore.Faction f) {
-        Optional<String> owner = store.ownerOf(dim, chunk.x, chunk.z);
+        Optional<String> owner = store.ownerOf(dim, chunk.x(), chunk.z());
         boolean takingFromSomebody = false;
         if (owner.isPresent()) {
             if (owner.get().equals(f.id())) {
@@ -71,7 +71,7 @@ public final class FactionClaims {
             return Result.LIMIT;
         }
         if (FactionsConfig.REQUIRE_CONNECTED_CLAIMS.get() && held > 0
-                && !store.touchesOwnLand(dim, chunk.x, chunk.z, f.id())) {
+                && !store.touchesOwnLand(dim, chunk.x(), chunk.z(), f.id())) {
             return Result.DISCONNECTED;
         }
         // Paid last, after every free refusal has had its say — so a claim that was going to be
@@ -80,7 +80,7 @@ public final class FactionClaims {
         if (cost > 0.0D && !store.adjustBank(f.id(), -cost)) {
             return Result.BROKE;
         }
-        store.claim(dim, chunk.x, chunk.z, f.id());
+        store.claim(dim, chunk.x(), chunk.z(), f.id());
         return takingFromSomebody ? Result.TAKEN : Result.CLAIMED;
     }
 
@@ -92,7 +92,7 @@ public final class FactionClaims {
     public static double release(FactionStore store, String dim, ChunkPos chunk,
             FactionStore.Faction f) {
         int heldBefore = store.claimCount(f.id());
-        store.unclaim(dim, chunk.x, chunk.z);
+        store.unclaim(dim, chunk.x(), chunk.z());
         double back = FactionBank.refund(heldBefore);
         if (back > 0.0D) {
             store.adjustBank(f.id(), back);
@@ -149,7 +149,7 @@ public final class FactionClaims {
         if (FactionPower.overreach(theirHeld, theirEntitlement) <= 0) {
             return Result.THEIRS_AND_HELD;
         }
-        if (!store.isBorderOf(dim, chunk.x, chunk.z, theirId)) {
+        if (!store.isBorderOf(dim, chunk.x(), chunk.z(), theirId)) {
             return Result.NOT_THEIR_BORDER;
         }
         return Result.CLAIMED;

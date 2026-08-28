@@ -207,7 +207,8 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
 
     public static final net.minecraft.world.level.saveddata.SavedDataType<FactionStore> TYPE =
             new net.minecraft.world.level.saveddata.SavedDataType<>(
-                    "factions", FactionStore::new, CODEC, null);
+                    net.minecraft.resources.Identifier.fromNamespaceAndPath("factions", "data"),
+                    FactionStore::new, CODEC, null);
 
     private final Map<String, Faction> factions = new LinkedHashMap<>();
 
@@ -639,7 +640,7 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
     }
 
     public Optional<Faction> factionAt(String dimension, ChunkPos chunk) {
-        return ownerOf(dimension, chunk.x, chunk.z).flatMap(this::byId);
+        return ownerOf(dimension, chunk.x(), chunk.z()).flatMap(this::byId);
     }
 
     public int claimCount(String factionId) {
