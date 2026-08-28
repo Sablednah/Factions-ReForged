@@ -125,6 +125,8 @@ public final class FactionLang {
                 "&cYour standard is gone. {term.dim}(raise another when you can)");
         Lang.contribute("msg.factions.standard_still_taken",
                 "&cYou cannot raise another while &f{name}&c is flying yours. {term.dim}(go and take it back)");
+        Lang.contribute("msg.factions.standard_carried",
+                "&c&f{player}&c is carrying your standard — &f{x}, {y}, {z}&c in &f{world}&c. {term.dim}(go and get it)");
         Lang.contribute("msg.factions.power_mine",
                 "{term.prefix} &f{player}&7 has &f{power}&7 of &f{max}&7 power.");
         Lang.contribute("msg.factions.power_faction",

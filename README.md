@@ -181,6 +181,14 @@ That is a reason to have one and a reason to take somebody else's, which is the 
 from two sides. Breaking a standard is the one deliberate hole in claim protection: an enemy may
 take your flag where they can take nothing else.
 
+**Carrying it home is the dangerous part.** While somebody holds your standard **in their hands**,
+you cannot raise a new one — and the refusal tells you exactly where they are standing. But a flag
+in your hands is a flag you are holding instead of a sword: you cannot carry somebody's colours and
+fight properly at the same time, so getting it home is something your friends have to make happen.
+
+Put it in a chest and you stop being a target, and stop denying them anything, and they simply
+raise another. There is no version of hiding that works.
+
 **And it is always recoverable.** The banner drops carrying its owner's name, and a thief who plants
 it on their own land under sky flies it as a trophy for a smaller bonus — where you can see exactly
 where it is, and coming for it is now your raid. Hoarding one in a chest pays nothing at all: the

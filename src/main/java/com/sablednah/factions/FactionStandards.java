@@ -143,6 +143,21 @@ public final class FactionStandards {
             return false;
         }
 
+        // Or somebody is carrying it home right now. Told with their position, because a carrier
+        // who could simply walk away and wait is not a target — and being a target while your
+        // hands are full is the whole trade.
+        Optional<ServerPlayer> carrier = carriedBy(level.getServer(), store, faction.id());
+        if (carrier.isPresent()) {
+            ServerPlayer holder = carrier.get();
+            Feedback.chat(player, Lang.fmt("msg.factions.standard_carried",
+                    "player", holder.getName().getString(),
+                    "x", holder.blockPosition().getX(),
+                    "y", holder.blockPosition().getY(),
+                    "z", holder.blockPosition().getZ(),
+                    "world", FactionBridge.dimensionOf((ServerLevel) holder.level())));
+            return false;
+        }
+
         // Is this somebody else's flag, being flown as a trophy? The name a taken standard carries
         // survives being placed, so vanilla's own data answers it and nothing has to track the
         // item across chests, hoppers and deaths.
@@ -196,6 +211,50 @@ public final class FactionStandards {
                     "colour", colour.getName().replace('_', ' ')));
         }
         return true;
+    }
+
+    /**
+     * Whoever is carrying this faction's standard <b>in their hands</b>, if anybody.
+     *
+     * <h3>In hand, deliberately — not in a bag</h3>
+     *
+     * <p>This is what makes the journey home the dangerous part of a raid. A flag in a backpack is
+     * invisible and costs its carrier nothing; a flag <em>in your hands</em> is a flag you are
+     * holding instead of a sword. You cannot carry somebody's colours and fight properly at the
+     * same time, so getting it home is something your friends have to make happen.</p>
+     *
+     * <p>And it means hiding is not a strategy: while you hold it you are denying its owner a new
+     * one, and the refusal they get names <b>where you are</b>. Put it in a chest and you stop
+     * being a target — but you also stop denying them anything, so they simply raise another.</p>
+     *
+     * <p>Cheap: online players only, two item stacks each. Run when somebody tries to raise a
+     * standard, which is rare.</p>
+     */
+    public static Optional<ServerPlayer> carriedBy(net.minecraft.server.MinecraftServer server,
+            FactionStore store, String factionId) {
+        String wanted = store.byId(factionId)
+                .map(f -> com.sablednah.standards.neoforge.Feedback.stripCodes(
+                        Lang.fmt("msg.factions.standard_item", "name", f.name())))
+                .orElse(null);
+        if (wanted == null) {
+            return Optional.empty();
+        }
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            if (holding(player.getMainHandItem(), wanted)
+                    || holding(player.getOffhandItem(), wanted)) {
+                return Optional.of(player);
+            }
+        }
+        return Optional.empty();
+    }
+
+    private static boolean holding(ItemStack stack, String wantedName) {
+        if (stack.isEmpty() || !(stack.getItem() instanceof net.minecraft.world.item.BannerItem)) {
+            return false;
+        }
+        net.minecraft.network.chat.Component name =
+                stack.get(net.minecraft.core.component.DataComponents.CUSTOM_NAME);
+        return name != null && name.getString().equals(wantedName);
     }
 
     /** Which faction a banner's name says it belongs to, if any. */
