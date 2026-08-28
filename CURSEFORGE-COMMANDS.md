@@ -85,6 +85,27 @@ The home must be **on land you hold** — one outside it is one an enemy can cam
 Standards' teleport, so the warmup, the countdown, the safe landing and cancel-on-damage all apply,
 and it shows up in `/back list` as `/f home`.
 
+## Power and the standard
+
+Only when `power.mode` is not `fixed`.
+
+### `/f power [player]`
+
+Yours, or theirs. Then what your faction holds against its entitlement, how exposed you are if that
+is over, and **how fast power comes back** with the reason — which is the standard's whole effect
+made visible.
+
+### `/f standard` — officer
+
+Look at a banner on your own land under open sky and it becomes your faction's standard: its colour
+and pattern become the faction's identity.
+
+With nothing in front of you it answers **"where is my flag"** — on your tower, in an enemy's
+courtyard, or in somebody's hands running for the border.
+
+Planting a captured flag on your own land flies it as a trophy; no command needed, because the act
+is the declaration.
+
 ## Seeing
 
 ### `/f map`

@@ -162,6 +162,35 @@ Allies may **interact** by default and may **not build** by default, and the spl
 An ally who cannot open your gate stands outside it; an ally who can take your walls down is a
 demolition permit you issued for a diplomatic position that can change next week.
 
+### Power: fixed is the ceiling, power is the erosion
+
+Optional and off by default (`power.mode = fixed`), so switching it on changes a server rather than
+arriving with one.
+
+`chunksPerMember` still decides what a faction is **entitled** to; power decides how much of that it
+is currently **holding**. Power can only take entitlement away, never grant more — which means
+turning it on redistributes nobody's land, and farming power cannot inflate holdings because the
+ceiling is membership. That kills the mob-grinder exploit with no special case to maintain.
+
+**Overclaiming is the point.** When a faction holds more land than its power covers, a declared
+enemy may take the difference — at their border, eating inward, each chunk reducing the overreach by
+one. Without it, power is a claim limit with extra steps and this mod already had one. The attacker
+is rewarded for *noticing*, not for attacking.
+
+Four modes differing only in what counts as losing: `fixed`, `pvp`, **`pve`** and `both`. `pve` is
+the one nothing else offers — your territory shrinks when the *world* beats you.
+
+**Environmental deaths never cost power.** Falling in your own lava is not a raid: nobody decided it
+and nobody gains from it. The original charged for it deliberately and was wrong, which is the same
+mistake as tagging somebody for freezing to death. Attribution comes from Standards' combat API, so
+arrows and pets resolve to the person behind them.
+
+**Experience restores it**, read from the mob's drop rather than your balance. The drop value is
+already Minecraft's own opinion of how hard something was to kill — maintained by Mojang, extended
+free by every mod on the server — so a ZombieMod tank outweighs a walker with no registry of mob ids
+to keep and nothing to be wrong about the day a modpack adds a boss. Reading your *balance* instead
+would make smelting a land claim and enchanting a cost in territory.
+
 ### The standard is a banner somebody can take
 
 A faction designs a banner in a loom, plants it on its own land, and `/f standard` makes it the

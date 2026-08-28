@@ -50,11 +50,83 @@ Walk across a border and the **action bar names whose land you have entered**, o
 | **Right-clicks** | Doors, buttons, levers, chests, furnaces. **Not a list of block types** — a list is something somebody has to maintain, and every modded block is missing from it. A stranger who cannot mine your chest could still *open* it, and that is the theft the claim was bought to prevent. |
 | **Pressure plates** | Still work, deliberately. Put one outside the door for visitors: protection you can open a hole in beats protection you have to switch off. |
 | **Item frames, armour stands, paintings** | Covered separately, because none of them are blocks and every block-shaped guard misses them. |
+| **Mobs** | Cannot chew through claimed land, answered through Standards' claims seam so a mob mod does not have to guess — ZombieMod asked for that hook and uses it. |
 | **Explosions** | Filtered per block, so a creeper on the wilderness side of your wall craters the wilderness and leaves the wall standing. You still take the damage. TNT is a separate setting, because on a PvP server it *is* the siege tool. |
 
 A refusal **says no where the no happened** — red dust at the exact face you clicked and a low
 thud, rather than a line of text at the top of the screen while the disappointment is under your
 cursor.
+
+## Power — land you hold rather than own
+
+Optional, and **off by default**: `power.mode = fixed` is exactly the behaviour above, so switching
+to this changes a server rather than arriving with it.
+
+Every player has power. Dying costs some; time online and killing things bring it back. A faction's
+power is its members' added up — and here is the whole idea:
+
+> **`chunksPerMember` is still the ceiling. Power decides how much of that ceiling you are actually
+> holding onto.**
+
+So power can only ever take entitlement *away*, never grant more than the fixed rule would. Turning
+it on redistributes nobody's land; it adds a way to *lose* land by playing badly. And farming power
+cannot inflate holdings, because the ceiling is membership — which kills the mob-grinder exploit
+without a special case anywhere.
+
+**When a faction holds more land than its power covers, a declared enemy may take the difference.**
+That is the point of the whole system: without it, power is a claim limit with extra steps. Raids
+start **at their border** and eat inward, so nobody reaches past a wall for the chunk with the vault
+in it, and each chunk taken reduces the overreach by one — so a faction five chunks over stops being
+takeable after five. **The attacker is rewarded for noticing, not for attacking.**
+
+Four modes, differing only in what counts as *losing*:
+
+| mode | you lose power when |
+|---|---|
+| `fixed` | never — power is inert |
+| `pvp` | a player kills you |
+| **`pve`** | **a mob kills you** |
+| `both` | either |
+
+**`pve` is the one no faction plugin has offered**, and it fits a survival or apocalypse server
+exactly: your borders shrink when the *world* beats you and grow back as you push out.
+
+**Falling in your own lava is not a raid.** Environmental deaths never cost power — nobody decided
+it and nobody gains from it. Arrows and pets resolve to the person behind them, so a bow kill counts
+exactly as a sword kill does.
+
+**Experience brings it back.** A mob's XP drop is already Minecraft's own opinion of how hard it was
+to kill — maintained by Mojang and extended for free by every mod on your server — so a boss from a
+mob pack is worth more than a zombie without anyone maintaining a list of mob ids.
+
+And **nobody finds out by walking home**: the victim is told the moment land changes hands, and
+`/f status` says exactly how exposed you are — *"you hold 22 chunks on an entitlement of 18; 4 can
+be taken."*
+
+## The standard — a flag worth taking
+
+Design a banner in a loom, plant it on your land, and it is your faction's standard. **Its colour
+and pattern become your identity**, printed wherever your name appears — a faction personalised by
+something it made rather than a setting it typed.
+
+**It must see the sky.** That one rule is the whole game. Enemies cannot break your blocks or open
+your doors, so the only way anyone reaches your flag is a path you left; without the rule everybody
+entombs theirs in a sealed box and the feature is dead on arrival. It is re-checked continuously —
+roof it over and it stops earning, uncover it and it resumes.
+
+**Flying one is the difference between recovering at full speed and recovering slowly.** A reason to
+have one and a reason to take somebody else's, which is the same number seen from two sides.
+Breaking a standard is the *one* deliberate hole in claim protection — an enemy may take your flag
+where they can take nothing else of yours.
+
+**Carrying it home is the dangerous part.** A flag in your hands is a flag you are holding instead
+of a sword, you **glow red through walls**, and its owner is told exactly where you are standing.
+Plant it on your own land to fly it as a trophy — where they can come and take it back, and taking
+it back is now their raid. Put it in a chest and you stop being a target, and stop denying them
+anything.
+
+Identified by faction id in the item's own data rather than by its name, because a name is something
+anybody can type into an anvil. Duplicates are inert rather than policed.
 
 ## Claiming, and walking
 
@@ -68,6 +140,10 @@ else's territory says nothing at all, because that is a journey and not a failed
 reason is given once, not per chunk.
 
 ## Diplomacy, and the asymmetry that matters
+
+**Allies cannot hurt each other**, which sounds obvious and was missing until 1.1.0 — an alliance
+stopped you being overclaimed and did nothing whatever to stop you being shot. `pvp.betweenAllies`
+turns friendly fire back on for a server that wants it.
 
 **Allies must agree; enemies need not.** An alliance holds only when both factions have declared
 it. A war needs one declaration. You cannot conscript a friend, and you cannot decline to be
@@ -133,7 +209,7 @@ of colour rules and one merge-on-upgrade behaviour.
 
 | Minecraft | NeoForge | Java | Depends on |
 |---|---|---|---|
-| 1.21.11 | 21.11.42+ | 21 | [SableCraft Standards](https://www.curseforge.com/minecraft/mc-mods/sablecraft-standards) 1.0.1+ |
+| 1.21.11 | 21.11.42+ | 21 | [SableCraft Standards](https://www.curseforge.com/minecraft/mc-mods/sablecraft-standards) 1.1.1+ |
 
 Standards is a **hard dependency and deliberately so**: the claims and groups seams, the message
 catalogue, the safe-landing search, the teleport warmups, the chat router and the economy are all
@@ -141,10 +217,10 @@ borrowed rather than reimplemented. Install both on the server; your players ins
 
 ## What is not in this release
 
-**Power.** The old plugin's mechanic where a faction that keeps dying holds less land than it has
-claimed, and an enemy can take the difference. It is designed in full — including a PvE mode where
-your territory shrinks when the *world* beats you, and a faction standard an enemy can steal — and
-deliberately not shipped half-built. See `POWER.md` in the repository.
+**`/f raid`** — declared attacks, with everyone glowing by side and, optionally, land only changing
+hands during a raid rather than whenever somebody notices. Designed in `POWER.md`; not built,
+because how a raid *ends* and whether it can be *declined* decide what game it is, and those are
+worth settling properly rather than quickly.
 
 ## Credits and licence
 
