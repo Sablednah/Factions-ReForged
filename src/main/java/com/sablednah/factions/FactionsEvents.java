@@ -138,11 +138,6 @@ public final class FactionsEvents {
         guardEntity(event, event.getTarget());
     }
 
-    @SubscribeEvent
-    static void onEntityInteractSpecific(net.neoforged.neoforge.event.entity.player
-            .PlayerInteractEvent.EntityInteractSpecific event) {
-        guardEntity(event, event.getTarget());
-    }
 
     /** Breaking a frame is a left-click, so it arrives as an attack rather than an interaction. */
     @SubscribeEvent

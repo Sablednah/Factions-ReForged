@@ -293,10 +293,9 @@ public final class FactionStandards {
         net.minecraft.world.scores.PlayerTeam team = scoreboard.getPlayerTeam(CARRIER_TEAM);
         if (team == null) {
             team = scoreboard.addPlayerTeam(CARRIER_TEAM);
-            // ⚠ Version-fragile, and ZombieMod paid for this already: on 26.2
+            // The change ZombieMod warned about, arriving exactly as described: 26.2's
             // PlayerTeam.setColor takes an Optional<TeamColor> rather than a ChatFormatting.
-            // See ZombieMod's platform/Colours for the seam it put that behind.
-            team.setColor(net.minecraft.ChatFormatting.RED);
+            team.setColor(java.util.Optional.of(net.minecraft.world.scores.TeamColor.RED));
             // Or two carriers running together read as one blob with no edge between them.
             team.setSeeFriendlyInvisibles(false);
         }
