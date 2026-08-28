@@ -117,6 +117,12 @@ public final class FactionLang {
                 "&c&l⚑ &r&f{name}&c is flying your standard at &f{x}, {y}, {z}&c.");
         Lang.contribute("msg.factions.standard_lost",
                 "&c&lYour standard has fallen. &r&cPower comes back slower until you raise another.");
+        Lang.contribute("msg.factions.standard_covered",
+                "&cYour standard no longer sees the sky. {term.dim}(it earns nothing while it is covered)");
+        Lang.contribute("msg.factions.standard_uncovered",
+                "{term.prefix} &aYour standard sees the sky again.");
+        Lang.contribute("msg.factions.standard_gone",
+                "&cYour standard is gone. {term.dim}(raise another when you can)");
         Lang.contribute("msg.factions.power_mine",
                 "{term.prefix} &f{player}&7 has &f{power}&7 of &f{max}&7 power.");
         Lang.contribute("msg.factions.power_faction",

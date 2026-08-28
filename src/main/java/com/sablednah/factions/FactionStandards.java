@@ -135,6 +135,7 @@ public final class FactionStandards {
         }
 
         store.setStandard(faction.id(), dim, pos, colour, patterns, capturedFrom);
+        FLYING.put(faction.id(), true);
 
         // Name the banner itself, now rather than when it falls. Two reasons, and the second is
         // the load-bearing one:
@@ -300,6 +301,88 @@ public final class FactionStandards {
         copy.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
                 Feedback.colored(Lang.fmt("msg.factions.standard_item", "name", ownerName)));
         return copy;
+    }
+
+    /** Whether each faction's standard is currently valid, refreshed periodically. */
+    private static final java.util.Map<String, Boolean> FLYING =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static int checkCounter;
+
+    /**
+     * Is this faction's flag actually flying?
+     *
+     * <p>A cached answer, refreshed on a timer — the scan itself walks a block column and is not
+     * something to do for every player every few seconds.</p>
+     */
+    public static boolean flying(String factionId) {
+        return FLYING.getOrDefault(factionId, true);
+    }
+
+    /**
+     * Re-check every standard, because <b>the sky rule has to keep being true</b>.
+     *
+     * <p>Testing it once at designation would be an invitation: plant the flag in the open,
+     * satisfy the rule, then roof it over. That is the first thing anybody would try, and it would
+     * leave the feature looking intact while being entirely defeated.</p>
+     *
+     * <h3>Covering it stops the bonus rather than forfeiting the flag</h3>
+     *
+     * <p>The bonus is paid for flying a <em>visible</em> flag, so a covered one simply stops
+     * earning, and starts again the moment the roof comes off. Confiscating it instead would
+     * punish somebody whose neighbour built a bridge, and make an accident permanent.</p>
+     *
+     * <p><b>A destroyed banner is different</b> and does clear the standard: if the block is gone
+     * there is nothing to uncover. That covers pistons, explosions, and every route out of the
+     * world that is not an enemy breaking it by hand.</p>
+     *
+     * <p>Unloaded chunks are skipped rather than treated as failures. Nobody should lose a flag
+     * because their base is not currently loaded, and force-loading chunks to check a decoration
+     * is not a trade worth making.</p>
+     */
+    public static void revalidate(net.minecraft.server.MinecraftServer server) {
+        // Every ten seconds. A roof takes longer than that to build, and this is a block column
+        // per faction rather than something to run every tick.
+        if (++checkCounter % 200 != 0) {
+            return;
+        }
+        FactionStore store = FactionStore.get(server);
+        for (FactionStore.Faction f : store.all()) {
+            Optional<BlockPos> where = store.standardPos(f.id());
+            if (where.isEmpty()) {
+                FLYING.remove(f.id());
+                continue;
+            }
+            ServerLevel level = store.standardDimension(f.id())
+                    .flatMap(d -> FactionBridge.levelFor(server, d)).orElse(null);
+            if (level == null || !level.isLoaded(where.get())) {
+                continue; // not loaded: keep the last answer rather than inventing one
+            }
+            BlockPos pos = where.get();
+            if (!isBanner(level, pos)) {
+                store.clearStandard(f.id());
+                FLYING.remove(f.id());
+                announce(server, f, Lang.get("msg.factions.standard_gone"));
+                continue;
+            }
+            boolean nowFlying = seesSky(level, pos);
+            Boolean was = FLYING.put(f.id(), nowFlying);
+            if (was != null && was != nowFlying) {
+                // Said once on each change, never repeated every ten seconds.
+                announce(server, f, Lang.get(nowFlying
+                        ? "msg.factions.standard_uncovered" : "msg.factions.standard_covered"));
+            }
+        }
+    }
+
+    private static void announce(net.minecraft.server.MinecraftServer server,
+            FactionStore.Faction f, String message) {
+        for (java.util.UUID member : f.memberIds()) {
+            ServerPlayer online = server.getPlayerList().getPlayer(member);
+            if (online != null) {
+                Feedback.chat(online, message);
+            }
+        }
     }
 
     /**

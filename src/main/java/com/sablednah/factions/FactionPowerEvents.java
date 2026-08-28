@@ -117,6 +117,7 @@ public final class FactionPowerEvents {
         double baseShare = perMinute / 12.0D; // five seconds of a minute
         double max = FactionsConfig.POWER_MAX.get();
         FactionStore store = FactionStore.get(server);
+        FactionStandards.revalidate(server);
 
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             UUID id = player.getUUID();
@@ -146,10 +147,13 @@ public final class FactionPowerEvents {
         }
         String id = mine.get().id();
         boolean captured = store.standardCapturedFrom(id).isPresent();
-        double own = store.hasStandard(id) && !captured
+        // Not merely planted — actually flying. A flag somebody has roofed over is not visible,
+        // and the bonus is paid for a visible flag.
+        boolean up = store.hasStandard(id) && FactionStandards.flying(id);
+        double own = up && !captured
                 ? FactionsConfig.REGEN_WITH_STANDARD.get()
                 : FactionsConfig.REGEN_WITHOUT_STANDARD.get();
-        return own + (captured ? FactionsConfig.REGEN_WITH_CAPTURED.get() : 0.0D);
+        return own + (captured && up ? FactionsConfig.REGEN_WITH_CAPTURED.get() : 0.0D);
     }
 
     private static boolean frozen(UUID player) {

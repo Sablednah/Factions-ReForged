@@ -239,4 +239,14 @@ public final class FactionBridge implements GroupProvider, ClaimProvider {
                     : Optional.of(Feedback.colored(Lang.get(key)));
         }
     }
+
+    /** The level a stored dimension id refers to, if it still exists. */
+    public static Optional<ServerLevel> levelFor(MinecraftServer server, String dimension) {
+        for (ServerLevel level : server.getAllLevels()) {
+            if (dimensionOf(level).equals(dimension)) {
+                return Optional.of(level);
+            }
+        }
+        return Optional.empty();
+    }
 }
