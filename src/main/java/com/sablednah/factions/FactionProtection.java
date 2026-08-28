@@ -73,8 +73,17 @@ public final class FactionProtection {
         if (mine.isEmpty() || mine.get().id().equals(flying.get())) {
             return false;
         }
-        // Peaceful, both ways. A faction that opted out of fighting neither raids nor is raided,
-        // and its flag is part of that promise.
+
+        // Taking back your OWN flag is always allowed, whatever the relation and whatever either
+        // side has declared. Recovering your property is not an act of aggression, and without
+        // this exception there is a lock: capture a faction's standard, and if either of you then
+        // goes peaceful they can neither reclaim it nor raise another, for ever.
+        if (store.standardCapturedFrom(flying.get()).map(mine.get().id()::equals).orElse(false)) {
+            return true;
+        }
+
+        // Otherwise the ordinary rules. Peaceful both ways: a faction that opted out of fighting
+        // neither raids nor is raided, and its flag is part of that promise.
         Optional<FactionStore.Faction> theirs = store.byId(flying.get());
         if (mine.get().peaceful() || theirs.map(FactionStore.Faction::peaceful).orElse(false)) {
             return false;

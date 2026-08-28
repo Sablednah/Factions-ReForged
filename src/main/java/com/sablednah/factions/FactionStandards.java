@@ -125,6 +125,24 @@ public final class FactionStandards {
             named = Optional.ofNullable(banner.getCustomName());
         }
 
+        // While an enemy is FLYING your standard, you cannot simply raise another. Without this
+        // the trophy is worthless: you would shrug, plant a fresh banner, and their prize would
+        // deny you nothing. Going and taking it back is the point.
+        //
+        // Flying, not merely held. A thief who roofs their trophy over earns nothing from it, and
+        // it stops denying you at the same moment — so "capture it and bury it" is not a way to
+        // keep somebody flagless forever. One visibility rule governs both halves.
+        Optional<FactionStore.Faction> thief = store.all().stream()
+                .filter(other -> store.standardCapturedFrom(other.id())
+                        .map(faction.id()::equals).orElse(false))
+                .filter(other -> flying(other.id()))
+                .findFirst();
+        if (thief.isPresent()) {
+            Feedback.chat(player, Lang.fmt("msg.factions.standard_still_taken",
+                    "name", thief.get().name()));
+            return false;
+        }
+
         // Is this somebody else's flag, being flown as a trophy? The name a taken standard carries
         // survives being placed, so vanilla's own data answers it and nothing has to track the
         // item across chests, hoppers and deaths.
@@ -284,6 +302,10 @@ public final class FactionStandards {
             ItemStack stack = item.getItem();
             if (stack.getItem() instanceof net.minecraft.world.item.BannerItem) {
                 item.setItem(asTrophy(stack, owner));
+                // It does not despawn. A flag that quietly evaporated five minutes into the
+                // journey home would end a raid with nobody having done anything, and neither
+                // side would know why.
+                item.setUnlimitedLifetime();
             }
         }
         return true;
@@ -300,6 +322,12 @@ public final class FactionStandards {
         ItemStack copy = banner.copy();
         copy.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
                 Feedback.colored(Lang.fmt("msg.factions.standard_item", "name", ownerName)));
+        // Fireproof, because a captured flag should be lost to somebody taking it off you rather
+        // than to the lava you happened to fight over. The return journey is meant to be the
+        // dangerous part of a raid; losing the prize to terrain is not danger, it is a shrug.
+        copy.set(net.minecraft.core.component.DataComponents.DAMAGE_RESISTANT,
+                new net.minecraft.world.item.component.DamageResistant(
+                        net.minecraft.tags.DamageTypeTags.IS_FIRE));
         return copy;
     }
 
