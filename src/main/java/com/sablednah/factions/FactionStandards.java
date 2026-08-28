@@ -349,8 +349,72 @@ public final class FactionStandards {
         return name != null && name.getString().equals(wantedName);
     }
 
+    /**
+     * Whose standard a <b>placed banner</b> says it is, from the block itself.
+     *
+     * <h3>Identity lives on the object, not in the registry</h3>
+     *
+     * <p>Learned the hard way. Everything used to key on "is this position registered as a
+     * standard", which meant a captured flag that had been carried home and planted was — until
+     * somebody typed a command — an ordinary banner. Its owner could not break it, because it sat
+     * in the thief's protected land; the thief got nothing, because nothing had been registered;
+     * and neither of them was told anything, because from the mod's point of view nothing had
+     * happened.</p>
+     *
+     * <p>A flag is a flag because of what it is, not because of what has been recorded about it.</p>
+     */
+    public static Optional<String> whoseStandardBlock(ServerLevel level, BlockPos pos) {
+        if (!(level.getBlockEntity(pos) instanceof BannerBlockEntity banner)) {
+            return Optional.empty();
+        }
+        net.minecraft.network.chat.Component name = banner.getCustomName();
+        if (name == null) {
+            return Optional.empty();
+        }
+        return whoseStandard(FactionStore.get(level.getServer()), name);
+    }
+
+    /**
+     * Somebody has planted a banner. If it is a standard, make it one.
+     *
+     * <p><b>No command needed.</b> Planting a captured flag in your own land is unambiguous — you
+     * are flying it — and requiring a command afterwards produced exactly the confusion it should
+     * have: a player placed a trophy, nothing happened, and there was no message to explain why.
+     * The act is the declaration.</p>
+     *
+     * <p>Still refused where a standard could not be raised anyway, and <b>said out loud</b>, so a
+     * flag planted in a cellar tells you why it is not flying rather than silently not counting.</p>
+     */
+    public static void onPlaced(ServerLevel level, BlockPos pos, ServerPlayer placer) {
+        Optional<String> ownerId = whoseStandardBlock(level, pos);
+        if (ownerId.isEmpty()) {
+            return; // an ordinary banner
+        }
+        FactionStore store = FactionStore.get(level.getServer());
+        Optional<FactionStore.Faction> mine = store.of(placer.getUUID());
+        if (mine.isEmpty()) {
+            Feedback.chat(placer, Lang.get("msg.factions.standard_no_faction"));
+            return;
+        }
+        String dim = FactionBridge.dimensionOf(level);
+        if (!store.ownerOf(dim, pos.getX() >> 4, pos.getZ() >> 4)
+                .map(mine.get().id()::equals).orElse(false)) {
+            Feedback.chat(placer, Lang.get("msg.factions.standard_plant_own_land"));
+            return;
+        }
+        if (!seesSky(level, pos)) {
+            Feedback.chat(placer, Lang.get("msg.factions.standard_needs_sky"));
+            return;
+        }
+        if (store.hasStandard(mine.get().id())) {
+            Feedback.chat(placer, Lang.get("msg.factions.standard_already_flying"));
+            return;
+        }
+        designate(placer, level, pos, mine.get());
+    }
+
     /** Which faction a banner's name says it belongs to, if any. */
-    private static Optional<String> whoseStandard(FactionStore store,
+    static Optional<String> whoseStandard(FactionStore store,
             net.minecraft.network.chat.Component name) {
         String plain = name.getString();
         for (FactionStore.Faction f : store.all()) {
@@ -539,9 +603,13 @@ public final class FactionStandards {
             }
             BlockPos pos = where.get();
             if (!isBanner(level, pos)) {
+                // Gone with nobody having taken it: a mob broke what it stood on, an explosion
+                // reached it, a piston moved it. Said differently from a theft, because "your
+                // standard fell over" and "somebody took your standard" call for different
+                // reactions and only one of them is a raid.
                 store.clearStandard(f.id());
                 FLYING.remove(f.id());
-                announce(server, f, Lang.get("msg.factions.standard_gone"));
+                announce(server, f, Lang.get("msg.factions.standard_broken_by_world"));
                 continue;
             }
             boolean nowFlying = seesSky(level, pos);

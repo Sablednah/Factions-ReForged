@@ -895,6 +895,10 @@ public final class FactionCommands {
                 Feedback.chat(player, Lang.fmt("msg.factions.power_exposed",
                         "over", over, "held", held, "entitled", entitled));
             }
+            Feedback.chat(player, Lang.fmt("msg.factions.power_regen",
+                    "rate", FactionPowerEvents.trim(
+                            FactionPowerEvents.regenPerMinute(store, mine.id())),
+                    "standard", Lang.get(FactionPowerEvents.standardState(store, mine.id()))));
         }
 
         // Money, but only when there is something to say about it — a bank line reading zero on
@@ -1077,6 +1081,12 @@ public final class FactionCommands {
         Optional<net.minecraft.core.BlockPos> where = store.standardPos(f.get().id());
         if (where.isEmpty()) {
             Feedback.chat(player, Lang.get("msg.factions.standard_none"));
+            // What not having one costs, in the same breath. "Raise a flag" is advice; "you are
+            // recovering at half speed" is a reason.
+            Feedback.chat(player, Lang.fmt("msg.factions.power_regen",
+                    "rate", FactionPowerEvents.trim(
+                            FactionPowerEvents.regenPerMinute(store, f.get().id())),
+                    "standard", Lang.get(FactionPowerEvents.standardState(store, f.get().id()))));
             return 0;
         }
         Optional<String> captured = store.standardCapturedFrom(f.get().id());
@@ -1085,6 +1095,10 @@ public final class FactionCommands {
                 "x", where.get().getX(), "y", where.get().getY(), "z", where.get().getZ(),
                 "world", store.standardDimension(f.get().id()).orElse("?"),
                 "name", captured.flatMap(store::byId).map(FactionStore.Faction::name).orElse("?")));
+        Feedback.chat(player, Lang.fmt("msg.factions.power_regen",
+                "rate", FactionPowerEvents.trim(
+                        FactionPowerEvents.regenPerMinute(store, f.get().id())),
+                "standard", Lang.get(FactionPowerEvents.standardState(store, f.get().id()))));
         return 1;
     }
 
@@ -1128,6 +1142,12 @@ public final class FactionCommands {
                 Feedback.chat(player, Lang.fmt("msg.factions.power_exposed",
                         "over", over, "held", held, "entitled", entitled));
             }
+            // How fast it comes back, and why. Without this the standard's whole effect is
+            // invisible: you are told a flag matters and never shown that it does.
+            Feedback.chat(player, Lang.fmt("msg.factions.power_regen",
+                    "rate", FactionPowerEvents.trim(
+                            FactionPowerEvents.regenPerMinute(store, f.id())),
+                    "standard", Lang.get(FactionPowerEvents.standardState(store, f.id()))));
         });
         return 1;
     }

@@ -91,6 +91,10 @@ public final class FactionsEvents {
             return;
         }
         if (Claims.mayModify(player, level, event.getPos())) {
+            // Planting a captured flag in your own land IS flying it. Requiring a command as well
+            // produced exactly the confusion it deserved: a player planted a trophy, nothing
+            // happened, and there was no message to say why. The act is the declaration.
+            FactionStandards.onPlaced(level, event.getPos(), player);
             return;
         }
         event.setCanceled(true);

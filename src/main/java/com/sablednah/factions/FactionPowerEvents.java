@@ -145,20 +145,44 @@ public final class FactionPowerEvents {
      * chest pays nobody, because the mechanic rewards use rather than possession and a flag in a
      * box is a flag out of the game.</p>
      */
-    private static double standardMultiplier(FactionStore store, UUID player) {
-        Optional<FactionStore.Faction> mine = store.of(player);
-        if (mine.isEmpty()) {
-            return FactionsConfig.REGEN_WITHOUT_STANDARD.get();
+    /**
+     * How fast this faction recovers, and why — for showing a player rather than for arithmetic.
+     *
+     * @return points per minute, and the reason in a message key
+     */
+    public static double regenPerMinute(FactionStore store, String factionId) {
+        return FactionsConfig.POWER_PER_MINUTE.get() * multiplierFor(store, factionId);
+    }
+
+    /** Which of the three standard states this faction is in, as a message key. */
+    public static String standardState(FactionStore store, String factionId) {
+        if (!store.hasStandard(factionId)) {
+            return "msg.factions.standard_state_none";
         }
-        String id = mine.get().id();
+        if (!FactionStandards.flying(factionId)) {
+            return "msg.factions.standard_state_covered";
+        }
+        return store.standardCapturedFrom(factionId).isPresent()
+                ? "msg.factions.standard_state_trophy" : "msg.factions.standard_state_flying";
+    }
+
+    private static double multiplierFor(FactionStore store, String id) {
         boolean captured = store.standardCapturedFrom(id).isPresent();
-        // Not merely planted — actually flying. A flag somebody has roofed over is not visible,
-        // and the bonus is paid for a visible flag.
         boolean up = store.hasStandard(id) && FactionStandards.flying(id);
         double own = up && !captured
                 ? FactionsConfig.REGEN_WITH_STANDARD.get()
                 : FactionsConfig.REGEN_WITHOUT_STANDARD.get();
         return own + (captured && up ? FactionsConfig.REGEN_WITH_CAPTURED.get() : 0.0D);
+    }
+
+    private static double standardMultiplier(FactionStore store, UUID player) {
+        Optional<FactionStore.Faction> mine = store.of(player);
+        if (mine.isEmpty()) {
+            return FactionsConfig.REGEN_WITHOUT_STANDARD.get();
+        }
+        // Not merely planted — actually flying. A flag somebody has roofed over is not visible,
+        // and the bonus is paid for a visible flag.
+        return multiplierFor(store, mine.get().id());
     }
 
     private static boolean frozen(UUID player) {

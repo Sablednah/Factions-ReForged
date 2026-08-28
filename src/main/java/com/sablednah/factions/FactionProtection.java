@@ -65,11 +65,23 @@ public final class FactionProtection {
             return false;
         }
         FactionStore store = FactionStore.get(level.getServer());
-        Optional<String> flying = store.standardAt(FactionBridge.dimensionOf(level), pos);
+        String dim = FactionBridge.dimensionOf(level);
+
+        // Your own flag is yours to take back wherever it is standing and whether or not anybody
+        // registered it. Checked from the BLOCK rather than the registry, because a captured
+        // standard planted in an enemy's land was otherwise an ordinary banner to us — protected,
+        // unreclaimable, and silently doing nothing for anybody.
+        Optional<String> named = FactionStandards.whoseStandardBlock(level, pos);
+        Optional<FactionStore.Faction> claimant = store.of(player.getUUID());
+        if (claimant.isPresent() && named.map(claimant.get().id()::equals).orElse(false)) {
+            return true;
+        }
+
+        Optional<String> flying = store.standardAt(dim, pos);
         if (flying.isEmpty()) {
             return false;
         }
-        Optional<FactionStore.Faction> mine = store.of(player.getUUID());
+        Optional<FactionStore.Faction> mine = claimant;
         if (mine.isEmpty() || mine.get().id().equals(flying.get())) {
             return false;
         }

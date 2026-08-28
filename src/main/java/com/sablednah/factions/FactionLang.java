@@ -91,6 +91,12 @@ public final class FactionLang {
 
         // Power.
         Lang.contribute("msg.factions.power_off", "&7Power is not in use on this server.");
+        Lang.contribute("msg.factions.power_regen",
+                " {term.dim}-&r &7Power returns at &f{rate}&7 a minute {term.dim}({standard})");
+        Lang.contribute("msg.factions.standard_state_none", "no standard");
+        Lang.contribute("msg.factions.standard_state_flying", "standard flying");
+        Lang.contribute("msg.factions.standard_state_covered", "standard covered — it earns nothing");
+        Lang.contribute("msg.factions.standard_state_trophy", "flying a captured standard");
 
         // The standard.
         Lang.contribute("msg.factions.standard_set",
@@ -127,6 +133,14 @@ public final class FactionLang {
                 "&cYou cannot raise another while &f{name}&c is flying yours. {term.dim}(go and take it back)");
         Lang.contribute("msg.factions.standard_carried",
                 "&c&f{player}&c is carrying your standard — &f{x}, {y}, {z}&c in &f{world}&c. {term.dim}(go and get it)");
+        Lang.contribute("msg.factions.standard_no_faction",
+                "&cThat is a {term.faction} standard. You need a {term.faction} to fly it.");
+        Lang.contribute("msg.factions.standard_plant_own_land",
+                "&cPlant it on land you hold, and it flies. {term.dim}(here it is just a banner)");
+        Lang.contribute("msg.factions.standard_already_flying",
+                "&cYou already fly a standard. {term.dim}(take that one down first)");
+        Lang.contribute("msg.factions.standard_broken_by_world",
+                "&cYour standard has been destroyed. {term.dim}(nobody took it — raise another when you can)");
         Lang.contribute("msg.factions.power_mine",
                 "{term.prefix} &f{player}&7 has &f{power}&7 of &f{max}&7 power.");
         Lang.contribute("msg.factions.power_faction",
