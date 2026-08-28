@@ -94,6 +94,7 @@ public final class FactionLang {
         Lang.contribute("msg.factions.power_regen",
                 " {term.dim}-&r &7Power returns at &f{rate}&7 a minute {term.dim}({standard})");
         Lang.contribute("msg.factions.standard_state_none", "no standard");
+        Lang.contribute("msg.factions.standard_state_stolen", "your standard is taken");
         Lang.contribute("msg.factions.standard_state_flying", "standard flying");
         Lang.contribute("msg.factions.standard_state_covered", "standard covered — it earns nothing");
         Lang.contribute("msg.factions.standard_state_trophy", "flying a captured standard");
@@ -118,6 +119,10 @@ public final class FactionLang {
                 "&c&f{name}&c is flying your standard at &f{x}, {y}, {z}&c in &f{world}&c. {term.dim}(you cannot raise another until you take it back)");
         Lang.contribute("msg.factions.standard_taken",
                 "&c&l⚑ &r&f{taker}&c has taken &f{name}&c's standard.");
+        Lang.contribute("msg.factions.standard_recovered",
+                "&a&l⚑ &r&f{taker}&a has recovered their standard.");
+        Lang.contribute("msg.factions.standard_not_the_real_one",
+                "&cThat is not the real one. {term.dim}(their standard is accounted for)");
         Lang.contribute("msg.factions.standard_item", "&f{name}&7's standard");
         Lang.contribute("msg.factions.standard_planted_trophy",
                 "{term.prefix} &6You are flying &f{name}&6's standard. {term.dim}(they can see where — and come for it)");
@@ -135,6 +140,8 @@ public final class FactionLang {
                 "&cYou cannot raise another while &f{name}&c is flying yours. {term.dim}(go and take it back)");
         Lang.contribute("msg.factions.standard_carried",
                 "&c&f{player}&c is carrying your standard — &f{x}, {y}, {z}&c in &f{world}&c. {term.dim}(go and get it)");
+        Lang.contribute("msg.factions.standard_carried_ours",
+                "{term.prefix} &f{player}&7 is carrying it — &f{x}, {y}, {z}&7. {term.dim}(plant it on your land under sky to raise it)");
         Lang.contribute("msg.factions.standard_no_faction",
                 "&cThat is a {term.faction} standard. You need a {term.faction} to fly it.");
         Lang.contribute("msg.factions.standard_plant_own_land",

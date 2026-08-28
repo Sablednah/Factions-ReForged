@@ -55,7 +55,7 @@ public final class FactionStandards {
      * from the store, so the answer has to be carried across the gap. Keyed by position, cleared
      * as it is consumed.</p>
      */
-    private static final java.util.Map<BlockPos, String> JUST_TAKEN =
+    private static final java.util.Map<BlockPos, String[]> JUST_TAKEN =
             new java.util.concurrent.ConcurrentHashMap<>();
 
     /** Whether this block is a banner of any kind, standing or wall-mounted. */
@@ -147,7 +147,10 @@ public final class FactionStandards {
         // who could simply walk away and wait is not a target — and being a target while your
         // hands are full is the whole trade.
         Optional<ServerPlayer> carrier = carriedBy(level.getServer(), store, faction.id());
-        if (carrier.isPresent()) {
+        if (carrier.isPresent() && !store.of(carrier.get().getUUID())
+                .map(theirs -> theirs.id().equals(faction.id())).orElse(false)) {
+            // Only somebody ELSE holding it blocks you. Your own member carrying it home should
+            // plant it, not be told they cannot raise it because they are holding it.
             ServerPlayer holder = carrier.get();
             Feedback.chat(player, Lang.fmt("msg.factions.standard_carried",
                     "player", holder.getName().getString(),
@@ -165,6 +168,24 @@ public final class FactionStandards {
         if (capturedFrom.map(faction.id()::equals).orElse(false)) {
             // Your own flag, recovered. It is yours again rather than a trophy.
             capturedFrom = Optional.empty();
+        }
+        // A duplicate is inert. Somebody will work out how to copy a named banner — renaming in an
+        // anvil, a creative copy, a dupe bug in some other mod — so a claim to be holding a
+        // faction's standard is only honoured while that faction genuinely has none and nobody
+        // else is already flying it. The second copy does nothing at all, which is the outcome
+        // that needs no policing.
+        if (capturedFrom.isPresent()) {
+            String victimId = capturedFrom.get();
+            boolean theyStillFlyIt = store.hasStandard(victimId)
+                    && store.standardCapturedFrom(victimId).isEmpty();
+            boolean somebodyElseHasIt = store.all().stream()
+                    .anyMatch(other -> !other.id().equals(faction.id())
+                            && store.standardCapturedFrom(other.id())
+                                    .map(victimId::equals).orElse(false));
+            if (theyStillFlyIt || somebodyElseHasIt) {
+                Feedback.chat(player, Lang.get("msg.factions.standard_not_the_real_one"));
+                return false;
+            }
         }
 
         store.setStandard(faction.id(), dim, pos, colour, patterns, capturedFrom);
@@ -232,16 +253,9 @@ public final class FactionStandards {
      */
     public static Optional<ServerPlayer> carriedBy(net.minecraft.server.MinecraftServer server,
             FactionStore store, String factionId) {
-        String wanted = store.byId(factionId)
-                .map(f -> com.sablednah.standards.neoforge.Feedback.stripCodes(
-                        Lang.fmt("msg.factions.standard_item", "name", f.name())))
-                .orElse(null);
-        if (wanted == null) {
-            return Optional.empty();
-        }
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-            if (holding(player.getMainHandItem(), wanted)
-                    || holding(player.getOffhandItem(), wanted)) {
+            if (standardMarker(player.getMainHandItem()).map(factionId::equals).orElse(false)
+                    || standardMarker(player.getOffhandItem()).map(factionId::equals).orElse(false)) {
                 return Optional.of(player);
             }
         }
@@ -306,22 +320,8 @@ public final class FactionStandards {
 
     /** Whose standard, if any, this player has in their hands. */
     public static Optional<String> carriedStandard(FactionStore store, ServerPlayer player) {
-        for (ItemStack stack : new ItemStack[] {player.getMainHandItem(), player.getOffhandItem()}) {
-            if (stack.isEmpty()
-                    || !(stack.getItem() instanceof net.minecraft.world.item.BannerItem)) {
-                continue;
-            }
-            net.minecraft.network.chat.Component name =
-                    stack.get(net.minecraft.core.component.DataComponents.CUSTOM_NAME);
-            if (name == null) {
-                continue;
-            }
-            Optional<String> whose = whoseStandard(store, name);
-            if (whose.isPresent()) {
-                return whose;
-            }
-        }
-        return Optional.empty();
+        Optional<String> main = standardMarker(player.getMainHandItem());
+        return main.isPresent() ? main : standardMarker(player.getOffhandItem());
     }
 
     /** Take everybody off the marker team, for a clean shutdown. */
@@ -340,13 +340,17 @@ public final class FactionStandards {
         MARKED.clear();
     }
 
-    private static boolean holding(ItemStack stack, String wantedName) {
+    /** Whose standard this item is, from the marker rather than from its name. */
+    public static Optional<String> standardMarker(ItemStack stack) {
         if (stack.isEmpty() || !(stack.getItem() instanceof net.minecraft.world.item.BannerItem)) {
-            return false;
+            return Optional.empty();
         }
-        net.minecraft.network.chat.Component name =
-                stack.get(net.minecraft.core.component.DataComponents.CUSTOM_NAME);
-        return name != null && name.getString().equals(wantedName);
+        net.minecraft.world.item.component.CustomData data =
+                stack.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        if (data == null || !data.contains(MARKER)) {
+            return Optional.empty();
+        }
+        return data.copyTag().getString(MARKER);
     }
 
     /**
@@ -469,18 +473,25 @@ public final class FactionStandards {
 
         // Announced to the whole server, because the entire value of taking a flag is that
         // everybody knows. A humiliation nobody witnessed is just a missing block.
+        // Recovering your own reads differently from taking somebody's. "Sableoids has taken
+        // Sableoids's standard" is technically true and nonsense to read.
+        boolean recovering = taker.map(t -> t.id().equals(ownerId)).orElse(false);
         level.getServer().getPlayerList().broadcastSystemMessage(
-                Feedback.colored(Lang.fmt("msg.factions.standard_taken",
+                Feedback.colored(Lang.fmt(recovering
+                                ? "msg.factions.standard_recovered" : "msg.factions.standard_taken",
                         "taker", taker.map(FactionStore.Faction::name)
                                 .orElse(breaker.getName().getString()),
                         "name", ownerName)),
                 false);
 
         // Remembered for the drop, which does not exist yet.
-        JUST_TAKEN.put(pos.immutable(), ownerName);
+        JUST_TAKEN.put(pos.immutable(), new String[] {ownerName, ownerId});
 
-        // And said plainly to the losers, because the consequence is not obvious from the
-        // announcement: their power now comes back slower until they raise another.
+        // Said plainly to whoever just lost it — but not when they are the ones who took it back.
+        // "Your standard has fallen" to the faction that just recovered it is nonsense.
+        if (recovering) {
+            return true;
+        }
         store.byId(flyerId).ifPresent(loser -> {
             for (java.util.UUID member : loser.memberIds()) {
                 ServerPlayer online = level.getServer().getPlayerList().getPlayer(member);
@@ -506,7 +517,7 @@ public final class FactionStandards {
      * @return true if this position was a standard
      */
     public static boolean renameDrops(BlockPos pos, java.util.List<?> drops) {
-        String owner = JUST_TAKEN.remove(pos.immutable());
+        String[] owner = JUST_TAKEN.remove(pos.immutable());
         if (owner == null) {
             return false;
         }
@@ -516,7 +527,7 @@ public final class FactionStandards {
             }
             ItemStack stack = item.getItem();
             if (stack.getItem() instanceof net.minecraft.world.item.BannerItem) {
-                item.setItem(asTrophy(stack, owner));
+                item.setItem(asTrophy(stack, owner[0], owner[1]));
                 // It does not despawn. A flag that quietly evaporated five minutes into the
                 // journey home would end a raid with nobody having done anything, and neither
                 // side would know why.
@@ -533,10 +544,21 @@ public final class FactionStandards {
      * every route an item can take through a vanilla world — a hopper, an ender chest, a death, a
      * trade — and so anybody looking at it in an inventory can see what they are holding.</p>
      */
-    public static ItemStack asTrophy(ItemStack banner, String ownerName) {
+    /** The NBT key our marker lives under, inside the item's custom data. */
+    private static final String MARKER = "factions_standard";
+
+    public static ItemStack asTrophy(ItemStack banner, String ownerName, String ownerId) {
         ItemStack copy = banner.copy();
         copy.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
                 Feedback.colored(Lang.fmt("msg.factions.standard_item", "name", ownerName)));
+        // Identity in CUSTOM_DATA, not in the display name. A name is something anybody can type
+        // into an anvil, and "rename a banner and claim you captured somebody's flag" is exactly
+        // the sort of thing a server discovers the hard way. Custom data is not player-writable,
+        // so the name is decoration and this is the fact.
+        net.minecraft.nbt.CompoundTag tag = new net.minecraft.nbt.CompoundTag();
+        tag.putString(MARKER, ownerId);
+        copy.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                net.minecraft.world.item.component.CustomData.of(tag));
         // Fireproof, because a captured flag should be lost to somebody taking it off you rather
         // than to the lava you happened to fight over. The return journey is meant to be the
         // dangerous part of a raid; losing the prize to terrain is not danger, it is a shrug.

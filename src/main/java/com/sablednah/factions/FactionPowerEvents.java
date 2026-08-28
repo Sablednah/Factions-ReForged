@@ -171,7 +171,14 @@ public final class FactionPowerEvents {
 
     private static String standardState(FactionStore store, String factionId) {
         if (!store.hasStandard(factionId)) {
-            return "msg.factions.standard_state_none";
+            // "No standard" is only the whole truth when nobody took yours. Somebody who has been
+            // raided is not missing a flag, they are missing THEIR flag, and the two call for
+            // different reactions.
+            boolean somebodyHasIt = store.all().stream()
+                    .anyMatch(other -> store.standardCapturedFrom(other.id())
+                            .map(factionId::equals).orElse(false));
+            return somebodyHasIt
+                    ? "msg.factions.standard_state_stolen" : "msg.factions.standard_state_none";
         }
         if (!FactionStandards.flying(factionId)) {
             return "msg.factions.standard_state_covered";

@@ -1101,7 +1101,14 @@ public final class FactionCommands {
                     ctx.getSource().getServer(), store, f.get().id());
             if (carrier.isPresent()) {
                 ServerPlayer held = carrier.get();
-                Feedback.chat(player, Lang.fmt("msg.factions.standard_carried",
+                // One of your own carrying it home is not a theft to chase. Telling your own
+                // faction to "go and get it" when the person holding it is stood next to them is
+                // the message reading the situation backwards.
+                boolean ours = store.of(held.getUUID())
+                        .map(theirs -> theirs.id().equals(f.get().id())).orElse(false);
+                Feedback.chat(player, Lang.fmt(ours
+                                ? "msg.factions.standard_carried_ours"
+                                : "msg.factions.standard_carried",
                         "player", held.getName().getString(),
                         "x", held.blockPosition().getX(),
                         "y", held.blockPosition().getY(),
