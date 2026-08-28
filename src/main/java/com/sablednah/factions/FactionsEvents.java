@@ -28,6 +28,14 @@ public final class FactionsEvents {
     }
 
     @SubscribeEvent
+    static void onServerAboutToStart(
+            net.neoforged.neoforge.event.server.ServerAboutToStartEvent event) {
+        // Before anything reads the store: 26.1 moved it into a namespaced folder, and a world
+        // upgraded from 1.21.11 would otherwise load with no factions at all and no error.
+        FactionSaveMigration.run(event.getServer());
+    }
+
+    @SubscribeEvent
     static void onServerStarted(ServerStartedEvent event) {
         FactionBridge.install(event.getServer());
         FactionChat.install();
