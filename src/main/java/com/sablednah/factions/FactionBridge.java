@@ -142,6 +142,22 @@ public final class FactionBridge implements GroupProvider, ClaimProvider {
         return FactionProtection.mayBuild(player, level, pos);
     }
 
+    /**
+     * Mobs may not chew through claimed land.
+     *
+     * <p>Answered here rather than left to every mob mod to derive from {@code owner()}, so the
+     * rule is ours to change: a war zone letting mobs grief while a home claim does not is a
+     * setting this mod should own, not one each consumer invents.</p>
+     *
+     * <p>ZombieMod's session raised this: it had no player to pass to {@code mayModify} and was
+     * having to treat "claimed by anybody" as "leave it alone", which is the right answer today
+     * and would have been the wrong place to decide it.</p>
+     */
+    @Override
+    public boolean griefAllowed(ServerLevel level, BlockPos pos) {
+        return store().ownerOf(dimensionOf(level), pos.getX() >> 4, pos.getZ() >> 4).isEmpty();
+    }
+
     // --- shared ---
 
     public static String dimensionOf(ServerLevel level) {
