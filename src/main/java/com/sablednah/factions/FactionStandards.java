@@ -248,6 +248,98 @@ public final class FactionStandards {
         return Optional.empty();
     }
 
+    /** The scoreboard team that exists only to make a glow red. */
+    private static final String CARRIER_TEAM = "factions_carrier";
+
+    /** Who we have put on that team, so they can be taken off again. */
+    private static final java.util.Set<java.util.UUID> MARKED =
+            java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    /**
+     * Light up anybody carrying a captured standard.
+     *
+     * <p>Carrying a flag already costs you your hands. This costs you your cover: the run home
+     * becomes the dangerous part of a raid rather than a formality, and the owner's friends can
+     * intercept rather than merely being told a coordinate.</p>
+     *
+     * <p>Re-applied on a short timer with a short duration, so it lapses within a second or two of
+     * the flag going into a chest. Nothing has to notice the moment they stop carrying it.</p>
+     *
+     * <p>The red comes from a scoreboard team, which is the only thing vanilla colours a glow
+     * outline by. <b>A player already on a team is left alone</b> and simply glows white —
+     * pulling somebody out of another mod's team to recolour an outline would be a rude trade for
+     * a cosmetic.</p>
+     */
+    public static void markCarriers(net.minecraft.server.MinecraftServer server) {
+        if (!FactionsConfig.GLOW_WHILE_CARRYING.get()) {
+            return;
+        }
+        FactionStore store = FactionStore.get(server);
+        var scoreboard = server.getScoreboard();
+        net.minecraft.world.scores.PlayerTeam team = scoreboard.getPlayerTeam(CARRIER_TEAM);
+        if (team == null) {
+            team = scoreboard.addPlayerTeam(CARRIER_TEAM);
+            // ⚠ Version-fragile, and ZombieMod paid for this already: on 26.2
+            // PlayerTeam.setColor takes an Optional<TeamColor> rather than a ChatFormatting.
+            // See ZombieMod's platform/Colours for the seam it put that behind.
+            team.setColor(net.minecraft.ChatFormatting.RED);
+            // Or two carriers running together read as one blob with no edge between them.
+            team.setSeeFriendlyInvisibles(false);
+        }
+
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            boolean carrying = carriedStandard(store, player).isPresent();
+            if (carrying) {
+                // Short, and refreshed: it fades on its own the moment the flag is stashed.
+                player.addEffect(new net.minecraft.world.effect.MobEffectInstance(
+                        net.minecraft.world.effect.MobEffects.GLOWING, 40, 0, false, false));
+                if (scoreboard.getPlayersTeam(player.getScoreboardName()) == null) {
+                    scoreboard.addPlayerToTeam(player.getScoreboardName(), team);
+                    MARKED.add(player.getUUID());
+                }
+            } else if (MARKED.remove(player.getUUID())) {
+                scoreboard.removePlayerFromTeam(player.getScoreboardName(), team);
+                player.removeEffect(net.minecraft.world.effect.MobEffects.GLOWING);
+            }
+        }
+    }
+
+    /** Whose standard, if any, this player has in their hands. */
+    public static Optional<String> carriedStandard(FactionStore store, ServerPlayer player) {
+        for (ItemStack stack : new ItemStack[] {player.getMainHandItem(), player.getOffhandItem()}) {
+            if (stack.isEmpty()
+                    || !(stack.getItem() instanceof net.minecraft.world.item.BannerItem)) {
+                continue;
+            }
+            net.minecraft.network.chat.Component name =
+                    stack.get(net.minecraft.core.component.DataComponents.CUSTOM_NAME);
+            if (name == null) {
+                continue;
+            }
+            Optional<String> whose = whoseStandard(store, name);
+            if (whose.isPresent()) {
+                return whose;
+            }
+        }
+        return Optional.empty();
+    }
+
+    /** Take everybody off the marker team, for a clean shutdown. */
+    public static void unmarkAll(net.minecraft.server.MinecraftServer server) {
+        var scoreboard = server.getScoreboard();
+        net.minecraft.world.scores.PlayerTeam team = scoreboard.getPlayerTeam(CARRIER_TEAM);
+        if (team == null) {
+            return;
+        }
+        for (java.util.UUID id : MARKED) {
+            ServerPlayer player = server.getPlayerList().getPlayer(id);
+            if (player != null) {
+                scoreboard.removePlayerFromTeam(player.getScoreboardName(), team);
+            }
+        }
+        MARKED.clear();
+    }
+
     private static boolean holding(ItemStack stack, String wantedName) {
         if (stack.isEmpty() || !(stack.getItem() instanceof net.minecraft.world.item.BannerItem)) {
             return false;

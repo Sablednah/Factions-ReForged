@@ -105,9 +105,14 @@ public final class FactionPowerEvents {
         if (!mode.active()) {
             return;
         }
+        // Once a second: fast enough that the glow lapses within a moment of a flag going into a
+        // chest, cheap enough not to matter — online players, two stacks each.
+        if (++tickCounter % 20 == 0) {
+            FactionStandards.markCarriers(server);
+        }
         // Every five seconds. Power moves on a scale of minutes; asking more often than that is
         // work nobody can perceive the result of.
-        if (++tickCounter % 100 != 0) {
+        if (tickCounter % 100 != 0) {
             return;
         }
         double perMinute = FactionsConfig.POWER_PER_MINUTE.get();

@@ -37,6 +37,7 @@ public final class FactionsConfig {
     public static final ModConfigSpec.DoubleValue REGEN_WITH_STANDARD;
     public static final ModConfigSpec.DoubleValue REGEN_WITHOUT_STANDARD;
     public static final ModConfigSpec.DoubleValue REGEN_WITH_CAPTURED;
+    public static final ModConfigSpec.BooleanValue GLOW_WHILE_CARRYING;
     public static final ModConfigSpec.DoubleValue CLAIM_COST;
     public static final ModConfigSpec.DoubleValue CLAIM_COST_MULTIPLIER;
     public static final ModConfigSpec.DoubleValue CLAIM_REFUND;
@@ -304,6 +305,18 @@ public final class FactionsConfig {
                         "chest pays nothing at all: the mechanic rewards use, not possession, and",
                         "a flag in a box is a flag out of the game.")
                 .defineInRange("regenWithCapturedStandard", 0.25D, 0.0D, 10.0D);
+        GLOW_WHILE_CARRYING = b
+                .comment("A player carrying somebody's captured standard glows red, visible",
+                        "through walls to everybody.",
+                        "On by default. Carrying a flag already costs you your hands — this makes",
+                        "it cost you your cover too, so the run home is the dangerous part of a",
+                        "raid rather than a formality, and the owner's friends can actually",
+                        "intercept rather than merely being told a coordinate.",
+                        "The red comes from a scoreboard team, which is the only thing vanilla",
+                        "colours a glow outline by. A player already on a team is left alone and",
+                        "simply glows white — taking somebody out of another mod's team to",
+                        "recolour an outline would be a rude trade.")
+                .define("glowWhileCarrying", true);
         OVERCLAIM_ENEMIES_ONLY = b
                 .comment("Only a DECLARED ENEMY may take land from an over-extended faction.",
                         "On by default, and a deliberate divergence: the original let anybody who",
