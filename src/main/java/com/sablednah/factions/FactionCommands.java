@@ -1080,6 +1080,35 @@ public final class FactionCommands {
         // common a question as "make this my flag", and the same word should answer both.
         Optional<net.minecraft.core.BlockPos> where = store.standardPos(f.get().id());
         if (where.isEmpty()) {
+            // "Where is my flag" is the question, and "you have no standard" only answers it when
+            // nobody took yours. Somebody who has just been raided knows perfectly well they have
+            // none — what they want is where it went.
+            Optional<FactionStore.Faction> holder = store.all().stream()
+                    .filter(other -> store.standardCapturedFrom(other.id())
+                            .map(f.get().id()::equals).orElse(false))
+                    .findFirst();
+            if (holder.isPresent()) {
+                Optional<net.minecraft.core.BlockPos> at = store.standardPos(holder.get().id());
+                Feedback.chat(player, Lang.fmt("msg.factions.standard_theirs",
+                        "name", holder.get().name(),
+                        "x", at.map(net.minecraft.core.BlockPos::getX).orElse(0),
+                        "y", at.map(net.minecraft.core.BlockPos::getY).orElse(0),
+                        "z", at.map(net.minecraft.core.BlockPos::getZ).orElse(0),
+                        "world", store.standardDimension(holder.get().id()).orElse("?")));
+                return 0;
+            }
+            Optional<ServerPlayer> carrier = FactionStandards.carriedBy(
+                    ctx.getSource().getServer(), store, f.get().id());
+            if (carrier.isPresent()) {
+                ServerPlayer held = carrier.get();
+                Feedback.chat(player, Lang.fmt("msg.factions.standard_carried",
+                        "player", held.getName().getString(),
+                        "x", held.blockPosition().getX(),
+                        "y", held.blockPosition().getY(),
+                        "z", held.blockPosition().getZ(),
+                        "world", FactionBridge.dimensionOf((ServerLevel) held.level())));
+                return 0;
+            }
             Feedback.chat(player, Lang.get("msg.factions.standard_none"));
             // What not having one costs, in the same breath. "Raise a flag" is advice; "you are
             // recovering at half speed" is a reason.

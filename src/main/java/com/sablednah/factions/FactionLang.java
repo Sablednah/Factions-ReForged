@@ -114,6 +114,8 @@ public final class FactionLang {
                 "{term.prefix} &7Your standard stands at &f{x}, {y}, {z}&7 in &f{world}&7.");
         Lang.contribute("msg.factions.standard_where_captured",
                 "{term.prefix} &7You are flying &f{name}&7's captured standard at &f{x}, {y}, {z}&7.");
+        Lang.contribute("msg.factions.standard_theirs",
+                "&c&f{name}&c is flying your standard at &f{x}, {y}, {z}&c in &f{world}&c. {term.dim}(you cannot raise another until you take it back)");
         Lang.contribute("msg.factions.standard_taken",
                 "&c&l⚑ &r&f{taker}&c has taken &f{name}&c's standard.");
         Lang.contribute("msg.factions.standard_item", "&f{name}&7's standard");
