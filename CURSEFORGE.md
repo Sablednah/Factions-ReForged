@@ -1,3 +1,5 @@
+![Factions ReForged](https://media.forgecdn.net/attachments/description/null/description_369f6f82-b6d9-4a54-b6cd-3cfaa5d839b6.png)
+
 # Factions ReForged — land, allegiance, and the people you hold it with
 
 **Claim chunks, declare allies and enemies, and hold territory you can see the edge of.** A modern
