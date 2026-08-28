@@ -347,4 +347,16 @@ public final class FactionsEvents {
             FactionPowerEvents.onExperience(killer, event.getOriginalExperience());
         }
     }
+
+    /**
+     * Name a taken standard's drop.
+     *
+     * <p>Vanilla's banner loot table does not copy a block entity's custom name onto the item, so
+     * naming the block when it was designated is not enough — the drop has to be named again here,
+     * where the item finally exists.</p>
+     */
+    @SubscribeEvent
+    static void onBlockDrops(net.neoforged.neoforge.event.level.BlockDropsEvent event) {
+        FactionStandards.renameDrops(event.getPos(), event.getDrops());
+    }
 }

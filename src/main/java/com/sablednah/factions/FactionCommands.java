@@ -1066,10 +1066,10 @@ public final class FactionCommands {
         ServerLevel level = player.level();
         FactionStore store = store(ctx);
 
-        var hit = player.pick(6.0D, 0.0F, false);
-        if (hit instanceof net.minecraft.world.phys.BlockHitResult block
-                && FactionStandards.isBanner(level, block.getBlockPos())) {
-            return FactionStandards.designate(player, level, block.getBlockPos(), f.get()) ? 1 : 0;
+        Optional<net.minecraft.core.BlockPos> looking =
+                FactionStandards.lookingAtBanner(player, level);
+        if (looking.isPresent()) {
+            return FactionStandards.designate(player, level, looking.get(), f.get()) ? 1 : 0;
         }
 
         // Nothing in front of them: report instead of refusing. "Where is my flag" is at least as

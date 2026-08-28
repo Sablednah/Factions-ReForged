@@ -47,9 +47,43 @@ import com.sablednah.standards.neoforge.Lang;
  */
 public final class FactionStandards {
 
+    /**
+     * Standards broken this tick, and whose they were.
+     *
+     * <p>Needed because renaming the drop cannot happen in the break event: the item does not
+     * exist yet. By the time {@code BlockDropsEvent} fires the standard has already been cleared
+     * from the store, so the answer has to be carried across the gap. Keyed by position, cleared
+     * as it is consumed.</p>
+     */
+    private static final java.util.Map<BlockPos, String> JUST_TAKEN =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
     /** Whether this block is a banner of any kind, standing or wall-mounted. */
     public static boolean isBanner(ServerLevel level, BlockPos pos) {
         return level.getBlockState(pos).getBlock() instanceof AbstractBannerBlock;
+    }
+
+    /**
+     * The banner a player is looking at, allowing for the fact that a standing banner's hit shape
+     * is a thin pole occupying only part of its block.
+     *
+     * <p>Aim at the cloth — the part anybody would call "the banner" — and the ray passes through
+     * empty air above the shape and hits whatever is behind. So the block the ray landed on is
+     * checked, and then the two below it, because a banner is visually taller than it is
+     * clickable and people aim at what they can see.</p>
+     */
+    public static Optional<BlockPos> lookingAtBanner(ServerPlayer player, ServerLevel level) {
+        if (!(player.pick(6.0D, 0.0F, false)
+                instanceof net.minecraft.world.phys.BlockHitResult hit)) {
+            return Optional.empty();
+        }
+        BlockPos pos = hit.getBlockPos();
+        for (BlockPos candidate : new BlockPos[] {pos, pos.below(), pos.below(2)}) {
+            if (isBanner(level, candidate)) {
+                return Optional.of(candidate);
+            }
+        }
+        return Optional.empty();
     }
 
     /**
@@ -208,6 +242,9 @@ public final class FactionStandards {
                         "name", ownerName)),
                 false);
 
+        // Remembered for the drop, which does not exist yet.
+        JUST_TAKEN.put(pos.immutable(), ownerName);
+
         // And said plainly to the losers, because the consequence is not obvious from the
         // announcement: their power now comes back slower until they raise another.
         store.byId(flyerId).ifPresent(loser -> {
@@ -218,6 +255,36 @@ public final class FactionStandards {
                 }
             }
         });
+        return true;
+    }
+
+    /**
+     * Rename a broken standard's drop.
+     *
+     * <p>Vanilla's banner loot table does <b>not</b> carry a block entity's custom name onto the
+     * item — verified by breaking one and finding a plain banner. So naming the block at
+     * designation, which made it visibly a standard while it stood, was necessary and not
+     * sufficient: the item has to be named again on the way out.</p>
+     *
+     * <p>Patterns survive on their own, so a taken flag still looks exactly like the one that was
+     * flying.</p>
+     *
+     * @return true if this position was a standard
+     */
+    public static boolean renameDrops(BlockPos pos, java.util.List<?> drops) {
+        String owner = JUST_TAKEN.remove(pos.immutable());
+        if (owner == null) {
+            return false;
+        }
+        for (Object entry : drops) {
+            if (!(entry instanceof net.minecraft.world.entity.item.ItemEntity item)) {
+                continue;
+            }
+            ItemStack stack = item.getItem();
+            if (stack.getItem() instanceof net.minecraft.world.item.BannerItem) {
+                item.setItem(asTrophy(stack, owner));
+            }
+        }
         return true;
     }
 
