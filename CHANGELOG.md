@@ -1,5 +1,87 @@
 # Changelog
 
+## 1.1.0
+
+**Power, and the standard.** Land stops being a purchase and becomes a position you hold.
+
+Requires [SableCraft Standards](https://github.com/Sablednah/SableCraft-Standards) **1.1.1+**.
+
+### Power
+
+- **Four modes** — `fixed`, `pvp`, `pve`, `both` — differing only in what counts as *losing*.
+  `fixed` is the default and is today's behaviour exactly, so upgrading rearranges nothing.
+
+  **`pve` is the one nothing else offers**: your territory shrinks when the *world* beats you,
+  which is the actual fiction of a survival or apocalypse server.
+
+- **Fixed is the ceiling; power is the erosion.** `chunksPerMember` still decides what a faction is
+  entitled to, and power decides how much of that it is currently holding. Power can only ever take
+  entitlement *away* — never grant more than the fixed rule would. So turning it on redistributes
+  nobody's land, and **farming power cannot inflate holdings**, because the ceiling is membership.
+  That kills the mob-grinder exploit without a special case to maintain.
+
+- **Environmental deaths never cost power.** Falling in your own lava is not a raid: nobody decided
+  it and nobody gains from it. The original charged for it deliberately and was wrong. Attribution
+  comes from Standards' combat API, so arrows and pets resolve to the person behind them.
+
+- **Experience restores it.** A mob's XP drop is already Minecraft's own opinion of how hard it was
+  to kill — maintained by Mojang, extended free by every mod on the server — so a ZombieMod tank
+  outweighs a walker with no registry of mob ids to keep and nothing to be wrong about the day a
+  modpack adds a boss. Read from the drop, never from your balance, or smelting is a land claim.
+
+- **Overclaiming**, which is the entire point: build power without it and you have built a claim
+  limit with extra steps. A declared enemy may take the difference from a faction holding more land
+  than its power covers — **at their border**, so a raid eats inward rather than reaching past a
+  wall for the vault chunk, and each chunk taken reduces the overreach by one. The attacker is
+  rewarded for *noticing*, not for attacking.
+
+- **Nobody finds out by walking home.** The victim is told the moment land changes hands, and
+  `/f status` carries the exposure line: *"you hold 22 chunks on an entitlement of 18 — 4 can be
+  taken."* A raid you did not know was possible is indistinguishable from a bug.
+
+- `/f power [player]`, and regen rate with your standard's state everywhere it is relevant.
+
+### The standard
+
+A banner your faction designed, planted on its own land, that an enemy can come and take.
+
+- **Its colour and pattern are your identity** — a faction personalised by an object it made rather
+  than a setting it typed — and its name is printed in that colour wherever identity appears. The
+  map and borders stay relation-coloured, because nothing should make an enemy's land look friendly.
+
+- **It must see the sky**, re-checked continuously. That single rule is the whole game: enemies
+  cannot break your blocks or open your doors, so the only way anyone reaches your flag is a path
+  you left. Roof it over and it stops earning; uncover it and it resumes.
+
+- **Flying one is the difference between recovering at full speed and recovering slowly** — a reason
+  to have one and a reason to take somebody else's, which is the same number from two sides.
+  Breaking a standard is the one deliberate hole in claim protection.
+
+- **Carrying it home is the dangerous part.** A flag in your hands is a flag you are holding instead
+  of a sword; you glow red through walls, and its owner is told where you are standing. Put it in a
+  chest and you stop being a target — and stop denying them anything.
+
+- **Identified by faction id in the item's custom data**, not by its name, because a name is
+  something anybody can type into an anvil. Duplicates are inert rather than policed.
+
+### Also
+
+- **PvP rules moved onto Standards' harm seam**, so a hostile *skill* is refused for the same
+  reasons a sword is. Before this, a faction that had declared itself peaceful was peaceful against
+  arrows and defenceless against spells.
+- **Allies were never actually protected.** peaceful, same-faction and pvp-off were checked; ally
+  was simply missing. `pvp.betweenAllies`, off by default.
+- **`griefAllowed`** — mobs may not chew through claimed land, answered here so a war zone letting
+  mobs grief while a home claim does not stays this mod's decision.
+- **Three worked config profiles** in [`CURSEFORGE-CONFIGURATION.md`](CURSEFORGE-CONFIGURATION.md):
+  peaceful, cosy PvE, and war.
+- A **42-check self-test** over the arithmetic that decides who owns what.
+
+### Known
+
+`/f raid` — declared attacks with glow by side, and optionally gating overclaiming behind a raid —
+is designed in [`POWER.md`](POWER.md) and not built.
+
 ## 1.0.0 — first release
 
 Factions for NeoForge 1.21.11. Land you claim, allegiances you declare, and the people you hold it
