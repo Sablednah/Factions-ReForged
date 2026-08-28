@@ -121,6 +121,8 @@ public final class FactionLang {
                 "&c&l⚑ &r&f{taker}&c has taken &f{name}&c's standard.");
         Lang.contribute("msg.factions.standard_recovered",
                 "&a&l⚑ &r&f{taker}&a has recovered their standard.");
+        Lang.contribute("msg.factions.standard_taken_down",
+                "{term.prefix} &7Standard taken down. {term.dim}(plant it again to raise it)");
         Lang.contribute("msg.factions.standard_not_the_real_one",
                 "&cThat is not the real one. {term.dim}(their standard is accounted for)");
         Lang.contribute("msg.factions.standard_item", "&f{name}&7's standard");

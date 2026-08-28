@@ -473,8 +473,20 @@ public final class FactionStandards {
 
         // Announced to the whole server, because the entire value of taking a flag is that
         // everybody knows. A humiliation nobody witnessed is just a missing block.
-        // Recovering your own reads differently from taking somebody's. "Sableoids has taken
-        // Sableoids's standard" is technically true and nonsense to read.
+        // Taking down your own flag, that nobody had taken, is not an event. It is moving your
+        // banner — which works, and is a good way to relocate a standard, but the server does not
+        // need telling about it and "Sableoids has recovered their standard" from somebody who
+        // simply picked their own flag up reads as news that did not happen.
+        boolean wasCaptured = store.standardCapturedFrom(flyerId).isPresent();
+        boolean ownFlagOwnHands = taker.map(t -> t.id().equals(flyerId)).orElse(false);
+        if (!wasCaptured && ownFlagOwnHands) {
+            Feedback.chat(breaker, Lang.get("msg.factions.standard_taken_down"));
+            JUST_TAKEN.put(pos.immutable(), new String[] {ownerName, ownerId});
+            return true;
+        }
+
+        // Recovering your own from somebody else reads differently from taking theirs.
+        // "Sableoids has taken Sableoids's standard" is technically true and nonsense to read.
         boolean recovering = taker.map(t -> t.id().equals(ownerId)).orElse(false);
         level.getServer().getPlayerList().broadcastSystemMessage(
                 Feedback.colored(Lang.fmt(recovering
