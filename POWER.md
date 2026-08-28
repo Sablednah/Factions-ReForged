@@ -367,6 +367,41 @@ client renders, it can be the map legend and the chat colour, and `/f standard` 
 visual identity that a three-letter tag cannot. The theft is what makes it matter; the flag is
 worth having first.
 
+## 5. `/f raid` — not built, and worth building next
+
+**The idea, recorded as it arrived.** Declaring a raid is a distinct act from being at war:
+`/f raid <faction>` announces an attack, and while it runs the whole server can see it happening.
+
+- **Announced.** The defenders are told they are under attack. Half the value of a raid is that it
+  is an event rather than a discovery, and the current design already leans that way — the victim
+  is told when land changes hands and when their flag falls, but only *after*.
+- **Everyone glows, by side.** Attackers one colour, defenders another, and the **flag carrier a
+  third**. The carrier glow already exists; extending it to a declared raid turns a scattered fight
+  into something spectators and reinforcements can read at a glance.
+- **Optionally, raiding is what *enables* overclaiming.** This is the significant lever, and it
+  should be a config rather than a decision made for everybody:
+  - **as built today** — an over-extended enemy is takeable whenever anybody notices. Overclaiming
+    is ambient; the attacker is rewarded for paying attention.
+  - **raid-gated** — land only changes hands during a declared raid. Overclaiming becomes an
+    event with a beginning and an end, defenders get a fair chance to be present, and nobody logs
+    in to discover they were quietly eaten overnight.
+
+  The second is friendlier to a server where people have jobs, and worse for a server that wants
+  land to feel permanently contested. Hence a setting.
+
+**What it needs deciding first**, and none of it is obvious:
+
+- **How does a raid end?** A timer, a surrender, the attackers all dying, the flag being taken?
+  Each produces a different game. A timer is the least interesting and the most predictable.
+- **Can it be declined?** If not, a large faction can pin a small one indefinitely. If yes, it is
+  not a raid.
+- **A cooldown between raids on the same target**, or the answer to "how do I grief somebody" is
+  "declare a raid every ten minutes forever".
+- **What happens to a raid when the server restarts**, or when every attacker logs off.
+
+The glow work is already done and the announcement machinery exists; the design questions above are
+the actual cost. Worth doing properly rather than quickly.
+
 ## Worth stealing from the archive
 
 Read for intent, not lifted — the standing rule.
