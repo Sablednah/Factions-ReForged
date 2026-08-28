@@ -583,6 +583,34 @@ public final class FactionStandards {
      * because their base is not currently loaded, and force-loading chunks to check a decoration
      * is not a trade worth making.</p>
      */
+    /**
+     * Re-check one faction's standard right now, ignoring the timer.
+     *
+     * <p>For the moment somebody <em>asks</em>. A player checking their regen rate has almost
+     * always just changed something — roofed the flag over, taken the roof off — and answering
+     * from a sweep that ran up to ten seconds ago is answering the wrong question. Cheap: one
+     * block column, and only when a command is typed.</p>
+     */
+    public static void refresh(net.minecraft.server.MinecraftServer server, FactionStore store,
+            String factionId) {
+        Optional<BlockPos> where = store.standardPos(factionId);
+        if (where.isEmpty()) {
+            FLYING.remove(factionId);
+            return;
+        }
+        ServerLevel level = store.standardDimension(factionId)
+                .flatMap(d -> FactionBridge.levelFor(server, d)).orElse(null);
+        if (level == null || !level.isLoaded(where.get())) {
+            return;
+        }
+        if (!isBanner(level, where.get())) {
+            store.clearStandard(factionId);
+            FLYING.remove(factionId);
+            return;
+        }
+        FLYING.put(factionId, seesSky(level, where.get()));
+    }
+
     public static void revalidate(net.minecraft.server.MinecraftServer server) {
         // Every ten seconds. A roof takes longer than that to build, and this is a block column
         // per faction rather than something to run every tick.

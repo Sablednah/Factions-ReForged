@@ -110,6 +110,10 @@ public final class FactionPowerEvents {
         if (++tickCounter % 20 == 0) {
             FactionStandards.markCarriers(server);
         }
+        // Every tick, because revalidate keeps its OWN timer. Nesting it behind the power gate
+        // below multiplied the two counters together and made a ten-second sweep run every
+        // sixteen minutes — a flag could be roofed over and still paying for a quarter of an hour.
+        FactionStandards.revalidate(server);
         // Every five seconds. Power moves on a scale of minutes; asking more often than that is
         // work nobody can perceive the result of.
         if (tickCounter % 100 != 0) {
@@ -122,7 +126,6 @@ public final class FactionPowerEvents {
         double baseShare = perMinute / 12.0D; // five seconds of a minute
         double max = FactionsConfig.POWER_MAX.get();
         FactionStore store = FactionStore.get(server);
-        FactionStandards.revalidate(server);
 
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             UUID id = player.getUUID();
@@ -150,12 +153,23 @@ public final class FactionPowerEvents {
      *
      * @return points per minute, and the reason in a message key
      */
-    public static double regenPerMinute(FactionStore store, String factionId) {
+    public static double regenPerMinute(net.minecraft.server.MinecraftServer server,
+            FactionStore store, String factionId) {
+        // Checked now rather than trusted from the last sweep. Somebody asking what their regen
+        // rate is has almost always just changed something — roofed the flag over, taken the roof
+        // off — and being told the answer from ten seconds ago is being told the wrong one.
+        FactionStandards.refresh(server, store, factionId);
         return FactionsConfig.POWER_PER_MINUTE.get() * multiplierFor(store, factionId);
     }
 
     /** Which of the three standard states this faction is in, as a message key. */
-    public static String standardState(FactionStore store, String factionId) {
+    public static String standardState(net.minecraft.server.MinecraftServer server,
+            FactionStore store, String factionId) {
+        FactionStandards.refresh(server, store, factionId);
+        return standardState(store, factionId);
+    }
+
+    private static String standardState(FactionStore store, String factionId) {
         if (!store.hasStandard(factionId)) {
             return "msg.factions.standard_state_none";
         }

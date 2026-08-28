@@ -897,8 +897,8 @@ public final class FactionCommands {
             }
             Feedback.chat(player, Lang.fmt("msg.factions.power_regen",
                     "rate", FactionPowerEvents.trim(
-                            FactionPowerEvents.regenPerMinute(store, mine.id())),
-                    "standard", Lang.get(FactionPowerEvents.standardState(store, mine.id()))));
+                            FactionPowerEvents.regenPerMinute(ctx.getSource().getServer(), store, mine.id())),
+                    "standard", Lang.get(FactionPowerEvents.standardState(ctx.getSource().getServer(), store, mine.id()))));
         }
 
         // Money, but only when there is something to say about it — a bank line reading zero on
@@ -1085,8 +1085,8 @@ public final class FactionCommands {
             // recovering at half speed" is a reason.
             Feedback.chat(player, Lang.fmt("msg.factions.power_regen",
                     "rate", FactionPowerEvents.trim(
-                            FactionPowerEvents.regenPerMinute(store, f.get().id())),
-                    "standard", Lang.get(FactionPowerEvents.standardState(store, f.get().id()))));
+                            FactionPowerEvents.regenPerMinute(ctx.getSource().getServer(), store, f.get().id())),
+                    "standard", Lang.get(FactionPowerEvents.standardState(ctx.getSource().getServer(), store, f.get().id()))));
             return 0;
         }
         Optional<String> captured = store.standardCapturedFrom(f.get().id());
@@ -1097,8 +1097,8 @@ public final class FactionCommands {
                 "name", captured.flatMap(store::byId).map(FactionStore.Faction::name).orElse("?")));
         Feedback.chat(player, Lang.fmt("msg.factions.power_regen",
                 "rate", FactionPowerEvents.trim(
-                        FactionPowerEvents.regenPerMinute(store, f.get().id())),
-                "standard", Lang.get(FactionPowerEvents.standardState(store, f.get().id()))));
+                        FactionPowerEvents.regenPerMinute(ctx.getSource().getServer(), store, f.get().id())),
+                "standard", Lang.get(FactionPowerEvents.standardState(ctx.getSource().getServer(), store, f.get().id()))));
         return 1;
     }
 
@@ -1146,8 +1146,8 @@ public final class FactionCommands {
             // invisible: you are told a flag matters and never shown that it does.
             Feedback.chat(player, Lang.fmt("msg.factions.power_regen",
                     "rate", FactionPowerEvents.trim(
-                            FactionPowerEvents.regenPerMinute(store, f.id())),
-                    "standard", Lang.get(FactionPowerEvents.standardState(store, f.id()))));
+                            FactionPowerEvents.regenPerMinute(ctx.getSource().getServer(), store, f.id())),
+                    "standard", Lang.get(FactionPowerEvents.standardState(ctx.getSource().getServer(), store, f.id()))));
         });
         return 1;
     }
