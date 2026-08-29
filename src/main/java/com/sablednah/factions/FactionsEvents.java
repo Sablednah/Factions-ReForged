@@ -39,6 +39,14 @@ public final class FactionsEvents {
     static void onServerStarted(ServerStartedEvent event) {
         FactionBridge.install(event.getServer());
         FactionChat.install();
+
+        // Say out loud what came off disk. A store that failed to load is an empty one, and an
+        // empty one looks exactly like a server nobody has played on yet — which is how a botched
+        // save migration hides until somebody notices their faction is gone.
+        FactionStore store = FactionStore.get(event.getServer());
+        int claims = store.all().stream().mapToInt(f -> store.claimCount(f.id())).sum();
+        Factions.LOGGER.info("Factions: loaded {} faction(s) holding {} claim(s).",
+                store.all().size(), claims);
     }
 
     @SubscribeEvent
