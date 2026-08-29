@@ -25,7 +25,12 @@ side = "BOTH"
 [[dependencies.${mod_id}]]
 modId = "neoforge"
 type = "required"
-versionRange = "${loader_version_range}"
+# The NeoForge version, NOT loader_version_range - that is the FML loader spec, which is
+# "[1,)" and says nothing about NeoForge. Reusing it here declared no NeoForge floor at
+# all; Standards' hard dependency happened to cover for it. See neo_version_min in the
+# root gradle.properties: it drops NeoForge's trailing build counter and tracks the
+# Minecraft range, so this stays permissive without being meaningless.
+versionRange = "[${neo_version_min},)"
 ordering = "NONE"
 side = "BOTH"
 
