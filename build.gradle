@@ -65,6 +65,7 @@ var generateModMetadata = tasks.register("generateFactionsModMetadata", ProcessR
             minecraft_version      : minecraft_version,
             minecraft_version_range: minecraft_version_range,
             neo_version            : neo_version,
+            neo_version_min        : (project.findProperty('neo_version_min') ?: neo_version),
             loader_version_range   : loader_version_range,
             mod_id                 : factions_mod_id,
             mod_name               : factions_mod_name,
