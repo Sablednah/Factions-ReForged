@@ -3,7 +3,15 @@
 Three systems the 2012 plugin had that this one does not, designed together because they turn out
 to be one system wearing three coats.
 
-**Status: designed, not built.** Written 2026-08-26 from the archived
+**Status: built and shipped in 1.1.0, except `/f raid` (section 5).** Power, the four land-control
+modes, the faction bank's other half and the capturable standard are all in the game and were
+played through on 1.21.11, 26.1.2 and 26.2 — power draining on death, restoring with time and
+experience, `/f power` showing exposure, and overclaiming an over-extended neighbour.
+
+This line said *"designed, not built"* for four days after it shipped, which is why `CLAUDE.md` has
+a section about status lines rotting: a doc that undersells is never contradicted by a failure.
+
+Written 2026-08-26 from the archived
 [MassiveCraft Factions page of 15 November 2012][archive], which the owner dug out of the Wayback
 Machine. Numbers quoted below are that page's stated defaults, not guesses.
 
