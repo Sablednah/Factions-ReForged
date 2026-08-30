@@ -373,9 +373,9 @@ cd ../SableCraft-Standards
 - [`CURSEFORGE.md`](CURSEFORGE.md) — the project description, versioned alongside the mod.
 - [`CURSEFORGE-COMMANDS.md`](CURSEFORGE-COMMANDS.md) — every `/f` subcommand, with the rank it needs.
 - [`CURSEFORGE-CONFIGURATION.md`](CURSEFORGE-CONFIGURATION.md) — three worked profiles: peaceful, cosy PvE, and war.
-- [`POWER.md`](POWER.md) — **power, the faction bank's other half, and the standard**: designed in
-  full and not built. Four land-control modes, why `fixed` is the ceiling and power the erosion,
-  and what the 2012 numbers actually were rather than what everyone remembers them as.
+- [`POWER.md`](POWER.md) — **power, the faction bank's other half, and the standard**: built and
+  shipped in 1.1.0, bar `/f raid`. Four land-control modes, why `fixed` is the ceiling and power the
+  erosion, and what the 2012 numbers actually were rather than what everyone remembers them as.
 - [SableCraft Standards](https://github.com/Sablednah/SableCraft-Standards) — the mod underneath.
   Its `GROUPS-API.md`, `CHAT-API.md` and `ECONOMY-API.md` describe the seams this one is built on,
   and `COMBAT-API.md` is where the combat tag will live when it arrives.
