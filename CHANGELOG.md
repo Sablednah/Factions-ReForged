@@ -1,5 +1,40 @@
 # Changelog
 
+## 1.1.1
+
+### Added
+
+- **Minecraft 26.1.2 and 26.2**, on their own branches, matching Standards. Both mixin-free halves
+  of the port came out cheaper than expected; `../SableCraft-Standards/CROSS-VERSION.md` records
+  what each drop moved.
+
+- **A saved-data migration for 26.1 and later**, and a **line in the log saying what came off
+  disk** — `Factions: loaded 2 faction(s) holding 18 claim(s).`
+
+  26.1 renamed `factions.dat` to `factions/data.dat` *and* moved per-dimension data out of the world
+  root into `world/dimensions/minecraft/overworld/data/`. A migration that fixed only the filename
+  wrote a byte-perfect copy into the world-global folder — beside the scoreboard and the weather,
+  where nothing reads it — and logged success. Every faction, claim, power value and captured
+  standard would have been silently gone, because a missing saved-data file is not an error, it is
+  a new world.
+
+  The boot line is the guard against that happening again: an empty store looks exactly like a
+  server nobody has played on yet.
+
+### Fixed
+
+- **Factions declared no NeoForge requirement at all.** The dependency reused
+  `loader_version_range` — `[1,)`, the FML *loader spec*, which says nothing about NeoForge — and
+  only the hard dependency on Standards was covering for it. It now declares a real floor per
+  Minecraft line.
+
+### Docs
+
+- **`POWER.md` said "designed, not built" for four days after power shipped** and was being played.
+  Power, the four land-control modes, the faction bank and the capturable standard all went out in
+  1.1.0; only `/f raid` is still unbuilt. A doc that undersells is never contradicted by a failure,
+  which is why it survived so long.
+
 ## 1.1.0
 
 **Power, and the standard.** Land stops being a purchase and becomes a position you hold.
