@@ -52,6 +52,7 @@ public final class Factions {
         }));
 
         NeoForge.EVENT_BUS.register(FactionsEvents.class);
+        NeoForge.EVENT_BUS.register(FactionPermissions.class);
         // Dormant unless -Pselftest; see FactionsSelfTest.
         NeoForge.EVENT_BUS.register(FactionsSelfTest.class);
     }

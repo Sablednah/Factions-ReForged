@@ -34,6 +34,16 @@ public final class FactionLang {
         Lang.contribute("msg.factions.need_rank", "&cYou must be at least &f{rank}&c to do that.");
         Lang.contribute("msg.factions.outranked", "&cThey outrank you.");
 
+        // The claim override. Worded to keep it feeling temporary, because it is.
+        Lang.contribute("msg.factions.bypass_on",
+                "{term.prefix} &eClaim override ON&7 — you can edit anybody's land. {term.dim}(/f bypass off, and it drops when you log out)");
+        Lang.contribute("msg.factions.bypass_off",
+                "{term.prefix} &7Claim override off. {term.faction} land is protected from you again.");
+        Lang.contribute("msg.factions.bypass_already",
+                "{term.prefix} &7Claim override was already {state}&7.");
+        Lang.contribute("msg.factions.bypass_used",
+                "{term.dim}(override — this is &f{faction}&r{term.dim} land)");
+
         Lang.contribute("msg.factions.rank.member", "member");
         Lang.contribute("msg.factions.rank.officer", "officer");
         Lang.contribute("msg.factions.rank.leader", "leader");

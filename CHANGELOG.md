@@ -1,5 +1,36 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **`/f bypass` — staff editing claimed land, as a state you enter rather than a permission you
+  carry.** Until now `FactionProtection` never consulted operator status at all, so a moderator
+  undoing a grief inside a claim had to join the faction or unclaim the land.
+
+  The obvious fix — "if they are an op, let them build" — is the wrong one, and not for security
+  reasons. It is wrong because of **attention**. An always-on override means every operator spends
+  every session able to break somebody's base by accident, with nothing to say whose land they are
+  stood on, and the result looks exactly like a grief to the faction that finds it.
+
+  So: `/f bypass on`, do the job, `/f bypass off`. **It drops when you log out** — the one piece of
+  state in either mod designed to be lost. Standards' switches persist because forgetting you can
+  fly is harmless; forgetting you can edit everybody's land is not. Come back tomorrow and you have
+  to decide again. That decision is the feature.
+
+  Takes `on`/`off`/`toggle` like every switch in Standards, so a macro or command block can turn it
+  *off* reliably instead of guessing at a toggle. Every use is logged: the person asking about an
+  override afterwards is never the person who used it.
+
+- **`factions.bypass`** — the first permission node this mod has ever declared, so a moderator can
+  be trusted with the override without being made an operator and handed `/stop` alongside it.
+  Defaults to operators, so a server that configures nothing behaves as before.
+
+- **[`NODES.md`](NODES.md)** — the whole access model in one page: the node, the rank matrix, and
+  why almost nothing here is a permission. Rank inside a faction is *game state* — you become an
+  officer by being promoted, and a permissions mod should no more grant that than it should grant
+  "has a faction".
+
 ## 1.1.1
 
 ### Added

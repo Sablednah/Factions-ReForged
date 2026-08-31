@@ -33,11 +33,57 @@ public final class FactionsSelfTest {
         checkOverreach();
         checkModes();
         checkStandardColours();
+        checkBypass();
         if (failed == 0) {
             Factions.LOGGER.info("=== Factions self-test PASSED ({} checks) ===", passed);
         } else {
             Factions.LOGGER.error("=== Factions self-test FAILED ({} of {}) ===",
                     failed, passed + failed);
+        }
+    }
+
+    /**
+     * The claim override, and above all that it does not linger.
+     *
+     * <p>Both directions, because a bypass that cannot be turned off is worse than none at all,
+     * and one that survives a logout is precisely what the design exists to prevent — a staff
+     * member coming back tomorrow still able to edit everybody's land, having forgotten.</p>
+     *
+     * <p>Runs against the real static set and clears it afterwards. It has to: leaving somebody
+     * overriding because a test forgot to tidy up is the exact failure being tested for.</p>
+     */
+    private void checkBypass() {
+        java.util.UUID staff = java.util.UUID.nameUUIDFromBytes("selftest-bypass-staff".getBytes());
+        java.util.UUID other = java.util.UUID.nameUUIDFromBytes("selftest-bypass-other".getBytes());
+        try {
+            check("nobody is overriding to begin with", !FactionBypass.isActive(staff));
+
+            FactionBypass.forget(staff);      // no-op, and must not throw on somebody absent
+            check("forgetting an absent player is harmless", !FactionBypass.isActive(staff));
+
+            FactionBypass.set(staff, true);
+            check("turning it on takes effect", FactionBypass.isActive(staff));
+            check("...for that player only, not everybody", !FactionBypass.isActive(other));
+
+            FactionBypass.set(staff, false);
+            check("turning it off takes effect", !FactionBypass.isActive(staff));
+
+            // THE PROPERTY THE DESIGN RESTS ON. If the logout hook is ever dropped from
+            // FactionsEvents, staff silently keep the override across a relog — which is exactly
+            // what this exists to prevent, and which nothing else would report.
+            FactionBypass.set(staff, true);
+            FactionBypass.forget(staff);
+            check("logging out drops the override", !FactionBypass.isActive(staff));
+
+            FactionBypass.set(staff, true);
+            FactionBypass.set(other, true);
+            check("two staff can override at once", FactionBypass.active() == 2);
+            FactionBypass.forget(staff);
+            check("...and one leaving does not drop the other",
+                    FactionBypass.isActive(other) && !FactionBypass.isActive(staff));
+        } finally {
+            FactionBypass.clear();
+            check("the self-test leaves nobody overriding", FactionBypass.active() == 0);
         }
     }
 
