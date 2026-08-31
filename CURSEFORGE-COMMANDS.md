@@ -3,7 +3,7 @@
 Source of truth: `src/main/java/com/sablednah/factions/FactionCommands.java`.
 
 Everything is under **`/f`**. Three ranks — **member**, **officer**, **leader** — and each command
-says which it needs. There is no permission node per command: rank inside the faction is the gate,
+says which it needs. There is (almost) no permission node per command: rank inside the faction is the gate,
 because "may this person claim land" is a question about the faction and not about the server.
 
 Anything not listed as officer or leader is open to any member, and anything that does not need a
@@ -202,6 +202,22 @@ not a mute.
 Watch every faction channel. Overheard messages are marked as such, so they cannot be mistaken for
 a room you are in. A spy is never counted as an audience: a lone member still hears "nobody else is
 listening", or the message would quietly announce that somebody is watching.
+
+### `/f bypass [on|off|toggle]` — server operator, or `factions.bypass`
+
+Edit inside other people's claims. **A state you turn on, not a permission you carry.**
+
+An always-on operator override means every op spends every session able to break somebody's base by
+accident, with nothing on screen to say whose land they are stood on — and the mistake that follows
+looks exactly like a grief to the faction that finds it. So this is something you switch on, do the
+job, and switch off.
+
+**It drops when you log out**, on purpose. Come back tomorrow and the protection is on again; you
+have to decide a second time. Editing claimed land should cost a thought every time.
+
+Grantable through `factions.bypass` so a moderator can undo a grief without being made a full
+operator. Every use is written to the server log — the person asking about an override later is
+never the person who used it.
 
 ## Money
 
