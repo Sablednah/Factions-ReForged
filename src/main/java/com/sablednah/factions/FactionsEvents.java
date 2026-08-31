@@ -51,6 +51,9 @@ public final class FactionsEvents {
         FactionAutoClaim.forget(event.getEntity().getUUID());
         FactionChat.forget(event.getEntity().getUUID());
         FactionPowerEvents.forget(event.getEntity().getUUID());
+        // The one piece of state here that is MEANT to be lost. See FactionBypass: coming back
+        // with the protection off, having forgotten, is the whole thing it exists to prevent.
+        FactionBypass.forget(event.getEntity().getUUID());
     }
 
     // --- protection ---

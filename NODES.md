@@ -3,10 +3,14 @@
 **Status: accurate as of 1.1.1, and hand-written — unlike Standards' `NODES.md`, which is
 generated.** The difference is the point of this document.
 
-## Factions declares no permission nodes
+## Factions declares exactly one permission node
 
-Not an oversight, and worth stating plainly because the obvious assumption is the opposite:
-`grep -r PermissionNode src/` returns nothing. Factions gates on two things instead.
+| Node | Default | What it allows |
+|---|---|---|
+| `factions.bypass` | operators | Turn the **claim override** on with `/f bypass`. Grantable to a moderator so they can undo a grief inside a claim without being made an operator and handed `/stop` with it. |
+
+That is the whole node table, and the shortness is the design rather than an omission. Factions
+gates on two other things, neither of which is a permission.
 
 **1. Your rank inside your own faction.** Leader, officer, member. This is game state, not a
 permission — you get it by being promoted, and no permissions mod can or should grant it. A server
@@ -14,8 +18,8 @@ owner cannot hand somebody "officer" any more than they can hand somebody "has a
 
 **2. Operator level, for exactly two things.** `/f chatspy` and `/f fixture`.
 
-That is the whole access model. There is nothing here for LuckPerms or `/rank` to configure, which
-is why this file is a rank matrix rather than a node table.
+So this file is mostly a rank matrix. There is very little here for LuckPerms or `/rank` to
+configure, and that is correct: most of what `/f` does is decided by a faction, not by a server.
 
 ## The rank matrix
 
@@ -37,6 +41,7 @@ facts is the shape of every stale document this project has caught itself shippi
 | `/f ally <faction>` `/f enemy <faction>` `/f neutral <faction>` | **officer** or above |
 | `/f disband` `/f promote` `/f demote` `/f unclaimall` `/f tag` `/f rename` `/f peaceful` | **leader** |
 | `/f withdraw` | **leader**, or **officer** when `officersMayWithdraw = true` |
+| `/f bypass` | **operator**, or anyone granted `factions.bypass` |
 | `/f chatspy` | **operator** |
 | `/f fixture seed` `/f fixture clear` | **operator**, and only when fixtures are enabled in config |
 
@@ -47,9 +52,10 @@ and money coming out can.
 `/f chat ally` picks a chat channel and needs only membership. They share a word and nothing else,
 which is worth knowing before reading either row as covering the other.
 
-## Two gaps, both real, neither yet decided
+## The gaps this document was written to record
 
-Recorded here rather than fixed quietly, because both change behaviour on a shipped mod.
+One is answered and one is still open. Both were found by writing this file, which is the argument
+for having written it.
 
 ### There is no way to restrict who founds a faction
 
@@ -57,26 +63,35 @@ Recorded here rather than fixed quietly, because both change behaviour on a ship
 past a certain point — a rank, a playtime, a whitelist — has no lever at all. A single
 `factions.create` node would give it one, and would cost nothing to anybody who does not use it.
 
-### Staff cannot build in another faction's claim
+### ~~Staff cannot build in another faction's claim~~ — answered
 
-`FactionProtection.may()` asks who owns the chunk and which faction the player is in, and **never
-consults operator status**. So a moderator undoing a grief inside somebody's claim cannot place a
-block; their options are to join the faction or to unclaim the land.
+**Closed, and worth reading for the shape of the answer rather than the fact of it.**
 
-This may well be deliberate — `POWER.md` is explicit that `/f stuck` exists so a *player* trapped
-in a claim is answered without holing the protection, and the same instinct argues against a
-blanket op override. But a moderator with a shovel is a different case from a player with an
-escape route, and right now there is no distinction. A `factions.bypass` node, off by default,
-would draw it.
+The obvious fix is one line in `FactionProtection`: if the player is an operator, let them build.
+That is wrong, and not for security reasons — staff are trusted. It is wrong because of
+**attention**. An always-on override means every operator spends every session able to break
+somebody's base by accident, with nothing to tell them whose land they are stood on, and the
+resulting mistake looks exactly like a grief to the faction that finds it.
 
-## If Factions ever does declare nodes
+So the override is a **state you enter on purpose**: `/f bypass on`, do the job, `/f bypass off`.
+It is dropped when you log out — the only piece of state in either mod designed to be lost.
+Standards' switches persist across a logout because forgetting you can fly is harmless; forgetting
+you can edit everybody's land is not. A staff member who logs off mid-job comes back with the
+protection on and has to decide again.
 
-Generate this file rather than maintaining it, exactly as Standards does: `scripts/nodes.py`
-there parses the declarations out of the source, because a hand-kept list of nodes is the document
-that ships stale and nobody notices — a missing node reads precisely like a node that does not
-exist.
+**That decision is the feature.** Editing claimed land should cost a thought every time.
 
-This file is hand-written only because there is nothing to generate from. The rank matrix above
+It takes `on`/`off`/`toggle` like every switch in Standards, so a macro or a command block can turn
+it *off* reliably rather than guessing at a toggle, and every use is written to the server log —
+the person asking about an override later is never the person who used it.
+
+## If the node list ever grows
+
+Generate it rather than maintaining it, exactly as Standards does: `scripts/nodes.py` there parses
+the declarations out of the source, because a hand-kept list of nodes is the document that ships
+stale and nobody notices — a missing node reads precisely like a node that does not exist.
+
+One node is not worth a generator. Three would be. The rank matrix above
 lives inside command handlers as `atLeast(ctx, player, Rank.OFFICER)` calls, which is not something
 a parser can map back to command names with any confidence. **So it has to be checked by reading
 when `/f` changes** — which is a real maintenance cost, and one more argument for nodes.

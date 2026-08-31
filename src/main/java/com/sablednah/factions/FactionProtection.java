@@ -119,6 +119,12 @@ public final class FactionProtection {
         if (owner.isEmpty()) {
             return true; // wilderness belongs to nobody and is defended by nobody
         }
+        // Staff who have deliberately turned the override on. NOT an operator check: an always-on
+        // override means every op spends every session able to break somebody's base by accident.
+        // See FactionBypass — it is a state you enter, and it is dropped when you log out.
+        if (FactionBypass.isActive(player.getUUID())) {
+            return true;
+        }
         Optional<FactionStore.Faction> mine = store.of(player.getUUID());
         if (mine.isEmpty()) {
             return false;

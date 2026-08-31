@@ -118,6 +118,15 @@ public final class FactionCommands {
                 .then(Commands.literal("chatspy")
                         .requires(src -> Commands.hasPermission(Commands.LEVEL_GAMEMASTERS).test(src))
                         .executes(FactionCommands::chatspy))
+                // on / off / toggle, like every switch in Standards — a bare '/f bypass' flips it
+                // for a human, and the explicit forms exist so a command block, a datapack or a
+                // staff macro can turn it OFF reliably rather than guessing at a toggle.
+                .then(Commands.literal("bypass")
+                        .requires(FactionPermissions.require(FactionPermissions.BYPASS))
+                        .executes(ctx -> bypass(ctx, null))
+                        .then(Commands.literal("on").executes(ctx -> bypass(ctx, Boolean.TRUE)))
+                        .then(Commands.literal("off").executes(ctx -> bypass(ctx, Boolean.FALSE)))
+                        .then(Commands.literal("toggle").executes(ctx -> bypass(ctx, null))))
                 .then(Commands.literal("money")
                         .executes(FactionCommands::money)
                         .then(Commands.literal("deposit")
@@ -1314,6 +1323,32 @@ public final class FactionCommands {
         }
         com.sablednah.standards.api.chat.Chat.noteActivity(player);
         FactionChat.send(player, channel, StringArgumentType.getString(ctx, "message"));
+        return 1;
+    }
+
+    /**
+     * Turn the claim override on or off.
+     *
+     * @param want {@code null} to flip it, which is what a bare {@code /f bypass} means
+     */
+    private static int bypass(CommandContext<CommandSourceStack> ctx, Boolean want)
+            throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        boolean before = FactionBypass.isActive(player.getUUID());
+        if (want != null && want == before) {
+            // Say so rather than silently doing nothing: somebody typing 'off' twice wants to know
+            // the second one was unnecessary, not to wonder whether it took.
+            Feedback.chat(player, Lang.fmt("msg.factions.bypass_already",
+                    "state", Lang.get(before ? "msg.toggle.on" : "msg.toggle.off")));
+            return 0;
+        }
+        boolean now = want == null ? FactionBypass.toggle(player) : FactionBypass.set(player, want);
+        Feedback.chat(player, Lang.get(now
+                ? "msg.factions.bypass_on" : "msg.factions.bypass_off"));
+        // Logged, because an override used is a thing somebody may need to account for later, and
+        // the person asking will not be the person who used it.
+        Factions.LOGGER.info("Factions: claim override {} for {}",
+                now ? "ON" : "off", player.getName().getString());
         return 1;
     }
 
