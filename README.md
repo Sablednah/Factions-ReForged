@@ -372,6 +372,8 @@ cd ../SableCraft-Standards
 - [`CHANGELOG.md`](CHANGELOG.md) — what is in this release, and what is knowingly missing from it.
 - [`CURSEFORGE.md`](CURSEFORGE.md) — the project description, versioned alongside the mod.
 - [`CURSEFORGE-COMMANDS.md`](CURSEFORGE-COMMANDS.md) — every `/f` subcommand, with the rank it needs.
+- [`NODES.md`](NODES.md) — permissions at a glance: **Factions declares no permission nodes**,
+  what gates each command instead, and the two places that arguably wants revisiting.
 - [`CURSEFORGE-CONFIGURATION.md`](CURSEFORGE-CONFIGURATION.md) — three worked profiles: peaceful, cosy PvE, and war.
 - [`POWER.md`](POWER.md) — **power, the faction bank's other half, and the standard**: built and
   shipped in 1.1.0, bar `/f raid`. Four land-control modes, why `fixed` is the ceiling and power the
