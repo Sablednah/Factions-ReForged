@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## 1.2.0
+
+**Requires Standards 1.4.0.** The two are built together and released together; a new Factions
+beside an old Standards starts and *then* misbehaves somewhere unrelated.
 
 ### Added
 
