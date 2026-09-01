@@ -34,6 +34,15 @@ for when you have no hands free.
 Not a grid. **Each side of a chunk is drawn only where ownership actually changes**, so interior
 lines vanish and what is left is the outline of the territory — the thing you wanted to know.
 
+**They are drawn on the line, not in the blocks beside it.** Particles sit on the corners of the
+block grid — exactly where the boundary is — so there is nothing to work out. Centred inside the
+outermost block instead, a border tells you which block is the edge one when the question you
+actually have is which side of it you are standing on.
+
+Where two claims meet, the shared line **alternates between their two colours** and swaps each
+pulse, so a border between your land and an ally's shimmers between the two rather than one colour
+winning.
+
 **They stand on the ground, not at your feet.** Drawn at a flat height a border is buried in the
 first hill it crosses and floating over the first valley, and being underground is worst at the
 exact moment you are walking over the line. Each column sits on the surface beneath it.

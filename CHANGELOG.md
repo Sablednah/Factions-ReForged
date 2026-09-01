@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- **Border particles are drawn on the boundary itself**, at the corners of the block grid, rather
+  than centred inside the outermost block. Centred in a block, the display answered "which block is
+  the edge one" when the question you actually have is "which side of the line am I on" — and you
+  ended up counting blocks to work it out.
+
+### Fixed
+
+- **A border between two claims was drawn twice, in two colours.** The comment claimed every
+  boundary belonged to exactly one chunk; the code had both neighbours drawing the shared line, so
+  your colour and theirs fought over the same particles. Each boundary is now drawn once — and
+  because one chunk knows both sides, a shared line **alternates the two colours** and swaps each
+  pulse, so it shimmers between them instead of one winning.
+
 ## 1.2.0
 
 **Requires Standards 1.4.0.** The two are built together and released together; a new Factions
