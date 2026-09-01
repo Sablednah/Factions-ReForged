@@ -207,6 +207,28 @@ friends to sit still while you declare war on them is not a test plan. Off unles
 Strings live in Standards' single `messages.yml`, so there is one file for the whole server, one set
 of colour rules and one merge-on-upgrade behaviour.
 
+## Editing inside somebody's claim — `/f bypass`
+
+Protection has no back door for operators, on purpose. Instead there is a **state you enter
+deliberately**: `/f bypass on`, do the job, `/f bypass off`.
+
+An always-on override would mean every operator spends every session able to break somebody's base
+by accident, with nothing on screen to say whose land they are stood on — and the resulting mistake
+looks exactly like a grief to the faction that finds it. So the protection stays real the rest of
+the time, which is what makes it a protection.
+
+**It drops when you log out.** Come back tomorrow and you have to decide again. Editing claimed land
+should cost a thought every time.
+
+Takes `on` / `off` / `toggle` like every switch in Standards, so a macro or a command block can turn
+it *off* reliably rather than guessing. Every use is written to the server log — the person asking
+about an override afterwards is never the person who used it.
+
+Gated on **`factions.bypass`**, the only permission node this mod declares, so a moderator can be
+trusted with it without being made a full operator. Everything else under `/f` is gated on your rank
+inside your own faction, which is game state rather than a permission: you become an officer by
+being promoted, and no permissions mod should be able to hand that out.
+
 ## Requirements
 
 Built for three Minecraft lines. **Take the jar that names your version** — every file carries it,
