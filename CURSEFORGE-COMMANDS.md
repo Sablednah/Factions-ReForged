@@ -203,6 +203,24 @@ Watch every faction channel. Overheard messages are marked as such, so they cann
 a room you are in. A spy is never counted as an audience: a lone member still hears "nobody else is
 listening", or the message would quietly announce that somebody is watching.
 
+### `/f raid <faction>` — officer
+
+Declare an attack. Announced to the **whole server**, and everyone involved glows by side —
+attackers one colour, defenders another, the standard carrier keeping its own red.
+
+It ends when their **standard is taken** (attackers win), when **every attacker is dead or logged
+off** (defenders win), or when the **timer expires** (defenders held). The clock is a backstop, not
+the mechanism: a raid that could only end on a timer is one nobody can win.
+
+**It cannot be declined**, and it does not need to be — a raid requires **defenders online** to
+declare. That protects a small faction far better than declining could, since the faction that most
+needs protecting is the one with nobody online. Peaceful factions neither raid nor are raided.
+
+A cooldown stops the same attacker raiding the same target repeatedly. A raid never survives a
+server restart.
+
+`/f raids` (or a bare `/f raid`) lists what is running.
+
 ### `/f bypass [on|off|toggle]` — server operator, or `factions.bypass`
 
 Edit inside other people's claims. **A state you turn on, not a permission you carry.**

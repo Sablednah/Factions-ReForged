@@ -72,6 +72,18 @@ public final class FactionsEvents {
         FactionBypass.forget(event.getEntity().getUUID());
     }
 
+    /**
+     * A raid never survives a restart.
+     *
+     * <p>Deliberate, and the same reasoning as {@link FactionBypass}: a raid is a fight between
+     * people who are present, and one that outlived a server bounce could expire while nobody was
+     * online to defend it — a defeat nobody was there for.</p>
+     */
+    @SubscribeEvent
+    static void onRaidsStopping(net.neoforged.neoforge.event.server.ServerStoppingEvent event) {
+        FactionRaidEvents.forgetAll();
+    }
+
     // --- protection ---
 
     /**
