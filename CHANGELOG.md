@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+### Added
+
+- **`/f raid <faction>` — a declared, announced, time-boxed attack.** Being at war is a standing
+  relation; a raid is an *event*. It is announced to the whole server, both sides glow by side, and
+  it ends in a way somebody won: their **standard taken** (attackers win), **every attacker dead or
+  gone** (defenders win), or the **timer expiring** (defenders held). The clock is a backstop, not
+  the mechanism — a raid that could only end on a timer is one nobody can win.
+
+  **It cannot be declined, and does not need to be.** A raid requires **defenders online** to
+  declare. A decline would have been the wrong tool for the problem it was meant to solve: the
+  faction that most needs protecting is the one with nobody online, and they are not there to
+  decline. So nobody is raided in their sleep, and a raid is always a fight.
+
+  A cooldown runs per attacker–target **pair**, so a busy server is not frozen while "raid the same
+  victim every ten minutes" stops being a strategy. A raid **never survives a restart** — it is a
+  fight between people who are present, and one that outlived a server bounce could expire with
+  nobody online to defend it.
+
+  `/f raids` lists what is running. The design and its reasoning are in `POWER.md` §5, which had
+  been an open question list since 1.1.0.
+
+- **`raidGatesOverclaim`** — optionally, land only changes hands during a declared raid.
+  **Off by default**, so no existing server's game changes on update. On, overclaiming becomes an
+  event with a beginning and an end.
+
 ### Changed
 
 - **Border particles are drawn on the boundary itself**, at the corners of the block grid, rather

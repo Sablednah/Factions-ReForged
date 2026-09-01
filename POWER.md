@@ -3,7 +3,7 @@
 Three systems the 2012 plugin had that this one does not, designed together because they turn out
 to be one system wearing three coats.
 
-**Status: built and shipped in 1.1.0, except `/f raid` (section 5).** Power, the four land-control
+**Status: built. Power, the bank and the standard shipped in 1.1.0; `/f raid` (section 5) was designed and built 2026-09-02 and is awaiting a two-client test.** Power, the four land-control
 modes, the faction bank's other half and the capturable standard are all in the game and were
 played through on 1.21.11, 26.1.2 and 26.2 — power draining on death, restoring with time and
 experience, `/f power` showing exposure, and overclaiming an over-extended neighbour.
@@ -375,7 +375,7 @@ client renders, it can be the map legend and the chat colour, and `/f standard` 
 visual identity that a three-letter tag cannot. The theft is what makes it matter; the flag is
 worth having first.
 
-## 5. `/f raid` — not built, and worth building next
+## 5. `/f raid` — designed 2026-09-02, and next to build
 
 **The idea, recorded as it arrived.** Declaring a raid is a distinct act from being at war:
 `/f raid <faction>` announces an attack, and while it runs the whole server can see it happening.
@@ -397,18 +397,52 @@ worth having first.
   The second is friendlier to a server where people have jobs, and worse for a server that wants
   land to feel permanently contested. Hence a setting.
 
-**What it needs deciding first**, and none of it is obvious:
+**Decided 2026-09-02.** The five questions below were open for a fortnight; these are the answers
+and the reasoning, so they are not re-argued.
 
-- **How does a raid end?** A timer, a surrender, the attackers all dying, the flag being taken?
-  Each produces a different game. A timer is the least interesting and the most predictable.
-- **Can it be declined?** If not, a large faction can pin a small one indefinitely. If yes, it is
-  not a raid.
-- **A cooldown between raids on the same target**, or the answer to "how do I grief somebody" is
-  "declare a raid every ten minutes forever".
-- **What happens to a raid when the server restarts**, or when every attacker logs off.
+### How a raid ends — an objective, with a timer as the backstop
 
-The glow work is already done and the announcement machinery exists; the design questions above are
-the actual cost. Worth doing properly rather than quickly.
+Three ways out, and only one of them is the clock:
+
+- **The standard is taken** — the attackers win. This is the important one: the flag already exists
+  and already has a carrier glow, and making it the *objective* turns a raid from a period of time
+  into something with a point.
+- **Every attacker is dead or logged off** — the defenders win. "We repelled them" needs to be a
+  real outcome or defending is just waiting.
+- **The timer expires** — the defenders held. A backstop rather than the mechanism, because a raid
+  that can only end on a clock is a raid nobody can win or lose, and an unbounded one is a siege.
+
+### It cannot be declined — defenders being online is what protects the small
+
+A declinable raid is not a raid. But "a large faction pins a small one indefinitely" is a real
+failure, and a decline is the wrong tool for it: the faction that most needs protecting is the one
+with nobody online, and they are not there to decline.
+
+So **a raid requires defenders online to declare**. That answers the actual problem — nobody is
+raided while they are asleep — and it means a raid is always a fight rather than a formality. A
+server where people have jobs gets the protection it needs without the mechanic being softened.
+
+### A cooldown per attacker–target pair
+
+Configurable, and per pair rather than per faction: stopping a faction raiding *anybody* for six
+hours punishes a busy server, while stopping them raiding *the same victim* is precisely the
+"declare a raid every ten minutes forever" grief.
+
+### A raid does not survive a restart
+
+It is in memory and it is gone on stop, deliberately — the same reasoning as `/f bypass` and the
+teleport warmups. A pending, time-boxed thing that survives a restart is worse than losing one:
+coming back to a raid that expired while the server was down is a defeat nobody was present for.
+All attackers logging off ends it the same way, as a defender win.
+
+### Raid-gating overclaims is a config, defaulting OFF
+
+Both games are legitimate — see above — so it is a setting. It defaults to **today's behaviour**,
+because a mod that silently changes how land is taken on every existing server the moment it
+updates has done something worse than shipping the wrong default.
+
+The glow work is already done and the announcement machinery exists; the design above was the
+actual cost.
 
 ## Worth stealing from the archive
 

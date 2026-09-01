@@ -34,6 +34,31 @@ public final class FactionLang {
         Lang.contribute("msg.factions.need_rank", "&cYou must be at least &f{rank}&c to do that.");
         Lang.contribute("msg.factions.outranked", "&cThey outrank you.");
 
+        // Raids. Announced to the whole server on purpose — a raid nobody could see would be a
+        // war with extra steps, and half the value is that other people can turn up.
+        Lang.contribute("msg.factions.raid_declared",
+                "{term.prefix} &c&lRAID&r &f{attacker}&7 is attacking &f{defender}&7 — &f{time}&7 to take their standard.");
+        Lang.contribute("msg.factions.raid_over_taken",
+                "{term.prefix} &c&lRAID OVER&r &f{attacker}&7 took &f{defender}&7's standard.");
+        Lang.contribute("msg.factions.raid_over_repelled",
+                "{term.prefix} &a&lREPELLED&r &f{defender}&7 drove &f{attacker}&7 off.");
+        Lang.contribute("msg.factions.raid_over_held",
+                "{term.prefix} &a&lHELD&r &f{defender}&7 held out against &f{attacker}&7.");
+        Lang.contribute("msg.factions.raid_self", "&cRaiding yourself would prove very little.");
+        Lang.contribute("msg.factions.raid_peaceful",
+                "&cPeaceful {term.factions} neither raid nor are raided.");
+        Lang.contribute("msg.factions.raid_already", "&cThere is already a raid running.");
+        Lang.contribute("msg.factions.raid_cooldown",
+                "&cYou raided &f{name}&c too recently — &f{time}&c to wait.");
+        // The refusal that replaces declining, so it has to explain itself rather than just say no.
+        Lang.contribute("msg.factions.raid_nobody_home",
+                "&cNobody is home. &f{name}&c needs &f{needed}&c member(s) online to be raided, and has &f{online}&c.");
+        Lang.contribute("msg.factions.raid_none", "{term.prefix} &7No raids are running.");
+        Lang.contribute("msg.factions.raid_row",
+                " &f{attacker} {term.dim}-> raiding&r &f{defender} {term.dim}({time} left)");
+        Lang.contribute("msg.factions.raid_needed",
+                "&cLand only changes hands during a declared raid. {term.dim}(/f raid {name})");
+
         // The claim override. Worded to keep it feeling temporary, because it is.
         Lang.contribute("msg.factions.bypass_on",
                 "{term.prefix} &eClaim override ON&7 — you can edit anybody's land. {term.dim}(/f bypass off, and it drops when you log out)");

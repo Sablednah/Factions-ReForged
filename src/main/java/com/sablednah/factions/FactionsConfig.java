@@ -38,6 +38,12 @@ public final class FactionsConfig {
     public static final ModConfigSpec.DoubleValue REGEN_WITHOUT_STANDARD;
     public static final ModConfigSpec.DoubleValue REGEN_WITH_CAPTURED;
     public static final ModConfigSpec.BooleanValue GLOW_WHILE_CARRYING;
+    public static final ModConfigSpec.BooleanValue ENABLE_RAIDS;
+    public static final ModConfigSpec.IntValue RAID_MINUTES;
+    public static final ModConfigSpec.IntValue RAID_COOLDOWN_MINUTES;
+    public static final ModConfigSpec.IntValue RAID_MIN_DEFENDERS;
+    public static final ModConfigSpec.BooleanValue RAID_GATES_OVERCLAIM;
+    public static final ModConfigSpec.BooleanValue RAID_GLOW;
     public static final ModConfigSpec.DoubleValue CLAIM_COST;
     public static final ModConfigSpec.DoubleValue CLAIM_COST_MULTIPLIER;
     public static final ModConfigSpec.DoubleValue CLAIM_REFUND;
@@ -317,6 +323,51 @@ public final class FactionsConfig {
                         "simply glows white — taking somebody out of another mod's team to",
                         "recolour an outline would be a rude trade.")
                 .define("glowWhileCarrying", true);
+        ENABLE_RAIDS = b
+                .comment("/f raid — a declared, announced, time-boxed attack.",
+                        "Being at war is a standing relation; a raid is an EVENT. It starts,",
+                        "everybody is told, both sides light up, and it ends in a way somebody",
+                        "won. See POWER.md section 5.")
+                .define("raids", true);
+        RAID_MINUTES = b
+                .comment("How long a raid runs before the defenders are judged to have held.",
+                        "A backstop rather than the mechanism: a raid normally ends when the",
+                        "standard is taken or the attackers are all dead or gone. A raid that",
+                        "could only end on a clock would be one nobody can win.")
+                .defineInRange("raidMinutes", 20, 1, 240);
+        RAID_COOLDOWN_MINUTES = b
+                .comment("Quiet time before the SAME attacker may raid the SAME target again.",
+                        "Per pair, not per faction: stopping a faction raiding anybody for hours",
+                        "punishes a busy server, while stopping them raiding one victim over and",
+                        "over is the actual grief. Runs from the END of the raid.")
+                .defineInRange("raidCooldownMinutes", 120, 0, 10080);
+        RAID_MIN_DEFENDERS = b
+                .comment("How many of the defending faction must be ONLINE to declare a raid.",
+                        "This is what protects a small faction, and it is why a raid cannot be",
+                        "declined: the faction that most needs protecting is the one with nobody",
+                        "online, and they are not there to decline. Requiring defenders means",
+                        "nobody is raided in their sleep and a raid is always a fight.",
+                        "0 allows raids against an empty faction, which is a different game.")
+                .defineInRange("raidMinDefenders", 1, 0, 100);
+        RAID_GATES_OVERCLAIM = b
+                .comment("Land only changes hands DURING a declared raid.",
+                        "OFF by default, which is the behaviour every existing server already",
+                        "has: an over-extended enemy is takeable whenever anybody notices, and",
+                        "the attacker is rewarded for paying attention.",
+                        "ON makes overclaiming an event with a beginning and an end — defenders",
+                        "get a fair chance to be present, and nobody logs in to find they were",
+                        "quietly eaten overnight. Friendlier to a server where people have jobs,",
+                        "worse for one that wants land permanently contested.",
+                        "Defaulted off deliberately: silently changing how land is taken on every",
+                        "server that updates would be worse than shipping the wrong default.")
+                .define("raidGatesOverclaim", false);
+        RAID_GLOW = b
+                .comment("Everyone in a raid glows by side — attackers one colour, defenders",
+                        "another, and the standard carrier keeps its own red.",
+                        "Turns a scattered fight into something spectators and reinforcements can",
+                        "read at a glance, which is half of what makes a raid an event rather",
+                        "than a rumour.")
+                .define("raidGlow", true);
         OVERCLAIM_ENEMIES_ONLY = b
                 .comment("Only a DECLARED ENEMY may take land from an over-extended faction.",
                         "On by default, and a deliberate divergence: the original let anybody who",
