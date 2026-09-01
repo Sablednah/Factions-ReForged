@@ -42,6 +42,17 @@ import net.minecraft.world.level.ChunkPos;
  */
 public final class FactionBorders {
 
+    // Particles sit ON the boundary — integer coordinates, the lattice of block corners — rather
+    // than in the middle of the outermost block. Centred in a block, the display answers "which
+    // block is the edge one" when the question you actually have is "which side of the line am I
+    // on", and you end up counting blocks to work it out. On the corner lattice there is nothing
+    // to work out: the particles are the line.
+    //
+    // Where two claims meet, the shared line alternates between their two colours and swaps phase
+    // each pulse, so it shimmers between them. The alternative — offsetting one side slightly —
+    // puts particles inside somebody's chunk again, which is the problem this just fixed.
+
+
     /** Players who have asked to see borders. Not persisted: a display, not a setting. */
     private static final Set<UUID> SHOWING = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
@@ -111,6 +122,7 @@ public final class FactionBorders {
         if (every <= 0 || server.getTickCount() % every != 0) {
             return;
         }
+        pulse++;
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             if (wants(player)) {
                 draw(player);
@@ -197,19 +209,33 @@ public final class FactionBorders {
                     continue; // wilderness has no edge of its own; its neighbours draw theirs
                 }
                 int colour = colourFor(store, mine, owner.get());
-                // North and west only, plus the far side when the neighbour differs — every
-                // boundary belongs to exactly one chunk, so nothing is drawn twice.
-                if (!owner.equals(store.ownerOf(dim, cx, cz - 1))) {
-                    line(player, level, cx << 4, cz << 4, 1, 0, y, colour);
+
+                // EVERY BOUNDARY IS DRAWN EXACTLY ONCE, which the old comment claimed and the old
+                // code did not do: two claims side by side each drew the shared line, so the two
+                // colours fought over the same particles.
+                //
+                // North and west are drawn by this chunk whenever the neighbour differs, so of any
+                // two touching claims the souther/easter one owns the line between them. South and
+                // east are drawn only against WILDERNESS, which is skipped above and would
+                // otherwise leave those edges undrawn entirely.
+                Optional<String> north = store.ownerOf(dim, cx, cz - 1);
+                Optional<String> west = store.ownerOf(dim, cx - 1, cz);
+                Optional<String> south = store.ownerOf(dim, cx, cz + 1);
+                Optional<String> east = store.ownerOf(dim, cx + 1, cz);
+
+                if (!owner.equals(north)) {
+                    line(player, level, cx << 4, cz << 4, 1, 0, y,
+                            colour, sharedWith(store, mine, north));
                 }
-                if (!owner.equals(store.ownerOf(dim, cx, cz + 1))) {
-                    line(player, level, cx << 4, (cz << 4) + 16, 1, 0, y, colour);
+                if (!owner.equals(west)) {
+                    line(player, level, cx << 4, cz << 4, 0, 1, y,
+                            colour, sharedWith(store, mine, west));
                 }
-                if (!owner.equals(store.ownerOf(dim, cx - 1, cz))) {
-                    line(player, level, cx << 4, cz << 4, 0, 1, y, colour);
+                if (south.isEmpty()) {
+                    line(player, level, cx << 4, (cz << 4) + 16, 1, 0, y, colour, -1);
                 }
-                if (!owner.equals(store.ownerOf(dim, cx + 1, cz))) {
-                    line(player, level, (cx << 4) + 16, cz << 4, 0, 1, y, colour);
+                if (east.isEmpty()) {
+                    line(player, level, (cx << 4) + 16, cz << 4, 0, 1, y, colour, -1);
                 }
             }
         }
@@ -254,22 +280,53 @@ public final class FactionBorders {
      * generate it, and drawing a decoration is not a reason to generate terrain.</p>
      */
     private static void line(ServerPlayer player, ServerLevel level,
-            int startX, int startZ, int stepX, int stepZ, double y, int colour) {
+            int startX, int startZ, int stepX, int stepZ, double y,
+            int colour, int neighbourColour) {
         DustParticleOptions dust = new DustParticleOptions(colour, 1.0F);
+        DustParticleOptions other = neighbourColour < 0 ? null
+                : new DustParticleOptions(neighbourColour, 1.0F);
         boolean follow = FactionsConfig.BORDER_FOLLOW_GROUND.get();
+        // Which colour starts the run, flipped every pulse so a shared border shimmers between the
+        // two rather than freezing into a fixed pattern that reads as one dashed line.
+        int phase = pulse & 1;
+
+        // NO HALF-BLOCK OFFSET ACROSS THE LINE. The particles sit on integer coordinates, which is
+        // the lattice of block CORNERS — literally where the boundary is. Centring them in the
+        // outermost block instead, as this used to, leaves you working out which side of the line
+        // that block is on every time you look at it, which is the one question the display exists
+        // to answer. Integer positions also make adjacent edges meet exactly at the corners.
         for (int i = 0; i <= 16; i++) {
-            double x = startX + stepX * i + 0.5D;
-            double z = startZ + stepZ * i + 0.5D;
+            double x = startX + stepX * i;
+            double z = startZ + stepZ * i;
             double base = follow ? groundAt(level, x, z, y) : y;
-            level.sendParticles(player, dust, true, false, x, base, z,
+            DustParticleOptions here = other != null && ((i + phase) & 1) == 1 ? other : dust;
+            level.sendParticles(player, here, true, false, x, base, z,
                     1, 0.0D, 0.0D, 0.0D, 0.0D);
             // The wall, at half the density — it only has to say "wall".
             if (i % 2 == 0) {
-                level.sendParticles(player, dust, true, false, x, base + 2.0D, z,
+                level.sendParticles(player, here, true, false, x, base + 2.0D, z,
                         1, 0.0D, 0.0D, 0.0D, 0.0D);
             }
         }
     }
+
+    /**
+     * The colour of the claim on the far side of a boundary, or {@code -1} for none.
+     *
+     * <p>Only when the neighbour is claimed <em>and</em> reads as a different relation to you. Two
+     * allied factions meeting are both cyan to you, and alternating cyan with cyan would be a lot
+     * of arithmetic to draw the same line.</p>
+     */
+    private static int sharedWith(FactionStore store, Optional<FactionStore.Faction> mine,
+            Optional<String> neighbour) {
+        if (neighbour.isEmpty()) {
+            return -1;
+        }
+        return colourFor(store, mine, neighbour.get());
+    }
+
+    /** Incremented once per draw cycle, so the alternating colours swap between pulses. */
+    private static int pulse;
 
     /** How far above or below the player a border column may be drawn, in blocks. */
     private static final double GROUND_WINDOW = 24.0D;
