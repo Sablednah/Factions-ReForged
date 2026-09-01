@@ -209,9 +209,17 @@ of colour rules and one merge-on-upgrade behaviour.
 
 ## Requirements
 
+Built for three Minecraft lines. **Take the jar that names your version** — every file carries it,
+so `factions-1.2.0+mc26.1.2.jar` is the 26.1 one, and take the matching Standards jar with it.
+
 | Minecraft | NeoForge | Java | Depends on |
 |---|---|---|---|
-| 1.21.11 | 21.11.42+ | 21 | [SableCraft Standards](https://www.curseforge.com/minecraft/mc-mods/sablecraft-standards) 1.1.1+ |
+| 1.21.11 | 21.11+ | **21** | [SableCraft Standards](https://www.curseforge.com/minecraft/mc-mods/sablecraft-standards) 1.4.0+ |
+| 26.1.x | 26.1+ | **25** | Standards 1.4.0+ |
+| 26.2.x | 26.2+ | **25** | Standards 1.4.0+ |
+
+⚠ **26.x needs Java 25, not 21.** That is Minecraft's requirement rather than ours, and it is the
+one thing here that will stop a server booting — with an error that does not obviously say so.
 
 Standards is a **hard dependency and deliberately so**: the claims and groups seams, the message
 catalogue, the safe-landing search, the teleport warmups, the chat router and the economy are all
