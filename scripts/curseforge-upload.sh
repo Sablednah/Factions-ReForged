@@ -58,8 +58,8 @@ api "$BASE/api/game/versions" > "$VERSIONS_FILE"
 # reported once with the near misses listed rather than as a bare rejection later.
 # The file path goes in by environment; a pipe would not work at all, because `python3 - <<EOF`
 # already uses stdin for the script itself.
-IDS="$(MC="$MC_VERSION" VERSIONS_FILE="$VERSIONS_FILE" python3 - <<'PY'
-import json, os, sys, pathlib
+IDS="$(MC="$MC_VERSION" VERSIONS_FILE="$VERSIONS_FILE" JAR="$JAR" python3 - <<'PY'
+import json, os, sys, pathlib, zipfile
 raw = pathlib.Path(os.environ["VERSIONS_FILE"]).read_text()
 try:
     versions = json.loads(raw)
@@ -89,16 +89,45 @@ client, server = by_name.get("Client"), by_name.get("Server")
 if not client or not server:
     sys.exit("!! Could not find the Client/Server environment tags CurseForge requires.")
 
+# The Java tag is READ OUT OF THE JAR, not hardcoded and not derived from the Minecraft version.
+#
+# It used to be a literal "Java 21", which was right for the 1.21.11 line and quietly wrong for
+# every 26.x jar - those compile against Java 25, and the file page told people 21 would do.
+# Nothing failed, because CurseForge accepts whatever tag it is handed. Fixed in Standards first;
+# this copy had the same bug and would have mislabelled every Factions 26.x file the same way.
+#
+# A class file's major version is 44 + the Java release, so the jar states its own requirement.
+# Taking the highest across our own classes gives the floor a runtime actually has to meet.
+def java_release_from(jar_path):
+    best = 0
+    with zipfile.ZipFile(jar_path) as zf:
+        for entry in zf.namelist():
+            if not (entry.startswith("com/sablednah/") and entry.endswith(".class")):
+                continue
+            with zf.open(entry) as f:
+                head = f.read(8)
+            if len(head) >= 8 and head[:4] == b"\xca\xfe\xba\xbe":
+                best = max(best, int.from_bytes(head[6:8], "big"))
+    return best - 44 if best else None
+
+release = java_release_from(os.environ["JAR"])
+if release is None:
+    print("!! No com/sablednah/ classes in the jar - is this the right file?", file=sys.stderr)
+    sys.exit(1)
+
 # Optional, unlike the environment: right after a new Java ships CurseForge may not list it yet,
-# and that must not block a release.
-java = by_name.get("Java 21")
+# and that must not block a release. Saying which one was missed matters - a silently absent tag
+# is how the wrong one survived in the first place.
+java_name = f"Java {release}"
+java = by_name.get(java_name)
 
 ids = [mc] + ([loader] if loader else []) + [client, server] + ([java] if java else [])
 print(json.dumps(ids))
 print(f"   Minecraft {want} = {mc}"
       + (f", NeoForge = {loader}" if loader else ", NeoForge = MISSING")
       + f", Client = {client}, Server = {server}"
-      + (f", Java 21 = {java}" if java else ", Java 21 = not listed, omitted"),
+      + (f", {java_name} = {java}" if java
+         else f", {java_name} = not listed by CurseForge, omitted"),
       file=sys.stderr)
 PY
 )"
