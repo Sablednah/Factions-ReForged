@@ -109,6 +109,9 @@ public final class FactionPowerEvents {
         // chest, cheap enough not to matter — online players, two stacks each.
         if (++tickCounter % 20 == 0) {
             FactionStandards.markCarriers(server);
+            // Same beat as the carrier glow: both settle a short, refreshed effect, and one
+            // schedule is easier to keep honest than two.
+            FactionRaidEvents.tick(server);
         }
         // Every tick, because revalidate keeps its OWN timer. Nesting it behind the power gate
         // below multiplied the two counters together and made a ten-second sweep run every

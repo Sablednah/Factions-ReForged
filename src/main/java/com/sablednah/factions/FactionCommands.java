@@ -82,6 +82,18 @@ public final class FactionCommands {
                         .then(Commands.argument("name", StringArgumentType.word())
                                 .executes(FactionCommands::rename)))
                 .then(Commands.literal("peaceful").executes(FactionCommands::peaceful))
+                .then(Commands.literal("raid")
+                        .requires(src -> FactionsConfig.ENABLE_RAIDS.get())
+                        // A bare /f raid lists what is running rather than refusing as incomplete.
+                        // Same lesson as Standards' bare /nick: a command that knows its own name
+                        // should never answer 'unknown or incomplete'.
+                        .executes(FactionCommands::raids)
+                        .then(Commands.argument("faction", StringArgumentType.word())
+                                .suggests(FactionCommands::suggestFactions)
+                                .executes(FactionCommands::raid)))
+                .then(Commands.literal("raids")
+                        .requires(src -> FactionsConfig.ENABLE_RAIDS.get())
+                        .executes(FactionCommands::raids))
                 .then(relation("ally", FactionStore.Relation.ALLY))
                 .then(relation("enemy", FactionStore.Relation.ENEMY))
                 .then(relation("neutral", FactionStore.Relation.NEUTRAL))
@@ -577,6 +589,14 @@ public final class FactionCommands {
                                 .map(FactionStore.Faction::name).orElse("?")));
                 return 0;
             }
+            case NO_RAID -> {
+                // Names the command that would fix it: the land IS takeable, and the only thing
+                // missing is somebody saying so out loud.
+                Feedback.chat(player, Lang.fmt("msg.factions.raid_needed", "name",
+                        store.ownerOf(dim, chunk.x, chunk.z).flatMap(store::byId)
+                                .map(FactionStore.Faction::name).orElse("?")));
+                return 0;
+            }
             case PEACEFUL -> {
                 Feedback.chat(player, Lang.get("msg.factions.peaceful_no_enemies"));
                 return 0;
@@ -751,6 +771,97 @@ public final class FactionCommands {
         store(ctx).setPeaceful(f.get().id(), now);
         announce(ctx, f.get(), Lang.get(now
                 ? "msg.factions.now_peaceful" : "msg.factions.no_longer_peaceful"), null);
+        return 1;
+    }
+
+    /**
+     * {@code /f raid <faction>} — declare an attack.
+     *
+     * <p>The checks are the design, and each refusal names the rule it broke rather than saying no.
+     * See {@code POWER.md} §5; the ordering matters only in that the free refusals come before
+     * anything that reads the player list.</p>
+     */
+    /** What is happening right now. Open to anybody — a raid is a public event by design. */
+    private static int raids(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        var live = FactionRaid.active();
+        if (live.isEmpty()) {
+            Feedback.chat(player, Lang.get("msg.factions.raid_none"));
+            return 0;
+        }
+        FactionStore store = store(ctx);
+        long now = System.currentTimeMillis();
+        StringBuilder sb = new StringBuilder();
+        for (FactionRaid.Raid raid : live) {
+            if (sb.length() > 0) {
+                sb.append("\n");
+            }
+            sb.append(Lang.fmt("msg.factions.raid_row",
+                    "attacker", store.byId(raid.attackerId())
+                            .map(FactionStore.Faction::name).orElse("?"),
+                    "defender", store.byId(raid.defenderId())
+                            .map(FactionStore.Faction::name).orElse("?"),
+                    "time", com.sablednah.standards.core.Duration.describe(raid.secondsLeft(now))));
+        }
+        Feedback.chat(player, sb.toString());
+        return live.size();
+    }
+
+    private static int raid(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        // Officer, like every other act of war here — allying, enemying, claiming.
+        Optional<FactionStore.Faction> mine = atLeast(ctx, player, FactionStore.Rank.OFFICER);
+        if (mine.isEmpty()) {
+            return 0;
+        }
+        String name = StringArgumentType.getString(ctx, "faction");
+        Optional<FactionStore.Faction> target = store(ctx).byName(name);
+        if (target.isEmpty()) {
+            Feedback.chat(player, Lang.fmt("msg.factions.unknown", "name", name));
+            return 0;
+        }
+        FactionStore.Faction us = mine.get();
+        FactionStore.Faction them = target.get();
+        if (us.id().equals(them.id())) {
+            Feedback.chat(player, Lang.get("msg.factions.raid_self"));
+            return 0;
+        }
+        // Peaceful runs both ways, as it does everywhere else: a faction that opted out of
+        // fighting neither raids nor is raided, and the promise is not a promise otherwise.
+        if (us.peaceful() || them.peaceful()) {
+            Feedback.chat(player, Lang.get("msg.factions.raid_peaceful"));
+            return 0;
+        }
+        if (FactionRaid.involved(us.id()) || FactionRaid.involved(them.id())) {
+            Feedback.chat(player, Lang.get("msg.factions.raid_already"));
+            return 0;
+        }
+        long now = System.currentTimeMillis();
+        long wait = FactionRaid.cooldownLeft(us.id(), them.id(), now);
+        if (wait > 0) {
+            Feedback.chat(player, Lang.fmt("msg.factions.raid_cooldown",
+                    "name", them.name(),
+                    "time", com.sablednah.standards.core.Duration.describe(wait)));
+            return 0;
+        }
+        // THE RULE THAT REPLACES DECLINING. Nobody is raided while they are asleep, which is what
+        // a decline could never have achieved: the faction that most needs protecting is the one
+        // with nobody online, and they are not there to decline.
+        int needed = FactionsConfig.RAID_MIN_DEFENDERS.get();
+        int online = FactionRaid.onlineMembers(ctx.getSource().getServer(), them.id()).size();
+        if (online < needed) {
+            Feedback.chat(player, Lang.fmt("msg.factions.raid_nobody_home",
+                    "name", them.name(), "needed", String.valueOf(needed),
+                    "online", String.valueOf(online)));
+            return 0;
+        }
+
+        FactionRaid.Raid raid = FactionRaid.begin(us.id(), them.id(), now);
+        FactionRaidEvents.announce(ctx.getSource().getServer(),
+                Lang.fmt("msg.factions.raid_declared",
+                        "attacker", us.name(), "defender", them.name(),
+                        "time", com.sablednah.standards.core.Duration.describe(
+                                raid.secondsLeft(now))));
         return 1;
     }
 

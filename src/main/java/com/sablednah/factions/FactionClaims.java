@@ -33,6 +33,8 @@ public final class FactionClaims {
         BROKE,
         /** Taken from an over-extended faction, rather than claimed from wilderness. */
         TAKEN,
+        /** Over-extended and takeable, but this server only moves land during a declared raid. */
+        NO_RAID,
         /** Somebody else holds it and is strong enough to keep it. */
         THEIRS_AND_HELD,
         /** Theirs, and you would have to declare war first. */
@@ -141,6 +143,14 @@ public final class FactionClaims {
         if (FactionsConfig.OVERCLAIM_ENEMIES_ONLY.get()
                 && store.relation(mine.id(), theirId) != FactionStore.Relation.ENEMY) {
             return Result.NOT_AT_WAR;
+        }
+        // OFF by default, so every existing server keeps the game it already has: an
+        // over-extended enemy is takeable whenever anybody notices. Turned on, land only moves
+        // during a declared raid — an event with a beginning and an end, which is friendlier to a
+        // server where people have jobs and worse for one that wants land permanently contested.
+        if (FactionsConfig.RAID_GATES_OVERCLAIM.get()
+                && !FactionRaid.between(mine.id(), theirId)) {
+            return Result.NO_RAID;
         }
         int theirHeld = store.claimCount(theirId);
         int theirEntitlement = FactionPower.entitlement(theirs.get().members().size(),

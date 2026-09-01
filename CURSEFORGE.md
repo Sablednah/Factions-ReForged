@@ -256,12 +256,38 @@ Standards is a **hard dependency and deliberately so**: the claims and groups se
 catalogue, the safe-landing search, the teleport warmups, the chat router and the economy are all
 borrowed rather than reimplemented. Install both on the server; your players install neither.
 
-## What is not in this release
+## Raids — an attack that is an event, not a discovery
 
-**`/f raid`** — declared attacks, with everyone glowing by side and, optionally, land only changing
-hands during a raid rather than whenever somebody notices. Designed in `POWER.md`; not built,
-because how a raid *ends* and whether it can be *declined* decide what game it is, and those are
-worth settling properly rather than quickly.
+Being at war is a standing relation. **`/f raid <faction>`** is an event: it is announced to the
+whole server, everyone involved lights up by side, and it ends in a way somebody won.
+
+Three ways out, and only one of them is the clock:
+
+- **Their standard is taken** — the attackers win. The flag is the objective, which is what turns a
+  raid from a stretch of time into something with a point.
+- **Every attacker is dead or logged off** — the defenders win. *"We repelled them"* has to be a
+  real outcome, or defending is just waiting.
+- **The timer runs out** — the defenders held.
+
+**A raid cannot be declined, and it does not need to be.** What protects a small faction is that
+**a raid requires defenders online to declare**. A decline would have been the wrong tool: the
+faction that most needs protecting is the one with nobody online, and they are not there to decline
+anything. So nobody is raided in their sleep, and a raid is always a fight.
+
+There is a cooldown before the same attacker may raid the same target again — per *pair*, so a
+busy server is not frozen, but "declare a raid every ten minutes forever" is not a strategy.
+
+**A raid never survives a restart.** It is a fight between people who are present; one that outlived
+a server bounce could expire while nobody was online to defend it.
+
+### Optionally, raids are what move land
+
+Off by default, so nothing changes on a server that updates. Turned on, **land only changes hands
+during a declared raid** — overclaiming becomes an event with a beginning and an end, defenders get
+a fair chance to be there, and nobody logs in to find they were quietly eaten overnight.
+
+Friendlier to a server where people have jobs; worse for one that wants land permanently contested.
+Which is why it is a setting rather than a decision made for everybody.
 
 ## Credits and licence
 

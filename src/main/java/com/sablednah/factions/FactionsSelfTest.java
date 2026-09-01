@@ -34,11 +34,71 @@ public final class FactionsSelfTest {
         checkModes();
         checkStandardColours();
         checkBypass();
+        checkRaids();
         if (failed == 0) {
             Factions.LOGGER.info("=== Factions self-test PASSED ({} checks) ===", passed);
         } else {
             Factions.LOGGER.error("=== Factions self-test FAILED ({} of {}) ===",
                     failed, passed + failed);
+        }
+    }
+
+    /**
+     * Raids: the state machine, the cooldown, and that nothing lingers.
+     *
+     * <p>Every rule has its opposite asserted. A raid system that refused every declaration would
+     * pass most positive checks by never starting anything, and one that started but never ended
+     * would look identical to a working one for the first twenty minutes.</p>
+     */
+    private void checkRaids() {
+        try {
+            FactionRaid.clear();
+            long now = 1_000_000_000_000L;
+            check("no raids to begin with", FactionRaid.active().isEmpty());
+            check("...and nobody is involved in one", !FactionRaid.involved("a"));
+
+            FactionRaid.Raid raid = FactionRaid.begin("a", "b", now);
+            check("declaring starts one", FactionRaid.active().size() == 1);
+            check("the attacker is attacking",
+                    FactionRaid.attacking("a").map(r -> r.defenderId().equals("b")).orElse(false));
+            check("the defender is defending",
+                    FactionRaid.defending("b").map(r -> r.attackerId().equals("a")).orElse(false));
+            check("...and not the other way round", FactionRaid.attacking("b").isEmpty());
+            check("both sides count as involved",
+                    FactionRaid.involved("a") && FactionRaid.involved("b"));
+            check("a bystander does not", !FactionRaid.involved("c"));
+
+            // between() is what gates overclaiming, so it must be symmetric — the attacker takes
+            // land from the defender, and the rule is asked about the pair rather than a direction.
+            check("between() sees the pair either way round",
+                    FactionRaid.between("a", "b") && FactionRaid.between("b", "a"));
+            check("...and not a pair that is not raiding", !FactionRaid.between("a", "c"));
+
+            // The clock is a backstop, so it has to actually expire.
+            check("a fresh raid has not expired", !raid.expired(now));
+            check("...and has time on it", raid.secondsLeft(now) > 0);
+            check("it expires once the clock runs out", raid.expired(raid.endsAtMillis()));
+            check("...reporting no time left", raid.secondsLeft(raid.endsAtMillis()) == 0);
+
+            FactionRaid.end(raid, now);
+            check("ending removes it", FactionRaid.active().isEmpty());
+            check("...and nobody is involved any more", !FactionRaid.involved("a"));
+
+            // The cooldown is per PAIR, which is the whole point: a busy faction must still be
+            // able to raid somebody else immediately.
+            check("the same pair is on cooldown",
+                    FactionRaid.cooldownLeft("a", "b", now) > 0);
+            check("a different target is not",
+                    FactionRaid.cooldownLeft("a", "c", now) == 0);
+            check("nor is the reverse direction",
+                    FactionRaid.cooldownLeft("b", "a", now) == 0);
+            check("and the cooldown lapses",
+                    FactionRaid.cooldownLeft("a", "b",
+                            now + FactionsConfig.RAID_COOLDOWN_MINUTES.get() * 60_000L + 1) == 0);
+        } finally {
+            FactionRaid.clear();
+            check("the raid fixtures are gone", FactionRaid.active().isEmpty()
+                    && FactionRaid.cooldownLeft("a", "b", 1_000_000_000_000L) == 0);
         }
     }
 
