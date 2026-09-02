@@ -172,31 +172,44 @@ public final class FactionPowerEvents {
         return standardState(store, factionId);
     }
 
+    /** The state of a faction's OWN flag. Trophies are reported separately by {@code /f standard}. */
     private static String standardState(FactionStore store, String factionId) {
         if (!store.hasStandard(factionId)) {
+            // Flying somebody else's and none of your own is its own situation, and it now has to
+            // be said explicitly: a trophy no longer occupies the slot your own flag would.
+            if (!store.capturedStandards(factionId).isEmpty()) {
+                return "msg.factions.standard_state_trophy";
+            }
             // "No standard" is only the whole truth when nobody took yours. Somebody who has been
             // raided is not missing a flag, they are missing THEIR flag, and the two call for
             // different reactions.
             boolean somebodyHasIt = store.all().stream()
-                    .anyMatch(other -> store.standardCapturedFrom(other.id())
-                            .map(factionId::equals).orElse(false));
+                    .anyMatch(other -> store.capturedStandards(other.id()).contains(factionId));
             return somebodyHasIt
                     ? "msg.factions.standard_state_stolen" : "msg.factions.standard_state_none";
         }
-        if (!FactionStandards.flying(factionId)) {
-            return "msg.factions.standard_state_covered";
-        }
-        return store.standardCapturedFrom(factionId).isPresent()
-                ? "msg.factions.standard_state_trophy" : "msg.factions.standard_state_flying";
+        return FactionStandards.flying(factionId)
+                ? "msg.factions.standard_state_flying" : "msg.factions.standard_state_covered";
     }
 
+    /**
+     * How fast power comes back: your own flag, plus a flat bonus for holding anybody's.
+     *
+     * <p><b>The trophy bonus does not stack</b>, however many you fly — see {@code POWER.md} §6.
+     * A faction that regenerated faster for each flag would make hoarding them the optimal play
+     * and compound the advantage of whoever is already winning.</p>
+     *
+     * <p>What several trophies buy instead is <b>ablative armour for the bonus</b>: an enemy has
+     * to come and take every single one before your regen drops. That falls out of the flat rule
+     * rather than being a mechanic of its own, which is the nicest kind of design.</p>
+     */
     private static double multiplierFor(FactionStore store, String id) {
-        boolean captured = store.standardCapturedFrom(id).isPresent();
-        boolean up = store.hasStandard(id) && FactionStandards.flying(id);
-        double own = up && !captured
+        boolean ownUp = store.hasStandard(id) && FactionStandards.flying(id);
+        double own = ownUp
                 ? FactionsConfig.REGEN_WITH_STANDARD.get()
                 : FactionsConfig.REGEN_WITHOUT_STANDARD.get();
-        return own + (captured && up ? FactionsConfig.REGEN_WITH_CAPTURED.get() : 0.0D);
+        return own + (FactionStandards.anyTrophyFlying(store, id)
+                ? FactionsConfig.REGEN_WITH_CAPTURED.get() : 0.0D);
     }
 
     private static double standardMultiplier(FactionStore store, UUID player) {

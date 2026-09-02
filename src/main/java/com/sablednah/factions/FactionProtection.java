@@ -90,7 +90,7 @@ public final class FactionProtection {
         // side has declared. Recovering your property is not an act of aggression, and without
         // this exception there is a lock: capture a faction's standard, and if either of you then
         // goes peaceful they can neither reclaim it nor raise another, for ever.
-        if (store.standardCapturedFrom(flying.get()).map(mine.get().id()::equals).orElse(false)) {
+        if (store.standardOwnerAt(dim, pos).map(mine.get().id()::equals).orElse(false)) {
             return true;
         }
 

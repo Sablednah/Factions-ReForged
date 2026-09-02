@@ -67,12 +67,57 @@ public final class FactionRaid {
 
     /** How a raid finished, so the announcement can say who won and why. */
     public enum Outcome {
-        /** The standard fell. The attackers took it. */
-        STANDARD_TAKEN,
+        /**
+         * The attackers planted the defenders' standard on their own land. The classic capture the
+         * flag: taking it is the hard part, carrying it home is the dangerous part, and only the
+         * second one ends the raid.
+         */
+        STANDARD_PLANTED,
+        /**
+         * The attackers took land from a faction that flies no standard.
+         *
+         * <p>The answer to "what can winning mean against somebody with no flag to take" — asked
+         * the first time a raid was declared on a flagless faction and found to be unwinnable by
+         * any sequence of moves at all. Taking their ground is the only thing left that costs
+         * them something, so it is the win.</p>
+         *
+         * <p>It deliberately does <b>not</b> apply once they fly one: there the land is a bonus and
+         * the flag is the objective, so a raid that has already taken a chunk keeps running and
+         * the attackers can go for the standard as well.</p>
+         */
+        LAND_TAKEN,
         /** Every attacker died or logged off. */
         ATTACKERS_GONE,
         /** The clock ran out with the defenders still holding. */
         HELD
+    }
+
+    /**
+     * Attackers who have planted their target's standard at home.
+     *
+     * <p>A latch rather than a live query, because the win is the <em>act</em> of planting: an
+     * enemy who sprints in and takes the trophy back thirty seconds later does not un-win the raid
+     * that already ended.</p>
+     */
+    private static final java.util.Set<String> PLANTED =
+            java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    /**
+     * Record that {@code attackerId} planted a standard captured from {@code victimId}.
+     *
+     * <p>Called from the planting path rather than polled, and it checks the pairing itself so the
+     * caller does not have to know whether a raid is running. Planting a trophy taken from
+     * somebody you are <em>not</em> currently raiding is just decorating your base.</p>
+     */
+    public static void plantedStandard(String attackerId, String victimId) {
+        if (attacking(attackerId).map(r -> r.defenderId().equals(victimId)).orElse(false)) {
+            PLANTED.add(attackerId);
+        }
+    }
+
+    /** Whether this attacker has planted their target's standard. */
+    public static boolean hasPlanted(String attackerId) {
+        return PLANTED.contains(attackerId);
     }
 
     /** Live raids, keyed by the attacking faction — one faction raids one target at a time. */
@@ -168,8 +213,69 @@ public final class FactionRaid {
         synchronized (ACTIVE) {
             ACTIVE.remove(raid.attackerId(), raid);
         }
+        SAW_STANDARD.remove(raid.attackerId());
+        PLANTED.remove(raid.attackerId());
+        synchronized (CLAIMED_IN_RAID) {
+            CLAIMED_IN_RAID.remove(raid.attackerId());
+        }
         synchronized (COOLDOWNS) {
             COOLDOWNS.put(pair(raid.attackerId(), raid.defenderId()), now);
+        }
+    }
+
+    /**
+     * Attacker ids whose target has been seen flying a standard at some point during the raid.
+     *
+     * <p><b>Watched continuously rather than recorded once.</b> The first version noted whether the
+     * defenders were flying one at declaration, which stops a flagless faction losing the instant
+     * it is raided — and also meant a flag <em>planted during</em> the raid could be taken with no
+     * effect at all. That happened the first time somebody tried it: the defenders replanted, the
+     * attacker took it, and the raid still expired as "held".</p>
+     *
+     * <p>So the objective is "their standard was up, and now it is not", asked every tick. A
+     * faction that never plants one still cannot lose that way; one that plants a flag mid-raid has
+     * given the attackers something to take, which is exactly right.</p>
+     */
+    private static final java.util.Set<String> SAW_STANDARD =
+            java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    /** Note that this raid's defenders are flying a standard right now. */
+    public static void sawStandard(String attackerId) {
+        SAW_STANDARD.add(attackerId);
+    }
+
+    /** Whether this raid has ever seen the defenders flying one. */
+    public static boolean hasSeenStandard(String attackerId) {
+        return SAW_STANDARD.contains(attackerId);
+    }
+
+    /**
+     * Chunks taken during each live raid, keyed by attacker.
+     *
+     * <p>Reset when the raid ends, so the allowance is per raid rather than per faction. With
+     * {@code raidClaimLimit} at its default of 1 this is the anti-bullying rule: a large faction
+     * cannot strip a small one in a single sitting, and every further chunk costs another raid and
+     * another cooldown.</p>
+     */
+    private static final Map<String, Integer> CLAIMED_IN_RAID = new LinkedHashMap<>();
+
+    /** How many chunks this raid has taken so far. */
+    public static int claimsTaken(String attackerId) {
+        synchronized (CLAIMED_IN_RAID) {
+            return CLAIMED_IN_RAID.getOrDefault(attackerId, 0);
+        }
+    }
+
+    /** Whether this raid may take another. {@code raidClaimLimit} of 0 means no limit. */
+    public static boolean mayTakeLand(String attackerId) {
+        int limit = FactionsConfig.RAID_CLAIM_LIMIT.get();
+        return limit <= 0 || claimsTaken(attackerId) < limit;
+    }
+
+    /** Count one. Called only when a chunk has actually changed hands. */
+    public static void tookLand(String attackerId) {
+        synchronized (CLAIMED_IN_RAID) {
+            CLAIMED_IN_RAID.merge(attackerId, 1, Integer::sum);
         }
     }
 
@@ -180,6 +286,11 @@ public final class FactionRaid {
         }
         synchronized (COOLDOWNS) {
             COOLDOWNS.clear();
+        }
+        SAW_STANDARD.clear();
+        PLANTED.clear();
+        synchronized (CLAIMED_IN_RAID) {
+            CLAIMED_IN_RAID.clear();
         }
     }
 

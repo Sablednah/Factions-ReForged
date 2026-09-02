@@ -237,14 +237,16 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
     private final Map<UUID, Double> power = new LinkedHashMap<>();
 
     /** faction id → the flag it is flying. Its own, or one it has taken. */
-    private final Map<String, Standard> standards = new LinkedHashMap<>();
+    /** Flyer to the flags they have planted: at most one of their own, plus trophies. */
+    private final Map<String, List<Standard>> standards = new LinkedHashMap<>();
 
     private FactionStore(Snapshot snapshot) {
         snapshot.factions().forEach(f -> factions.put(f.id(), f));
         snapshot.claims().forEach(c -> claims.put(key(c.dimension(), c.x(), c.z()), c.faction()));
         snapshot.banks().forEach(b -> banks.put(b.faction(), b.balance()));
         snapshot.power().forEach(row -> power.put(row.player(), row.power()));
-        snapshot.standards().forEach(st -> standards.put(st.faction(), st));
+        snapshot.standards().forEach(st -> standards
+                .computeIfAbsent(st.faction(), k -> new ArrayList<>()).add(st));
     }
 
     private Snapshot snapshot() {
@@ -261,8 +263,10 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
         });
         List<Power> powers = new ArrayList<>();
         power.forEach((id, value) -> powers.add(new Power(id, value)));
+        List<Standard> flags = new ArrayList<>();
+        standards.values().forEach(flags::addAll);
         return new Snapshot(List.copyOf(factions.values()), out, money, powers,
-                List.copyOf(standards.values()));
+                List.copyOf(flags));
     }
 
     public static FactionStore get(MinecraftServer server) {
@@ -417,9 +421,20 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
         // disbanding to wipe your losses would be the first thing anybody tried.
         standards.remove(id);
         // And anybody flying THIS faction's captured flag stops flying it — the trophy was a
-        // trophy because its owner existed to want it back.
-        standards.entrySet().removeIf(e -> e.getValue().capturedFrom()
-                .map(id::equals).orElse(false));
+        // trophy because its owner existed to want it back. Only that one comes down; a flyer
+        // keeps its own flag and any other trophies it holds.
+        for (Map.Entry<String, List<Standard>> e : new LinkedHashMap<>(standards).entrySet()) {
+            List<Standard> left = e.getValue().stream()
+                    .filter(st -> !st.capturedFrom().map(id::equals).orElse(false))
+                    .toList();
+            if (left.size() != e.getValue().size()) {
+                if (left.isEmpty()) {
+                    standards.remove(e.getKey());
+                } else {
+                    standards.put(e.getKey(), left);
+                }
+            }
+        }
         // And so do other factions' opinions about it, or a recycled name inherits old grudges.
         List<Faction> touched = factions.values().stream()
                 .filter(f -> f.allies().contains(id) || f.enemies().contains(id))
@@ -491,57 +506,150 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
 
     // --- the standard ---
 
-    /** Where this faction's flag stands, if it has planted one. */
+    /**
+     * A faction flies <b>one of its own</b> and any number of captured trophies.
+     *
+     * <p>One-per-faction used to be structural rather than a rule — the map was keyed by faction —
+     * which is how a raid's original win condition came to be unreachable: an attacker already
+     * flying their own flag could never plant a captured one. See {@code POWER.md} §6.</p>
+     *
+     * <p>The saved format did not change: {@link Snapshot} always held a <em>list</em>, and only
+     * the in-memory index is different.</p>
+     */
+    private List<Standard> flagsOf(String factionId) {
+        return standards.getOrDefault(factionId, List.of());
+    }
+
+    private Optional<Standard> ownFlag(String factionId) {
+        return flagsOf(factionId).stream().filter(st -> st.capturedFrom().isEmpty()).findFirst();
+    }
+
+    /** Where this faction's OWN flag stands, if it has planted one. */
     public Optional<net.minecraft.core.BlockPos> standardPos(String factionId) {
-        Standard st = standards.get(factionId);
-        return st == null ? Optional.empty()
-                : Optional.of(new net.minecraft.core.BlockPos(st.x(), st.y(), st.z()));
+        return ownFlag(factionId)
+                .map(st -> new net.minecraft.core.BlockPos(st.x(), st.y(), st.z()));
     }
 
     public Optional<String> standardDimension(String factionId) {
-        return Optional.ofNullable(standards.get(factionId)).map(Standard::dimension);
+        return ownFlag(factionId).map(Standard::dimension);
     }
+
+    /** Every flag this faction flies, own and captured, as dimension-and-position pairs. */
+    public List<Placed> standardsOf(String factionId) {
+        return flagsOf(factionId).stream()
+                .map(st -> new Placed(st.dimension(),
+                        new net.minecraft.core.BlockPos(st.x(), st.y(), st.z()),
+                        st.capturedFrom()))
+                .toList();
+    }
+
+    /** One planted flag, for callers that need to tell them apart. */
+    public record Placed(String dimension, net.minecraft.core.BlockPos pos,
+            Optional<String> capturedFrom) {}
 
     /** The colour a faction wears, taken from its own banner. White until it plants one. */
     public net.minecraft.world.item.DyeColor colourOf(String factionId) {
-        Standard st = standards.get(factionId);
-        // A captured flag is somebody else's identity, so it does not become yours. You are flying
-        // it, not wearing it.
-        if (st == null || st.capturedFrom().isPresent()) {
-            return net.minecraft.world.item.DyeColor.WHITE;
-        }
-        return st.colour();
+        // A captured flag is somebody else's identity, so it never becomes yours. You are flying
+        // it, not wearing it — which is why this reads the OWN flag rather than any of them.
+        return ownFlag(factionId).map(Standard::colour)
+                .orElse(net.minecraft.world.item.DyeColor.WHITE);
     }
 
+    /** Whether this faction has planted its <b>own</b> flag — the one that can be taken from it. */
     public boolean hasStandard(String factionId) {
-        return standards.containsKey(factionId);
+        return ownFlag(factionId).isPresent();
     }
 
-    /** Whether the flag this faction is flying was taken from somebody. */
+    /** Whether it flies anything at all, its own or somebody else's. */
+    public boolean hasAnyStandard(String factionId) {
+        return !flagsOf(factionId).isEmpty();
+    }
+
+    /** Everyone whose flag this faction is flying as a trophy. */
+    public List<String> capturedStandards(String factionId) {
+        return flagsOf(factionId).stream()
+                .map(Standard::capturedFrom)
+                .flatMap(Optional::stream)
+                .toList();
+    }
+
+    /**
+     * Whether the flag this faction flies was taken from somebody.
+     *
+     * <p>Kept for callers that only care whether <em>any</em> trophy is flown. Where several may
+     * matter, use {@link #capturedStandards}.</p>
+     */
     public Optional<String> standardCapturedFrom(String factionId) {
-        return Optional.ofNullable(standards.get(factionId)).flatMap(Standard::capturedFrom);
+        return capturedStandards(factionId).stream().findFirst();
     }
 
     /** Whoever is flying a standard at this exact spot, if anybody. */
     public Optional<String> standardAt(String dimension, net.minecraft.core.BlockPos pos) {
-        for (Standard st : standards.values()) {
-            if (st.dimension().equals(dimension) && st.x() == pos.getX()
-                    && st.y() == pos.getY() && st.z() == pos.getZ()) {
-                return Optional.of(st.faction());
+        for (List<Standard> flags : standards.values()) {
+            for (Standard st : flags) {
+                if (st.dimension().equals(dimension) && st.x() == pos.getX()
+                        && st.y() == pos.getY() && st.z() == pos.getZ()) {
+                    return Optional.of(st.faction());
+                }
             }
         }
         return Optional.empty();
     }
 
+    /** Which faction's flag stands at this spot — the original owner, not the flyer. */
+    public Optional<String> standardOwnerAt(String dimension, net.minecraft.core.BlockPos pos) {
+        for (List<Standard> flags : standards.values()) {
+            for (Standard st : flags) {
+                if (st.dimension().equals(dimension) && st.x() == pos.getX()
+                        && st.y() == pos.getY() && st.z() == pos.getZ()) {
+                    return Optional.of(st.capturedFrom().orElse(st.faction()));
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Plant one. Your own <b>replaces</b> any own flag you had; a trophy is added alongside.
+     *
+     * <p>The replace half keeps the invariant that exactly one flag is yours — it is the thing an
+     * enemy can take from you, and two of them would mean two different answers to "where is your
+     * standard".</p>
+     */
     public void setStandard(String factionId, String dimension, net.minecraft.core.BlockPos pos,
             net.minecraft.world.item.DyeColor colour,
             net.minecraft.world.level.block.entity.BannerPatternLayers patterns,
             Optional<String> capturedFrom) {
-        standards.put(factionId, new Standard(factionId, dimension, pos.getX(), pos.getY(),
-                pos.getZ(), colour, patterns, capturedFrom));
+        List<Standard> flags = new ArrayList<>(flagsOf(factionId));
+        if (capturedFrom.isEmpty()) {
+            flags.removeIf(st -> st.capturedFrom().isEmpty());
+        }
+        flags.add(new Standard(factionId, dimension, pos.getX(), pos.getY(), pos.getZ(),
+                colour, patterns, capturedFrom));
+        standards.put(factionId, List.copyOf(flags));
         setDirty();
     }
 
+    /** Take down one particular flag, wherever it stands. */
+    public void clearStandardAt(String dimension, net.minecraft.core.BlockPos pos) {
+        for (Map.Entry<String, List<Standard>> e : new LinkedHashMap<>(standards).entrySet()) {
+            List<Standard> left = e.getValue().stream()
+                    .filter(st -> !(st.dimension().equals(dimension) && st.x() == pos.getX()
+                            && st.y() == pos.getY() && st.z() == pos.getZ()))
+                    .toList();
+            if (left.size() != e.getValue().size()) {
+                if (left.isEmpty()) {
+                    standards.remove(e.getKey());
+                } else {
+                    standards.put(e.getKey(), left);
+                }
+                setDirty();
+                return;
+            }
+        }
+    }
+
+    /** Take down everything this faction flies. Disbanding, mostly. */
     public void clearStandard(String factionId) {
         if (standards.remove(factionId) != null) {
             setDirty();

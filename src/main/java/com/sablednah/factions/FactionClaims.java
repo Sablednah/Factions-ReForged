@@ -35,6 +35,8 @@ public final class FactionClaims {
         TAKEN,
         /** Over-extended and takeable, but this server only moves land during a declared raid. */
         NO_RAID,
+        /** This raid has already taken as much land as one raid may. */
+        RAID_CLAIM_LIMIT,
         /** Somebody else holds it and is strong enough to keep it. */
         THEIRS_AND_HELD,
         /** Theirs, and you would have to declare war first. */
@@ -83,6 +85,20 @@ public final class FactionClaims {
             return Result.BROKE;
         }
         store.claim(dim, chunk.x, chunk.z, f.id());
+        // Counted only once the chunk has ACTUALLY changed hands — after every refusal above,
+        // including running out of money. A raid must not spend its allowance on a claim that did
+        // not happen.
+        //
+        // Recorded whatever raidGatesOverclaim says, and that is not an oversight: the count is
+        // read for TWO different things. The gate uses it as an allowance (the one-claim-per-raid
+        // limit), and the raid uses it as a WIN — taking ground is how you beat a faction that
+        // flies no standard to steal. Only counting it under the gate left that win unreachable on
+        // a default server, which is exactly the shape of bug this pair keeps producing: a value
+        // read by two callers and written by only one of their conditions.
+        if (takingFromSomebody && owner.map(victim -> FactionRaid.attacking(f.id())
+                .map(r -> r.defenderId().equals(victim)).orElse(false)).orElse(false)) {
+            FactionRaid.tookLand(f.id());
+        }
         return takingFromSomebody ? Result.TAKEN : Result.CLAIMED;
     }
 
@@ -148,9 +164,14 @@ public final class FactionClaims {
         // over-extended enemy is takeable whenever anybody notices. Turned on, land only moves
         // during a declared raid — an event with a beginning and an end, which is friendlier to a
         // server where people have jobs and worse for one that wants land permanently contested.
-        if (FactionsConfig.RAID_GATES_OVERCLAIM.get()
-                && !FactionRaid.between(mine.id(), theirId)) {
-            return Result.NO_RAID;
+        if (FactionsConfig.RAID_GATES_OVERCLAIM.get()) {
+            if (!FactionRaid.between(mine.id(), theirId)) {
+                return Result.NO_RAID;
+            }
+            // The allowance is per raid, so a big faction cannot strip a small one in one sitting.
+            if (!FactionRaid.mayTakeLand(mine.id())) {
+                return Result.RAID_CLAIM_LIMIT;
+            }
         }
         int theirHeld = store.claimCount(theirId);
         int theirEntitlement = FactionPower.entitlement(theirs.get().members().size(),
