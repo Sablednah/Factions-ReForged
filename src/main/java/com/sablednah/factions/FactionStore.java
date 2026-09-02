@@ -649,13 +649,6 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
         }
     }
 
-    /** Take down everything this faction flies. Disbanding, mostly. */
-    public void clearStandard(String factionId) {
-        if (standards.remove(factionId) != null) {
-            setDirty();
-        }
-    }
-
     // --- the bank ---
 
     public double balanceOf(String id) {
