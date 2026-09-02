@@ -639,6 +639,11 @@ public final class FactionStandards {
         return false;
     }
 
+    /** The dimension this faction's own flag stands in, or the empty string if it has none. */
+    private static String dimOf(FactionStore store, String factionId) {
+        return store.standardDimension(factionId).orElse("");
+    }
+
     /** Whether the flag standing at this exact spot is under open sky. */
     public static boolean flyingAt(String dimension, BlockPos pos) {
         return FLAG_FLYING.getOrDefault(key(dimension, pos), true);
@@ -713,11 +718,16 @@ public final class FactionStandards {
             return;
         }
         if (!isBanner(level, where.get())) {
-            store.clearStandard(factionId);
+            // At the position, NOT store.clearStandard(factionId) — that removes every flag the
+            // faction flies, so an own banner broken by a creeper would have quietly deleted a
+            // wall of trophies along with it.
+            store.clearStandardAt(dimOf(store, factionId), where.get());
+            FLAG_FLYING.remove(key(dimOf(store, factionId), where.get()));
             FLYING.remove(factionId);
             return;
         }
         FLYING.put(factionId, seesSky(level, where.get()));
+        FLAG_FLYING.put(key(dimOf(store, factionId), where.get()), seesSky(level, where.get()));
     }
 
     public static void revalidate(net.minecraft.server.MinecraftServer server) {
@@ -763,7 +773,8 @@ public final class FactionStandards {
                 // reached it, a piston moved it. Said differently from a theft, because "your
                 // standard fell over" and "somebody took your standard" call for different
                 // reactions and only one of them is a raid.
-                store.clearStandard(f.id());
+                store.clearStandardAt(FactionBridge.dimensionOf(level), pos);
+                FLAG_FLYING.remove(key(FactionBridge.dimensionOf(level), pos));
                 FLYING.remove(f.id());
                 announce(server, f, Lang.get("msg.factions.standard_broken_by_world"));
                 continue;
