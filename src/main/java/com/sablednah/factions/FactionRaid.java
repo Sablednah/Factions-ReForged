@@ -44,9 +44,12 @@ public final class FactionRaid {
      * @param attackerId the faction that declared it
      * @param defenderId the faction being raided
      * @param endsAtMillis when the clock runs out, if nothing settles it first
+     * @param defenderHadStandard whether they were flying one when this was declared. Recorded at
+     *        the start because the objective is that it <em>falls</em>, and a faction that never
+     *        had one would otherwise satisfy "their standard is gone" the instant the raid began
      */
     public record Raid(String attackerId, String defenderId, long startedAtMillis,
-            long endsAtMillis) {
+            long endsAtMillis, boolean defenderHadStandard) {
 
         public boolean expired(long now) {
             return now >= endsAtMillis;
@@ -145,9 +148,10 @@ public final class FactionRaid {
     // --- writing ---
 
     /** Begin one. The caller has already checked it is allowed; this only records it. */
-    public static Raid begin(String attackerId, String defenderId, long now) {
+    public static Raid begin(String attackerId, String defenderId, long now,
+            boolean defenderHadStandard) {
         long length = FactionsConfig.RAID_MINUTES.get() * 60L * 1000L;
-        Raid raid = new Raid(attackerId, defenderId, now, now + length);
+        Raid raid = new Raid(attackerId, defenderId, now, now + length, defenderHadStandard);
         synchronized (ACTIVE) {
             ACTIVE.put(attackerId, raid);
         }

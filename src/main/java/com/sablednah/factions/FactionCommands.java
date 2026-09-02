@@ -856,7 +856,10 @@ public final class FactionCommands {
             return 0;
         }
 
-        FactionRaid.Raid raid = FactionRaid.begin(us.id(), them.id(), now);
+        // Recorded now, because the objective is that their flag FALLS — and a faction flying
+        // none would otherwise satisfy "their standard is gone" the moment the raid started.
+        boolean theyFly = store(ctx).hasStandard(them.id());
+        FactionRaid.Raid raid = FactionRaid.begin(us.id(), them.id(), now, theyFly);
         FactionRaidEvents.announce(ctx.getSource().getServer(),
                 Lang.fmt("msg.factions.raid_declared",
                         "attacker", us.name(), "defender", them.name(),
