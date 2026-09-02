@@ -76,6 +76,14 @@ public final class FactionsSelfTest {
                     !FactionRaid.begin("x", "y", now, false).defenderHadStandard());
             FactionRaid.end(FactionRaid.attacking("x").orElseThrow(), now);
 
+            // A flag planted DURING the raid must count. The declaration-time snapshot alone said
+            // no, which made every raid on a flagless faction unwinnable whatever happened next.
+            check("a raid has not seen a standard to begin with",
+                    !FactionRaid.hasSeenStandard("a"));
+            FactionRaid.sawStandard("a");
+            check("...and remembers once it has", FactionRaid.hasSeenStandard("a"));
+            check("but only for that raid", !FactionRaid.hasSeenStandard("zz"));
+
             // between() is what gates overclaiming, so it must be symmetric — the attacker takes
             // land from the defender, and the rule is asked about the pair rather than a direction.
             check("between() sees the pair either way round",
@@ -103,11 +111,62 @@ public final class FactionsSelfTest {
             check("and the cooldown lapses",
                     FactionRaid.cooldownLeft("a", "b",
                             now + FactionsConfig.RAID_COOLDOWN_MINUTES.get() * 60_000L + 1) == 0);
+            check("ending a raid forgets what it saw", endForgets(now));
+
+            // The per-raid land allowance. Default 1: a big faction cannot strip a small one in
+            // one sitting, and each further chunk costs another raid and another cooldown.
+            int limit = FactionsConfig.RAID_CLAIM_LIMIT.get();
+            // A live raid of its own — the one above was ended, and asserting that a finished
+            // raid is still running is how this check failed the first time it ran.
+            FactionRaid.begin("land", "victim", now, true);
+            check("a fresh raid has taken no land", FactionRaid.claimsTaken("land") == 0);
+            check("...and may take some", FactionRaid.mayTakeLand("land"));
+            for (int i = 0; i < Math.max(1, limit); i++) {
+                FactionRaid.tookLand("land");
+            }
+            check("the allowance runs out at the configured limit",
+                    limit <= 0 || !FactionRaid.mayTakeLand("land"));
+            check("...counting what was taken", FactionRaid.claimsTaken("land") >= 1);
+            // Per RAID, not per faction: another raid starts with a full allowance.
+            check("a different raid is unaffected", FactionRaid.mayTakeLand("other"));
+
+            // Taking land must NOT end the raid — if they fly a standard there is still something
+            // to go for, which is the whole reason the limit caps land rather than the fight.
+            check("taking land leaves the raid running",
+                    FactionRaid.attacking("land").isPresent());
+            FactionRaid.end(FactionRaid.attacking("land").orElseThrow(), now);
+
+            // Plant to win. The latch has to be picky about WHOSE flag was planted: a faction that
+            // has been hoarding trophies for weeks would otherwise win every raid it declared the
+            // instant the tick ran, having planted nothing at all.
+            FactionRaid.begin("planter", "target", now, true);
+            check("a fresh raid has planted nothing", !FactionRaid.hasPlanted("planter"));
+            FactionRaid.plantedStandard("planter", "somebody_else");
+            check("planting an unrelated trophy is not a win",
+                    !FactionRaid.hasPlanted("planter"));
+            FactionRaid.plantedStandard("planter", "target");
+            check("...but planting the target's is", FactionRaid.hasPlanted("planter"));
+            // And it must not survive the raid, or the attacker's NEXT raid starts already won.
+            FactionRaid.end(FactionRaid.attacking("planter").orElseThrow(), now);
+            check("the win does not carry into the next raid",
+                    !FactionRaid.hasPlanted("planter"));
+            // Nobody in a raid at all cannot bank one for later either.
+            FactionRaid.plantedStandard("drifter", "target");
+            check("planting outside a raid records nothing",
+                    !FactionRaid.hasPlanted("drifter"));
         } finally {
             FactionRaid.clear();
             check("the raid fixtures are gone", FactionRaid.active().isEmpty()
                     && FactionRaid.cooldownLeft("a", "b", 1_000_000_000_000L) == 0);
         }
+    }
+
+    /** A finished raid must not leave its standard-sighting behind for the next one. */
+    private boolean endForgets(long now) {
+        FactionRaid.Raid r = FactionRaid.begin("q", "r", now, false);
+        FactionRaid.sawStandard("q");
+        FactionRaid.end(r, now);
+        return !FactionRaid.hasSeenStandard("q");
     }
 
     /**

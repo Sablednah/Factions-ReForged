@@ -132,11 +132,7 @@ public final class FactionStandards {
         // Flying, not merely held. A thief who roofs their trophy over earns nothing from it, and
         // it stops denying you at the same moment — so "capture it and bury it" is not a way to
         // keep somebody flagless forever. One visibility rule governs both halves.
-        Optional<FactionStore.Faction> thief = store.all().stream()
-                .filter(other -> store.standardCapturedFrom(other.id())
-                        .map(faction.id()::equals).orElse(false))
-                .filter(other -> flying(other.id()))
-                .findFirst();
+        Optional<FactionStore.Faction> thief = thiefOf(store, faction.id());
         if (thief.isPresent()) {
             Feedback.chat(player, Lang.fmt("msg.factions.standard_still_taken",
                     "name", thief.get().name()));
@@ -176,12 +172,10 @@ public final class FactionStandards {
         // that needs no policing.
         if (capturedFrom.isPresent()) {
             String victimId = capturedFrom.get();
-            boolean theyStillFlyIt = store.hasStandard(victimId)
-                    && store.standardCapturedFrom(victimId).isEmpty();
+            boolean theyStillFlyIt = store.hasStandard(victimId);
             boolean somebodyElseHasIt = store.all().stream()
                     .anyMatch(other -> !other.id().equals(faction.id())
-                            && store.standardCapturedFrom(other.id())
-                                    .map(victimId::equals).orElse(false));
+                            && store.capturedStandards(other.id()).contains(victimId));
             if (theyStillFlyIt || somebodyElseHasIt) {
                 Feedback.chat(player, Lang.get("msg.factions.standard_not_the_real_one"));
                 return false;
@@ -189,7 +183,11 @@ public final class FactionStandards {
         }
 
         store.setStandard(faction.id(), dim, pos, colour, patterns, capturedFrom);
+        // Planting a trophy on your own ground is how a raid is won — designate() has already
+        // proved the chunk is theirs, so reaching here with a capturedFrom IS the win condition.
+        capturedFrom.ifPresent(victim -> FactionRaid.plantedStandard(faction.id(), victim));
         FLYING.put(faction.id(), true);
+        FLAG_FLYING.put(key(dim, pos), true);
 
         // Name the banner itself, now rather than when it falls. Two reasons, and the second is
         // the load-bearing one:
@@ -409,7 +407,11 @@ public final class FactionStandards {
             Feedback.chat(placer, Lang.get("msg.factions.standard_needs_sky"));
             return;
         }
-        if (store.hasStandard(mine.get().id())) {
+        // One of YOUR OWN, and any number of trophies. The old rule was one flag full stop, which
+        // is why an attacker already flying their own could never plant a captured one — and why a
+        // raid's original win condition turned out to be unreachable. See POWER.md section 6.
+        boolean plantingOwn = ownerId.get().equals(mine.get().id());
+        if (plantingOwn && store.hasStandard(mine.get().id())) {
             Feedback.chat(placer, Lang.get("msg.factions.standard_already_flying"));
             return;
         }
@@ -462,9 +464,14 @@ public final class FactionStandards {
         String flyerId = flying.get();
         Optional<FactionStore.Faction> flyer = store.byId(flyerId);
         // Whose identity it actually is: the faction that made it, which may not be the faction
-        // that was flying it.
-        String ownerId = store.standardCapturedFrom(flyerId).orElse(flyerId);
-        store.clearStandard(flyerId);
+        // that was flying it. Asked of the flag AT THIS POSITION, because a faction may now fly
+        // several — its own and any number of trophies — and "their captured one" is no longer a
+        // single thing.
+        String ownerId = store.standardOwnerAt(dim, pos).orElse(flyerId);
+        boolean wasCaptured = !ownerId.equals(flyerId);
+        // Only the one that was broken comes down. Clearing by faction would have taken their own
+        // flag and every other trophy with it.
+        store.clearStandardAt(dim, pos);
 
         String flyerName = flyer.map(FactionStore.Faction::name).orElse("?");
         String ownerName = store.byId(ownerId).map(FactionStore.Faction::name).orElse(flyerName);
@@ -476,7 +483,8 @@ public final class FactionStandards {
         // banner — which works, and is a good way to relocate a standard, but the server does not
         // need telling about it and "Sableoids has recovered their standard" from somebody who
         // simply picked their own flag up reads as news that did not happen.
-        boolean wasCaptured = store.standardCapturedFrom(flyerId).isPresent();
+        // Computed BEFORE the flag came down, above: asking afterwards reads a standard that is
+        // no longer there.
         boolean ownFlagOwnHands = taker.map(t -> t.id().equals(flyerId)).orElse(false);
         if (!wasCaptured && ownFlagOwnHands) {
             Feedback.chat(breaker, Lang.get("msg.factions.standard_taken_down"));
@@ -611,6 +619,59 @@ public final class FactionStandards {
     }
 
     /**
+     * Whether this faction flies at least one <b>uncovered</b> trophy.
+     *
+     * <p>Keyed by position rather than by faction, because a faction may now fly several and the
+     * sky rule is a property of each flag rather than of its owner. Roofing one trophy over stops
+     * that one earning and leaves the others alone.</p>
+     *
+     * <p>The power bonus is flat however many you hold — see {@code POWER.md} §6 — so this is the
+     * "any" question rather than a count. Which is what makes a stack of trophies <b>ablative</b>:
+     * an enemy has to take every one of them before the bonus stops.</p>
+     */
+    public static boolean anyTrophyFlying(FactionStore store, String factionId) {
+        for (FactionStore.Placed flag : store.standardsOf(factionId)) {
+            if (flag.capturedFrom().isPresent()
+                    && FLAG_FLYING.getOrDefault(key(flag.dimension(), flag.pos()), true)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Whether the flag standing at this exact spot is under open sky. */
+    public static boolean flyingAt(String dimension, BlockPos pos) {
+        return FLAG_FLYING.getOrDefault(key(dimension, pos), true);
+    }
+
+    /**
+     * The faction flying a trophy taken from {@code victimId}, if one is.
+     *
+     * <p>A search rather than a field, now that a faction can hold several. Only an
+     * <b>uncovered</b> trophy counts, which is what stops "capture it and bury it" keeping
+     * somebody flagless forever.</p>
+     */
+    public static Optional<FactionStore.Faction> thiefOf(FactionStore store, String victimId) {
+        for (FactionStore.Faction other : store.all()) {
+            for (FactionStore.Placed flag : store.standardsOf(other.id())) {
+                if (flag.capturedFrom().map(victimId::equals).orElse(false)
+                        && flyingAt(flag.dimension(), flag.pos())) {
+                    return Optional.of(other);
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    /** Per-flag sky answers, keyed by where the flag stands. */
+    private static final java.util.Map<String, Boolean> FLAG_FLYING =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static String key(String dimension, BlockPos pos) {
+        return dimension + "|" + pos.getX() + "," + pos.getY() + "," + pos.getZ();
+    }
+
+    /**
      * Re-check every standard, because <b>the sky rule has to keep being true</b>.
      *
      * <p>Testing it once at designation would be an invitation: plant the flag in the open,
@@ -667,6 +728,25 @@ public final class FactionStandards {
         }
         FactionStore store = FactionStore.get(server);
         for (FactionStore.Faction f : store.all()) {
+            // Every flag they fly, own and trophies — the sky rule belongs to each flag, and a
+            // roofed trophy must stop earning without touching the rest.
+            for (FactionStore.Placed trophy : store.standardsOf(f.id())) {
+                if (trophy.capturedFrom().isEmpty()) {
+                    continue; // their own is handled below, which also announces
+                }
+                ServerLevel tl = FactionBridge.levelFor(server, trophy.dimension()).orElse(null);
+                if (tl == null || !tl.isLoaded(trophy.pos())) {
+                    continue;
+                }
+                if (!isBanner(tl, trophy.pos())) {
+                    store.clearStandardAt(trophy.dimension(), trophy.pos());
+                    FLAG_FLYING.remove(key(trophy.dimension(), trophy.pos()));
+                    continue;
+                }
+                FLAG_FLYING.put(key(trophy.dimension(), trophy.pos()),
+                        seesSky(tl, trophy.pos()));
+            }
+
             Optional<BlockPos> where = store.standardPos(f.id());
             if (where.isEmpty()) {
                 FLYING.remove(f.id());

@@ -29,8 +29,8 @@ public final class FactionRaidEvents {
     /**
      * Settle anything that has finished, then repaint.
      *
-     * <p>Checked in the order the outcomes matter. The standard falling beats the clock: a raid
-     * whose flag was taken on the last tick was won, not held.</p>
+     * <p>Checked in the order the outcomes matter. A win beats the clock: a raid whose flag was
+     * planted on the last tick was won, not held.</p>
      */
     public static void tick(MinecraftServer server) {
         if (!FactionsConfig.ENABLE_RAIDS.get()) {
@@ -46,8 +46,10 @@ public final class FactionRaidEvents {
                 FactionRaid.end(raid, now);
                 continue;
             }
-            if (standardTaken(store, raid)) {
-                finish(server, store, raid, FactionRaid.Outcome.STANDARD_TAKEN, now);
+            if (FactionRaid.hasPlanted(raid.attackerId())) {
+                finish(server, store, raid, FactionRaid.Outcome.STANDARD_PLANTED, now);
+            } else if (landIsTheWin(store, raid)) {
+                finish(server, store, raid, FactionRaid.Outcome.LAND_TAKEN, now);
             } else if (FactionRaid.onlineMembers(server, raid.attackerId()).isEmpty()) {
                 finish(server, store, raid, FactionRaid.Outcome.ATTACKERS_GONE, now);
             } else if (raid.expired(now)) {
@@ -58,25 +60,34 @@ public final class FactionRaidEvents {
     }
 
     /**
-     * Whether the defenders' standard has fallen.
+     * Whether taking ground is this raid's win condition, and has happened.
      *
-     * <p><b>The objective is that it comes down, not that the attacker plants it.</b> The first
-     * version asked whether the attackers were <em>flying</em> it as a trophy, which reads
-     * naturally and is unreachable in practice: a faction may fly exactly one standard, so anybody
-     * who already has their own — which is every established faction — cannot plant a captured one
-     * and could never win. Found the first time a raid was played, when the flag was taken and the
-     * raid still expired as "held".</p>
+     * <p>Only against a faction that flies <b>no standard</b>, and has flown none at any point
+     * during the raid. That case needed an answer of its own: raiding a flagless faction was
+     * literally unwinnable — no sequence of taking their land, planting a flag for them, or
+     * handing one back could complete it — which is how it was found. Their ground is the only
+     * thing left that taking costs them, so taking it is the win.</p>
      *
-     * <p>Their flag falling is also the moment the <em>defenders</em> lose something, which is what
-     * a raid is supposed to decide. Getting it home stays worth doing — it is the trophy and the
-     * power bonus — but it is the reward rather than the win condition, so the journey home is
-     * still dangerous without being the thing that ends the fight.</p>
+     * <p>Once they do fly one the rule switches off, and deliberately: there the flag is the
+     * objective and a chunk is a bonus, so a raid that has already taken land keeps running and
+     * the attackers can go after the standard as well. That is the shape the owner asked for —
+     * "if they have a standard then let the raid continue so they can take that too".</p>
      *
-     * <p>Only counts if they had one to begin with, or a faction flying no standard would lose the
-     * instant a raid was declared on them.</p>
+     * <p>Watched every tick rather than sampled at declaration, for the same reason the standard
+     * check is: the first version snapshotted at the start, so a flag planted mid-raid could be
+     * taken with no effect at all.</p>
      */
-    private static boolean standardTaken(FactionStore store, FactionRaid.Raid raid) {
-        return raid.defenderHadStandard() && !store.hasStandard(raid.defenderId());
+    private static boolean landIsTheWin(FactionStore store, FactionRaid.Raid raid) {
+        if (store.hasStandard(raid.defenderId())) {
+            // Up right now. Remember it, so this raid can never revert to being about land — and
+            // so taking it later still counts even though they planted it after the raid began.
+            FactionRaid.sawStandard(raid.attackerId());
+            return false;
+        }
+        if (raid.defenderHadStandard() || FactionRaid.hasSeenStandard(raid.attackerId())) {
+            return false;
+        }
+        return FactionRaid.claimsTaken(raid.attackerId()) > 0;
     }
 
     /** End it, tell everybody, and start the cooldown. */
@@ -88,7 +99,8 @@ public final class FactionRaidEvents {
         String defender = store.byId(raid.defenderId())
                 .map(FactionStore.Faction::name).orElse("?");
         String key = switch (outcome) {
-            case STANDARD_TAKEN -> "msg.factions.raid_over_taken";
+            case STANDARD_PLANTED -> "msg.factions.raid_over_planted";
+            case LAND_TAKEN -> "msg.factions.raid_over_land";
             case ATTACKERS_GONE -> "msg.factions.raid_over_repelled";
             case HELD -> "msg.factions.raid_over_held";
         };
