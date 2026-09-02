@@ -6,9 +6,22 @@
 
 - **`/f raid <faction>` — a declared, announced, time-boxed attack.** Being at war is a standing
   relation; a raid is an *event*. It is announced to the whole server, both sides glow by side, and
-  it ends in a way somebody won: their **standard taken** (attackers win), **every attacker dead or
-  gone** (defenders win), or the **timer expiring** (defenders held). The clock is a backstop, not
-  the mechanism — a raid that could only end on a timer is one nobody can win.
+  it ends in a way somebody won: their **standard taken and planted on your own land** (attackers
+  win), **ground taken from a faction flying no standard** (attackers win), **every attacker dead
+  or gone** (defenders win), or the **timer expiring** (defenders held). The clock is a backstop,
+  not the mechanism — a raid that could only end on a timer is one nobody can win.
+
+  **Taking the flag is not the win; carrying it home is.** Two earlier versions got this wrong in
+  opposite directions and both were found by playing it: asking whether the attackers *flew* the
+  captured flag was unreachable while a faction could fly only one, and ending the raid the instant
+  the flag fell deleted the walk home, which is where the drama actually lives. Taking it now leaves
+  the raid running, so attackers can go for land as well, and the trophy is carried through the
+  people whose flag it is.
+
+  **Against a faction that flies no standard, taking ground is the win.** That case was literally
+  unwinnable before — no sequence of moves completed it — and with the one-claim-per-raid limit it
+  costs them exactly one chunk. It switches off the moment they raise a flag, checked every tick, so
+  a standard planted mid-raid becomes the objective.
 
   **It cannot be declined, and does not need to be.** A raid requires **defenders online** to
   declare. A decline would have been the wrong tool for the problem it was meant to solve: the
@@ -22,6 +35,20 @@
 
   `/f raids` lists what is running. The design and its reasoning are in `POWER.md` §5, which had
   been an open question list since 1.1.0.
+
+- **A faction may fly several standards** — its own, plus every trophy it has taken. Previously the
+  store keyed one flag per faction, which was structural rather than a rule, and it is what made a
+  raid's original win condition unreachable: an established faction already flying its own flag
+  could never plant a captured one.
+
+  **The power bonus stays flat however many you hold** — `regenWithCapturedStandard` rewards having
+  taken a flag, not having taken six. What a stack buys instead is **ablative armour for the bonus**:
+  an enemy has to come and take every one before your regen drops. Nothing implements that; it falls
+  out of the flat rule.
+
+  The sky rule is now **per flag**, so roofing one trophy over stops that one earning and leaves the
+  rest alone. `/f standard` lists them with where each stands and whether it is uncovered — an
+  address for each, because every one is somewhere an enemy can walk to.
 
 - **`raidGatesOverclaim`** — optionally, land only changes hands during a declared raid.
   **Off by default**, so no existing server's game changes on update. On, overclaiming becomes an

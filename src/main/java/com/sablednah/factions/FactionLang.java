@@ -37,9 +37,11 @@ public final class FactionLang {
         // Raids. Announced to the whole server on purpose — a raid nobody could see would be a
         // war with extra steps, and half the value is that other people can turn up.
         Lang.contribute("msg.factions.raid_declared",
-                "{term.prefix} &c&lRAID&r &f{attacker}&7 is attacking &f{defender}&7 — &f{time}&7 to take their standard.");
-        Lang.contribute("msg.factions.raid_over_taken",
-                "{term.prefix} &c&lRAID OVER&r &f{attacker}&7 took &f{defender}&7's standard.");
+                "{term.prefix} &c&lRAID&r &f{attacker}&7 is attacking &f{defender}&7 — &f{time}&7 to take their standard and plant it at home.");
+        Lang.contribute("msg.factions.raid_over_planted",
+                "&6&l⚔ &r&f{attacker}&6 has planted &f{defender}&6's standard on their own ground. The raid is won.");
+        Lang.contribute("msg.factions.raid_over_land",
+                "&6&l⚔ &r&f{attacker}&6 has taken ground from &f{defender}&6, who flew no standard to defend. The raid is won.");
         Lang.contribute("msg.factions.raid_over_repelled",
                 "{term.prefix} &a&lREPELLED&r &f{defender}&7 drove &f{attacker}&7 off.");
         Lang.contribute("msg.factions.raid_over_held",
@@ -53,6 +55,10 @@ public final class FactionLang {
         // The refusal that replaces declining, so it has to explain itself rather than just say no.
         Lang.contribute("msg.factions.raid_nobody_home",
                 "&cNobody is home. &f{name}&c needs &f{needed}&c member(s) online to be raided, and has &f{online}&c.");
+        Lang.contribute("msg.factions.raid_no_standard",
+                "{term.prefix} &e{name} flies no standard&7 — there is nothing to take yet. The raid still counts if they plant one.");
+        Lang.contribute("msg.factions.raid_claim_limit",
+                "&cThis raid has taken its &f{count}&c chunk(s). Another raid, another chunk.");
         Lang.contribute("msg.factions.raid_none", "{term.prefix} &7No raids are running.");
         Lang.contribute("msg.factions.raid_row",
                 " &f{attacker} {term.dim}-> raiding&r &f{defender} {term.dim}({time} left)");
@@ -148,10 +154,12 @@ public final class FactionLang {
                 "&7You fly no standard. {term.dim}(place a banner on your land under open sky, look at it, and /f standard)");
         Lang.contribute("msg.factions.standard_where",
                 "{term.prefix} &7Your standard stands at &f{x}, {y}, {z}&7 in &f{world}&7.");
-        Lang.contribute("msg.factions.standard_where_captured",
-                "{term.prefix} &7You are flying &f{name}&7's captured standard at &f{x}, {y}, {z}&7.");
+        Lang.contribute("msg.factions.standard_trophies",
+                "&7You also fly &f{count}&7 captured standard(s). {term.dim}(the power bonus is the same however many — but they have to take every one)");
+        Lang.contribute("msg.factions.standard_trophy_line",
+                "  &8• &f{name}&7's, at &f{x}, {y}, {z}&7 in &f{world}&7 — {state}");
         Lang.contribute("msg.factions.standard_theirs",
-                "&c&f{name}&c is flying your standard at &f{x}, {y}, {z}&c in &f{world}&c. {term.dim}(you cannot raise another until you take it back)");
+                "&c&f{name}&c is flying your standard at &f{x}, {y}, {z}&c in &f{world}&c. {term.dim}(you cannot raise another while it flies — go and take it back)");
         Lang.contribute("msg.factions.standard_taken",
                 "&c&l⚑ &r&f{taker}&c has taken &f{name}&c's standard.");
         Lang.contribute("msg.factions.standard_recovered",

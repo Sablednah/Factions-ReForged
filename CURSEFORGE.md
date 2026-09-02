@@ -136,6 +136,12 @@ Plant it on your own land to fly it as a trophy — where they can come and take
 it back is now their raid. Put it in a chest and you stop being a target, and stop denying them
 anything.
 
+**Fly as many trophies as you can hold.** One flag of your own, and every one you have taken. The
+power bonus is the same whether you fly one or six — hoarding is not a strategy — but an enemy has
+to come and take **every one of them** before it stops paying. A wall of conquests is armour that
+wears away one raid at a time, and each flag in it is standing in the open where somebody can reach
+it.
+
 Identified by faction id in the item's own data rather than by its name, because a name is something
 anybody can type into an anvil. Duplicates are inert rather than policed.
 
@@ -261,10 +267,16 @@ borrowed rather than reimplemented. Install both on the server; your players ins
 Being at war is a standing relation. **`/f raid <faction>`** is an event: it is announced to the
 whole server, everyone involved lights up by side, and it ends in a way somebody won.
 
-Three ways out, and only one of them is the clock:
+Four ways out, and only one of them is the clock:
 
-- **Their standard is taken** — the attackers win. The flag is the objective, which is what turns a
-  raid from a stretch of time into something with a point.
+- **Their standard is taken *and planted on your own land*** — the attackers win. The flag is the
+  objective, which is what turns a raid from a stretch of time into something with a point. Note
+  where the win is: stealing it is one lucky sprint, and **the walk home through the people whose
+  flag it is** is the part worth playing. So the raid keeps running after the theft — the attackers
+  can go for land as well, and a raid can be lost on the road thirty seconds from the gate.
+- **Ground is taken from a faction flying no standard** — the attackers win. With nothing to steal,
+  their land is the only thing taking costs them; the one-claim-per-raid limit means it costs
+  exactly one chunk. Raise a flag and it becomes the objective again, even mid-raid.
 - **Every attacker is dead or logged off** — the defenders win. *"We repelled them"* has to be a
   real outcome, or defending is just waiting.
 - **The timer runs out** — the defenders held.

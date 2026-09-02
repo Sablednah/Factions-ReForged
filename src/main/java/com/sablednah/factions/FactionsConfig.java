@@ -43,6 +43,7 @@ public final class FactionsConfig {
     public static final ModConfigSpec.IntValue RAID_COOLDOWN_MINUTES;
     public static final ModConfigSpec.IntValue RAID_MIN_DEFENDERS;
     public static final ModConfigSpec.BooleanValue RAID_GATES_OVERCLAIM;
+    public static final ModConfigSpec.IntValue RAID_CLAIM_LIMIT;
     public static final ModConfigSpec.BooleanValue RAID_GLOW;
     public static final ModConfigSpec.DoubleValue CLAIM_COST;
     public static final ModConfigSpec.DoubleValue CLAIM_COST_MULTIPLIER;
@@ -361,6 +362,16 @@ public final class FactionsConfig {
                         "Defaulted off deliberately: silently changing how land is taken on every",
                         "server that updates would be worse than shipping the wrong default.")
                 .define("raidGatesOverclaim", false);
+        RAID_CLAIM_LIMIT = b
+                .comment("How many chunks ONE raid may take, when raidGatesOverclaim is on.",
+                        "1 by default, 0 for no limit.",
+                        "This is the anti-bullying rule. A large faction cannot strip a small one",
+                        "in a single sitting: each further chunk costs another raid, and every",
+                        "raid costs a cooldown. It also gives a raid on a faction with no standard",
+                        "something to be for — taking the chunk IS the win there.",
+                        "Only counts land taken from a faction you are raiding; claiming",
+                        "wilderness is unaffected.")
+                .defineInRange("raidClaimLimit", 1, 0, 1000);
         RAID_GLOW = b
                 .comment("Everyone in a raid glows by side — attackers one colour, defenders",
                         "another, and the standard carrier keeps its own red.",

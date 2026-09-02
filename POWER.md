@@ -3,7 +3,7 @@
 Three systems the 2012 plugin had that this one does not, designed together because they turn out
 to be one system wearing three coats.
 
-**Status: built. Power, the bank and the standard shipped in 1.1.0; `/f raid` (section 5) was designed and built 2026-09-02 and is awaiting a two-client test.** Power, the four land-control
+**Status: built. Power, the bank and the standard shipped in 1.1.0; `/f raid` (section 5) and multiple standards (section 6) were built 2026-09-02. Raids have been driven with two clients — the win conditions below are the result of that; the side glow and the restart case are still untested.** Power, the four land-control
 modes, the faction bank's other half and the capturable standard are all in the game and were
 played through on 1.21.11, 26.1.2 and 26.2 — power draining on death, restoring with time and
 experience, `/f power` showing exposure, and overclaiming an over-extended neighbour.
@@ -353,11 +353,21 @@ liability with a dividend.
 **Hoarding earns nothing.** A standard in a chest or an ender chest pays no bonus to anybody. The
 mechanic rewards *use*, not possession, and a flag in a box is a flag out of the game.
 
-### Denial must not be permanent
+### Denial must not be permanent — resolved, by the visibility rule
 
-The one genuinely unresolved bit, so it is written down rather than discovered later. If a thief
-simply hides your standard forever, they have permanently removed your bonus for the price of one
-raid and no further play. Options, in order of preference:
+**Settled in the build, and by a route none of the three options below took.** The rule that a
+standard only counts *while planted under open sky* turns out to answer this on its own:
+
+- a standard **in a chest** is not planted, so it blocks nothing. Its owner raises a new one that
+  evening and the thief has bought themselves an item;
+- a standard **planted and roofed over** stops paying its bonus and stops denying its owner at the
+  same instant. Burying it is not a strategy;
+- a standard **planted in the open** denies its owner a new flag — and is standing somewhere they
+  can walk to and take it back, which is the raid the whole mechanic exists to cause.
+
+One rule, both halves, and no cooldown to tune. The options below are kept because they were the
+obvious answers and it is worth recording that the good one was structural rather than a new
+mechanic:
 
 1. **A hoarded standard can be re-designated by its owner after a cooldown** — days, configurable.
    A *planted* one cannot: they have earned that, and the answer is to go and take it back.
@@ -365,8 +375,8 @@ raid and no further play. Options, in order of preference:
 3. Nothing; theft is permanent until recovered. Simple, and the most likely to end in somebody
    quitting.
 
-Option 1 reads best: it makes the difference between a *raid* and a *sulk* mechanical. Plant it and
-you keep it; sit on it and it goes home.
+Option 1 read best on paper — plant it and you keep it, sit on it and it goes home — and the
+visibility rule gets the same outcome immediately, with no timer and nothing to configure.
 
 ### Worth having anyway
 
@@ -402,15 +412,57 @@ and the reasoning, so they are not re-argued.
 
 ### How a raid ends — an objective, with a timer as the backstop
 
-Three ways out, and only one of them is the clock:
+Four ways out, and only one of them is the clock:
 
-- **The standard is taken** — the attackers win. This is the important one: the flag already exists
-  and already has a carrier glow, and making it the *objective* turns a raid from a period of time
-  into something with a point.
+- **The standard is taken *and planted at home*** — the attackers win. This is the important one:
+  the flag already exists and already has a carrier glow, and making it the *objective* turns a raid
+  from a period of time into something with a point.
+- **Ground is taken from a faction that flies no standard** — the attackers win. See below; this
+  case needed an answer of its own.
 - **Every attacker is dead or logged off** — the defenders win. "We repelled them" needs to be a
   real outcome or defending is just waiting.
 - **The timer expires** — the defenders held. A backstop rather than the mechanism, because a raid
   that can only end on a clock is a raid nobody can win or lose, and an unbounded one is a siege.
+
+#### Taking the flag is not the win — planting it is
+
+**Revised 2026-09-02, after playing it.** The first build ended the raid the moment the standard
+came down, for a good reason: a version before *that* asked whether the attackers were *flying* it,
+which the one-standard rule made unreachable for any established faction. "It fell" was the fix.
+
+Playing it showed "it fell" is too cheap. Taking the flag is one lucky sprint; the walk home
+through the people whose flag it is has always been where the drama lives, and ending the raid at
+the moment of theft deletes exactly that half. So with several standards now flyable (§6), the win
+is **planting it on your own claimed land** — the classic capture the flag, and the same act that
+earns the power bonus.
+
+Two consequences, both wanted:
+
+- taking the flag **leaves the raid running**, so the attackers can keep going for land as well —
+  which is what the owner asked for: *"if they have a standard then let the raid continue so they
+  can take that too"*;
+- the trophy is **carried, and therefore takeable back**. A raid can be won and lost in the last
+  thirty seconds, on the road, in the open.
+
+It is a latch rather than a live check: an enemy who sprints in and steals the trophy back a minute
+later does not un-win the raid that has already ended.
+
+#### What winning means against a faction with no flag
+
+A raid on a flagless faction was **literally unwinnable** — found by playing it, and no sequence of
+moves fixed it: taking their land did nothing, planting a standard for them and stealing it back
+did nothing, handing theirs over did nothing. The raid could only ever expire as *held*.
+
+So: **taking ground from a faction that flies no standard wins the raid.** It is the only thing
+left that taking costs them, and where `raidGatesOverclaim` is on it is precisely the act the raid
+exists to permit.
+
+It switches off the moment they fly one — checked every tick, not sampled at declaration, because
+a flag planted mid-raid must count. There, the flag is the objective and a chunk is a bonus, so a
+raid that has already taken land keeps running rather than ending on the first claim. And the
+one-claim-per-raid limit means the flagless case cannot become a land grab: **one** chunk, and the
+raid is over. The owner's reading of that limit, which is the right one: *"a built-in
+anti-bullying"*.
 
 ### It cannot be declined — defenders being online is what protects the small
 
@@ -444,7 +496,7 @@ updates has done something worse than shipping the wrong default.
 The glow work is already done and the announcement machinery exists; the design above was the
 actual cost.
 
-## 6. Flying several standards — decided 2026-09-02, not yet built
+## 6. Flying several standards — built 2026-09-02
 
 **A faction may fly one of its own and any number of captured ones.** Today the store keys a
 standard by faction, so one-per-faction is structural rather than a rule — which is how a raid's
@@ -458,9 +510,18 @@ never plant a captured one.
   taken a flag, not having taken six: a faction that regenerates faster for each trophy makes
   hoarding them the optimal strategy, and compounds the advantage of whoever is already winning.
 
-The on-disk format needs no change — `Snapshot` already holds a *list* of standards and the map is
-built from it on load. The cost is roughly thirty call sites across seven accessors, plus
-`/f standard` needing to report several rather than one.
+  **What a stack of them buys instead is ablative armour for the bonus** — the owner's phrase, and
+  the best description of it. An enemy has to come and take *every* trophy before your regen drops.
+  That falls out of the flat rule rather than being a mechanic of its own, which is the nicest kind
+  of design: nothing implements it.
+- **The sky rule is per flag, not per faction.** Each one is asked separately whether it stands in
+  the open, so roofing one trophy over stops that one earning and leaves the rest alone. It has to
+  work this way or "capture it and bury it" would be a way to keep somebody flagless for ever —
+  the same rule that already governs your own flag, applied one at a time.
+
+The on-disk format needed no change — `Snapshot` already holds a *list* of standards and the map is
+built from it on load. The cost was roughly thirty call sites across seven accessors, plus
+`/f standard` reporting several rather than one.
 
 ## Worth stealing from the archive
 

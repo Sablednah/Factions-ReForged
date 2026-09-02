@@ -589,6 +589,11 @@ public final class FactionCommands {
                                 .map(FactionStore.Faction::name).orElse("?")));
                 return 0;
             }
+            case RAID_CLAIM_LIMIT -> {
+                Feedback.chat(player, Lang.fmt("msg.factions.raid_claim_limit",
+                        "count", String.valueOf(FactionsConfig.RAID_CLAIM_LIMIT.get())));
+                return 0;
+            }
             case NO_RAID -> {
                 // Names the command that would fix it: the land IS takeable, and the only thing
                 // missing is somebody saying so out loud.
@@ -860,6 +865,12 @@ public final class FactionCommands {
         // none would otherwise satisfy "their standard is gone" the moment the raid started.
         boolean theyFly = store(ctx).hasStandard(them.id());
         FactionRaid.Raid raid = FactionRaid.begin(us.id(), them.id(), now, theyFly);
+        if (!theyFly) {
+            // Not a refusal: they may plant one during the raid, and with raidGatesOverclaim on a
+            // raid is also how land moves. But saying nothing left an attacker trying every
+            // combination of placing and stealing a flag on a raid that could not be won.
+            Feedback.chat(player, Lang.fmt("msg.factions.raid_no_standard", "name", them.name()));
+        }
         FactionRaidEvents.announce(ctx.getSource().getServer(),
                 Lang.fmt("msg.factions.raid_declared",
                         "attacker", us.name(), "defender", them.name(),
@@ -1206,18 +1217,24 @@ public final class FactionCommands {
             // "Where is my flag" is the question, and "you have no standard" only answers it when
             // nobody took yours. Somebody who has just been raided knows perfectly well they have
             // none — what they want is where it went.
-            Optional<FactionStore.Faction> holder = store.all().stream()
-                    .filter(other -> store.standardCapturedFrom(other.id())
-                            .map(f.get().id()::equals).orElse(false))
-                    .findFirst();
-            if (holder.isPresent()) {
-                Optional<net.minecraft.core.BlockPos> at = store.standardPos(holder.get().id());
+            FactionStore.Faction holder = null;
+            FactionStore.Placed at = null;
+            for (FactionStore.Faction other : store.all()) {
+                for (FactionStore.Placed flag : store.standardsOf(other.id())) {
+                    if (flag.capturedFrom().map(f.get().id()::equals).orElse(false)) {
+                        holder = other;
+                        at = flag;
+                        break;
+                    }
+                }
+            }
+            if (holder != null) {
+                // Where the TROPHY stands, not where their own flag does — the two are different
+                // places now, and the one worth walking to is the one holding your colours.
                 Feedback.chat(player, Lang.fmt("msg.factions.standard_theirs",
-                        "name", holder.get().name(),
-                        "x", at.map(net.minecraft.core.BlockPos::getX).orElse(0),
-                        "y", at.map(net.minecraft.core.BlockPos::getY).orElse(0),
-                        "z", at.map(net.minecraft.core.BlockPos::getZ).orElse(0),
-                        "world", store.standardDimension(holder.get().id()).orElse("?")));
+                        "name", holder.name(),
+                        "x", at.pos().getX(), "y", at.pos().getY(), "z", at.pos().getZ(),
+                        "world", at.dimension()));
                 return 0;
             }
             Optional<ServerPlayer> carrier = FactionStandards.carriedBy(
@@ -1240,6 +1257,7 @@ public final class FactionCommands {
                 return 0;
             }
             Feedback.chat(player, Lang.get("msg.factions.standard_none"));
+            listTrophies(player, store, f.get().id());
             // What not having one costs, in the same breath. "Raise a flag" is advice; "you are
             // recovering at half speed" is a reason.
             Feedback.chat(player, Lang.fmt("msg.factions.power_regen",
@@ -1248,17 +1266,44 @@ public final class FactionCommands {
                     "standard", Lang.get(FactionPowerEvents.standardState(ctx.getSource().getServer(), store, f.get().id()))));
             return 0;
         }
-        Optional<String> captured = store.standardCapturedFrom(f.get().id());
-        Feedback.chat(player, Lang.fmt(captured.isPresent()
-                        ? "msg.factions.standard_where_captured" : "msg.factions.standard_where",
+        Feedback.chat(player, Lang.fmt("msg.factions.standard_where",
                 "x", where.get().getX(), "y", where.get().getY(), "z", where.get().getZ(),
-                "world", store.standardDimension(f.get().id()).orElse("?"),
-                "name", captured.flatMap(store::byId).map(FactionStore.Faction::name).orElse("?")));
+                "world", store.standardDimension(f.get().id()).orElse("?")));
+        listTrophies(player, store, f.get().id());
         Feedback.chat(player, Lang.fmt("msg.factions.power_regen",
                 "rate", FactionPowerEvents.trim(
                         FactionPowerEvents.regenPerMinute(ctx.getSource().getServer(), store, f.get().id())),
                 "standard", Lang.get(FactionPowerEvents.standardState(ctx.getSource().getServer(), store, f.get().id()))));
         return 1;
+    }
+
+    /**
+     * The enemy flags this faction flies, listed under its own.
+     *
+     * <p>Listed rather than counted, because each one is a place somebody can walk to and take
+     * back. A number would say "you are winning"; the addresses say "here is what you have to
+     * defend", which is the more useful sentence for both sides.</p>
+     *
+     * <p>The bonus they pay is flat however many there are — see {@code POWER.md} §6 — so the
+     * line says what a stack of them is actually for.</p>
+     */
+    private static void listTrophies(ServerPlayer player, FactionStore store, String factionId) {
+        List<FactionStore.Placed> trophies = store.standardsOf(factionId).stream()
+                .filter(flag -> flag.capturedFrom().isPresent()).toList();
+        if (trophies.isEmpty()) {
+            return;
+        }
+        Feedback.chat(player, Lang.fmt("msg.factions.standard_trophies", "count", trophies.size()));
+        for (FactionStore.Placed flag : trophies) {
+            Feedback.chat(player, Lang.fmt("msg.factions.standard_trophy_line",
+                    "name", flag.capturedFrom().flatMap(store::byId)
+                            .map(FactionStore.Faction::name).orElse("?"),
+                    "x", flag.pos().getX(), "y", flag.pos().getY(), "z", flag.pos().getZ(),
+                    "world", flag.dimension(),
+                    "state", Lang.get(FactionStandards.flyingAt(flag.dimension(), flag.pos())
+                            ? "msg.factions.standard_state_flying"
+                            : "msg.factions.standard_state_covered")));
+        }
     }
 
     /** {@code /f power [player]} — yours, or theirs, and what it entitles your faction to. */

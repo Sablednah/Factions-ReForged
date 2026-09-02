@@ -101,10 +101,13 @@ Look at a banner on your own land under open sky and it becomes your faction's s
 and pattern become the faction's identity.
 
 With nothing in front of you it answers **"where is my flag"** — on your tower, in an enemy's
-courtyard, or in somebody's hands running for the border.
+courtyard, or in somebody's hands running for the border. It also lists the **trophies** you fly,
+with where each one stands and whether it is still under open sky.
 
 Planting a captured flag on your own land flies it as a trophy; no command needed, because the act
-is the declaration.
+is the declaration. You may fly **one of your own and any number of captured ones** — but the power
+bonus is the same however many you hold. What a wall of them buys is that an enemy has to come and
+take *every one* before it stops paying, and each of them is standing somewhere they can reach.
 
 ## Seeing
 
@@ -208,9 +211,19 @@ listening", or the message would quietly announce that somebody is watching.
 Declare an attack. Announced to the **whole server**, and everyone involved glows by side —
 attackers one colour, defenders another, the standard carrier keeping its own red.
 
-It ends when their **standard is taken** (attackers win), when **every attacker is dead or logged
-off** (defenders win), or when the **timer expires** (defenders held). The clock is a backstop, not
-the mechanism: a raid that could only end on a timer is one nobody can win.
+It ends when you take their **standard and plant it on your own land** (attackers win), when you
+take **ground from a faction flying no standard** (attackers win), when **every attacker is dead or
+logged off** (defenders win), or when the **timer expires** (defenders held). The clock is a
+backstop, not the mechanism: a raid that could only end on a timer is one nobody can win.
+
+**Taking the flag does not end it — carrying it home does.** Stealing it is one lucky sprint; the
+walk back through the people whose flag it is has always been the good part. So the raid keeps
+running after the theft, the attackers can go for land as well, and a raid can be lost on the road
+thirty seconds from home.
+
+Against a faction that flies **no** standard there is nothing to steal, so taking their ground is
+the win instead — and with the one-claim-per-raid limit that costs them exactly one chunk. The
+moment they raise a flag it becomes the objective again, even if they raise it mid-raid.
 
 **It cannot be declined**, and it does not need to be — a raid requires **defenders online** to
 declare. That protects a small faction far better than declining could, since the faction that most
