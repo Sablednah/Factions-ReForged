@@ -444,6 +444,24 @@ updates has done something worse than shipping the wrong default.
 The glow work is already done and the announcement machinery exists; the design above was the
 actual cost.
 
+## 6. Flying several standards — decided 2026-09-02, not yet built
+
+**A faction may fly one of its own and any number of captured ones.** Today the store keys a
+standard by faction, so one-per-faction is structural rather than a rule — which is how a raid's
+original win condition came to be unreachable: an attacker who already flew their own flag could
+never plant a captured one.
+
+- **Your own standard stays unique.** It is the thing that can be taken from you.
+- **Trophies are targets.** If you can fly somebody's flag, somebody can come and take it back —
+  which turns a wall of conquests into a reason to be raided rather than a museum.
+- **The power bonus stays flat**, however many you fly. `regenWithCapturedStandard` rewards having
+  taken a flag, not having taken six: a faction that regenerates faster for each trophy makes
+  hoarding them the optimal strategy, and compounds the advantage of whoever is already winning.
+
+The on-disk format needs no change — `Snapshot` already holds a *list* of standards and the map is
+built from it on load. The cost is roughly thirty call sites across seven accessors, plus
+`/f standard` needing to report several rather than one.
+
 ## Worth stealing from the archive
 
 Read for intent, not lifted — the standing rule.

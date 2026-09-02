@@ -58,17 +58,25 @@ public final class FactionRaidEvents {
     }
 
     /**
-     * Whether the attackers hold the defenders' standard.
+     * Whether the defenders' standard has fallen.
      *
-     * <p>The objective. {@code standardCapturedFrom} is the existing bookkeeping for a captured
-     * flag, so this reads the mechanic that was already there rather than inventing a second
-     * notion of "taken".</p>
+     * <p><b>The objective is that it comes down, not that the attacker plants it.</b> The first
+     * version asked whether the attackers were <em>flying</em> it as a trophy, which reads
+     * naturally and is unreachable in practice: a faction may fly exactly one standard, so anybody
+     * who already has their own — which is every established faction — cannot plant a captured one
+     * and could never win. Found the first time a raid was played, when the flag was taken and the
+     * raid still expired as "held".</p>
+     *
+     * <p>Their flag falling is also the moment the <em>defenders</em> lose something, which is what
+     * a raid is supposed to decide. Getting it home stays worth doing — it is the trophy and the
+     * power bonus — but it is the reward rather than the win condition, so the journey home is
+     * still dangerous without being the thing that ends the fight.</p>
+     *
+     * <p>Only counts if they had one to begin with, or a faction flying no standard would lose the
+     * instant a raid was declared on them.</p>
      */
     private static boolean standardTaken(FactionStore store, FactionRaid.Raid raid) {
-        return store.byId(raid.attackerId())
-                .flatMap(f -> store.standardCapturedFrom(f.id()))
-                .filter(from -> from.equals(raid.defenderId()))
-                .isPresent();
+        return raid.defenderHadStandard() && !store.hasStandard(raid.defenderId());
     }
 
     /** End it, tell everybody, and start the cooldown. */
@@ -122,8 +130,14 @@ public final class FactionRaidEvents {
             Optional<FactionRaid.Raid> raid = FactionRaid.raidFor(server, player);
             if (raid.isEmpty()) {
                 if (MARKED.remove(player.getUUID())) {
-                    scoreboard.removePlayerFromTeam(player.getScoreboardName(), attack);
-                    scoreboard.removePlayerFromTeam(player.getScoreboardName(), defend);
+                    // ONLY the team they are actually on. Asking to remove them from the other
+                    // one throws IllegalStateException — "either on another team or not on any
+                    // team" — which killed the whole tick the first time a raid ended, and took
+                    // the server down behind it. A player is on one team or none, never both.
+                    PlayerTeam on = scoreboard.getPlayersTeam(player.getScoreboardName());
+                    if (on == attack || on == defend) {
+                        scoreboard.removePlayerFromTeam(player.getScoreboardName(), on);
+                    }
                     player.removeEffect(net.minecraft.world.effect.MobEffects.GLOWING);
                 }
                 continue;

@@ -57,7 +57,7 @@ public final class FactionsSelfTest {
             check("no raids to begin with", FactionRaid.active().isEmpty());
             check("...and nobody is involved in one", !FactionRaid.involved("a"));
 
-            FactionRaid.Raid raid = FactionRaid.begin("a", "b", now);
+            FactionRaid.Raid raid = FactionRaid.begin("a", "b", now, true);
             check("declaring starts one", FactionRaid.active().size() == 1);
             check("the attacker is attacking",
                     FactionRaid.attacking("a").map(r -> r.defenderId().equals("b")).orElse(false));
@@ -67,6 +67,14 @@ public final class FactionsSelfTest {
             check("both sides count as involved",
                     FactionRaid.involved("a") && FactionRaid.involved("b"));
             check("a bystander does not", !FactionRaid.involved("c"));
+
+            // The objective is that their flag FALLS, so whether they had one is recorded at the
+            // start. A faction flying none must not lose the instant a raid is declared on them —
+            // which is exactly what the first version did, unnoticed until it was played.
+            check("a defender who was flying one is recorded as such", raid.defenderHadStandard());
+            check("...and one who was not, is not",
+                    !FactionRaid.begin("x", "y", now, false).defenderHadStandard());
+            FactionRaid.end(FactionRaid.attacking("x").orElseThrow(), now);
 
             // between() is what gates overclaiming, so it must be symmetric — the attacker takes
             // land from the defender, and the rule is asked about the pair rather than a direction.

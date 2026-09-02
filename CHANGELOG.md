@@ -36,6 +36,25 @@
 
 ### Fixed
 
+- **A raid ending crashed the server.** Clearing the side glow removed the player from *both* the
+  attacker and defender teams, and removing somebody from a team they are not on throws — which
+  killed the tick and took the server with it. Only the team they are actually on is touched now.
+
+  It also left the JVM alive holding LuckPerms' database, so the *next* server found it locked,
+  LuckPerms denied every permission, and every gated command silently vanished. Worth knowing as a
+  chain: a crash here looks like broken permissions two restarts later.
+
+- **A raid could not be won.** The objective asked whether the attackers were *flying* the
+  defenders' standard as a trophy — which reads naturally and is unreachable, because a faction may
+  fly exactly one standard and every established faction already flies its own. Taking the flag
+  left the raid running until it expired as "held".
+
+  The objective is now that their standard **falls**, which is the moment the defenders actually
+  lose something and is true however the attacker got there. Carrying it home stays worth doing —
+  it is the trophy and the power bonus — so the journey home is still dangerous without being what
+  ends the fight. Whether they were flying one is recorded at declaration, or a faction with no
+  standard would lose the instant it was raided.
+
 - **A border between two claims was drawn twice, in two colours.** The comment claimed every
   boundary belonged to exactly one chunk; the code had both neighbours drawing the shared line, so
   your colour and theirs fought over the same particles. Each boundary is now drawn once — and
