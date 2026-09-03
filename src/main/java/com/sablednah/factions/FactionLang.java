@@ -38,6 +38,9 @@ public final class FactionLang {
         // war with extra steps, and half the value is that other people can turn up.
         Lang.contribute("msg.factions.raid_declared",
                 "{term.prefix} &c&lRAID&r &f{attacker}&7 is attacking &f{defender}&7 — &f{time}&7 to take their standard and plant it at home.");
+        Lang.contribute("msg.factions.raid_bar", "&6&lRAID&r &f{time}");
+        Lang.contribute("msg.factions.raid_bar_urgent", "&c&lRAID&r &c&l{time}");
+        Lang.contribute("msg.factions.raid_bar_over", "&8&lRAID OVER");
         Lang.contribute("msg.factions.raid_over_planted",
                 "&6&l⚔ &r&f{attacker}&6 has planted &f{defender}&6's standard on their own ground. The raid is won.");
         Lang.contribute("msg.factions.raid_over_land",
