@@ -59,6 +59,15 @@
   Only the name comes off; the colour and pattern they designed stay exactly as they are. A
   de-flagging, not a confiscation.
 
+- **A ticking countdown on the action bar while a raid runs**, for everybody in it. The action bar
+  rather than chat, for the reason Standards' teleport warmup uses it: chat would bury the fight
+  under two hundred identical lines.
+
+  It tightens as it goes — `4m 12s`, then `45s`, then a bare `9` in the last ten, red under thirty —
+  because a countdown that reads the same at four minutes and four seconds has told you nothing
+  about which one you are in. **Both sides see it**: a defender knowing how long they must hold is
+  exactly as useful as an attacker knowing how long they have to win. `raidCountdown` turns it off.
+
 - **`/f fixture standards`** — plants a real, stealable flag for every seeded neighbour, on their
   own claimed land, through the ordinary designation path. Behind the same `debug.fixtures` flag as
   the rest, and off on a live server.

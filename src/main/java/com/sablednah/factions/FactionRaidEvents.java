@@ -56,6 +56,7 @@ public final class FactionRaidEvents {
                 finish(server, store, raid, FactionRaid.Outcome.HELD, now);
             }
         }
+        countdown(server, now);
         glow(server);
     }
 
@@ -90,10 +91,81 @@ public final class FactionRaidEvents {
         return FactionRaid.claimsTaken(raid.attackerId()) > 0;
     }
 
+    /**
+     * Factions whose raid has just ended, and until when to say so.
+     *
+     * <p>Needed because the raid is gone from {@code ACTIVE} the instant it settles, so there is
+     * nothing left to read a final line off. Three seconds, then the bar goes quiet on its own.</p>
+     */
+    private static final java.util.Map<String, Long> OVER_UNTIL =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * The clock, on the action bar, for everybody in the fight.
+     *
+     * <p><b>The action bar rather than chat</b>, for the same reason the teleport warmup uses it —
+     * it is already the transient-status line, and a raid that posted a countdown to chat would
+     * bury the fight under two hundred identical messages. Standards' decision 8, applied to the
+     * other thing on this server with a clock on it.</p>
+     *
+     * <p>Both sides see it. A defender knowing how long they have to hold is exactly as useful as
+     * an attacker knowing how long they have to win, and a raid whose end surprises one side is
+     * the same failure as a teleport that lands with nobody told.</p>
+     *
+     * <p>It tightens as it runs — minutes, then seconds, then a bare urgent number under ten —
+     * because a countdown that reads the same at four minutes and at four seconds has told you
+     * nothing about which one you are in.</p>
+     *
+     * <p>⚠ It shares the action bar with Standards' teleport warmup. Running <code>/f home</code>
+     * mid-raid will flicker between the two for five seconds; last writer wins, both recover.
+     * Worth knowing rather than worth engineering around.</p>
+     */
+    private static void countdown(MinecraftServer server, long now) {
+        if (!FactionsConfig.RAID_COUNTDOWN.get()) {
+            return;
+        }
+        OVER_UNTIL.values().removeIf(until -> until <= now);
+        FactionStore store = FactionStore.get(server);
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            Optional<FactionRaid.Raid> raid = FactionRaid.raidFor(server, player);
+            if (raid.isPresent()) {
+                long left = Math.max(0L, raid.get().endsAtMillis() - now);
+                long secs = (left + 999L) / 1000L;
+                Feedback.actionBar(player, Lang.fmt(secs <= 30
+                                ? "msg.factions.raid_bar_urgent" : "msg.factions.raid_bar",
+                        "time", clock(secs)));
+                continue;
+            }
+            // Not in one — but their faction may have been in one a moment ago.
+            store.of(player.getUUID()).map(FactionStore.Faction::id)
+                    .filter(OVER_UNTIL::containsKey)
+                    .ifPresent(id -> Feedback.actionBar(player,
+                            Lang.get("msg.factions.raid_bar_over")));
+        }
+    }
+
+    /**
+     * Seconds as something worth reading at a glance.
+     *
+     * <p>Three shapes on purpose: {@code 4m 12s} while there is time to plan, {@code 45s} once
+     * there is not, and a bare {@code 9} in the last ten — where the number IS the message and a
+     * unit beside it is noise.</p>
+     */
+    private static String clock(long secs) {
+        if (secs > 60L) {
+            return (secs / 60L) + "m " + (secs % 60L) + "s";
+        }
+        return secs > 10L ? secs + "s" : String.valueOf(secs);
+    }
+
     /** End it, tell everybody, and start the cooldown. */
     private static void finish(MinecraftServer server, FactionStore store, FactionRaid.Raid raid,
             FactionRaid.Outcome outcome, long now) {
         FactionRaid.end(raid, now);
+        // Both sides get a final line on the bar, because the raid is out of ACTIVE from here and
+        // the countdown would otherwise simply stop mid-number.
+        OVER_UNTIL.put(raid.attackerId(), now + 3_000L);
+        OVER_UNTIL.put(raid.defenderId(), now + 3_000L);
         String attacker = store.byId(raid.attackerId())
                 .map(FactionStore.Faction::name).orElse("?");
         String defender = store.byId(raid.defenderId())

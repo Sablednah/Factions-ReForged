@@ -45,6 +45,7 @@ public final class FactionsConfig {
     public static final ModConfigSpec.BooleanValue RAID_GATES_OVERCLAIM;
     public static final ModConfigSpec.IntValue RAID_CLAIM_LIMIT;
     public static final ModConfigSpec.BooleanValue RAID_GLOW;
+    public static final ModConfigSpec.BooleanValue RAID_COUNTDOWN;
     public static final ModConfigSpec.DoubleValue CLAIM_COST;
     public static final ModConfigSpec.DoubleValue CLAIM_COST_MULTIPLIER;
     public static final ModConfigSpec.DoubleValue CLAIM_REFUND;
@@ -379,6 +380,15 @@ public final class FactionsConfig {
                         "read at a glance, which is half of what makes a raid an event rather",
                         "than a rumour.")
                 .define("raidGlow", true);
+        RAID_COUNTDOWN = b
+                .comment("A ticking countdown on the action bar for everybody in a raid.",
+                        "Both sides: a defender knowing how long they must hold is exactly as",
+                        "useful as an attacker knowing how long they have to win.",
+                        "The action bar rather than chat, because it is already the transient",
+                        "status line and a per-second countdown in chat would bury the fight.",
+                        "Note it shares that line with Standards' teleport warmup, so running",
+                        "/f home mid-raid flickers between the two for five seconds.")
+                .define("raidCountdown", true);
         OVERCLAIM_ENEMIES_ONLY = b
                 .comment("Only a DECLARED ENEMY may take land from an over-extended faction.",
                         "On by default, and a deliberate divergence: the original let anybody who",
