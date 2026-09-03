@@ -50,6 +50,15 @@
   rest alone. `/f standard` lists them with where each stands and whether it is uncovered — an
   address for each, because every one is somewhere an enemy can walk to.
 
+- **A superseded standard is stripped of its name when somebody tries to plant it.** Take a
+  faction's flag, sit on it, and let them raise a replacement: the one in your chest is now an
+  ordinary banner with delusions. It was already *inert* — the duplicate rule refused it — but it
+  went on calling itself their standard, so its holder had no way to learn it was worthless except
+  by carting it somewhere else and trying again.
+
+  Only the name comes off; the colour and pattern they designed stay exactly as they are. A
+  de-flagging, not a confiscation.
+
 - **`/f fixture standards`** — plants a real, stealable flag for every seeded neighbour, on their
   own claimed land, through the ordinary designation path. Behind the same `debug.fixtures` flag as
   the rest, and off on a live server.
