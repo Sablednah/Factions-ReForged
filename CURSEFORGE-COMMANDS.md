@@ -272,7 +272,7 @@ money arriving with no explanation is money the recipient treats as a bug.
 
 ## Testing
 
-### `/f fixture seed [chunks]` · `/f fixture clear` — operator, and off unless enabled
+### `/f fixture seed [chunks]` · `/f fixture standards` · `/f fixture clear` — operator, and off unless enabled
 
 Invents nine neighbour factions around you covering **every** relation state: allied, offered to
 you, waiting on you, hostile, neutral and peaceful.
@@ -280,8 +280,13 @@ you, waiting on you, hostile, neutral and peaceful.
 Two people cannot test a relation system — those states need four counterparties, and inviting six
 friends to sit still while you declare war on them is not a test plan.
 
-They are not mocks: ordinary factions with ordinary claims, held by ordinary offline players whose
-UUIDs are derived exactly as an offline-mode server derives them. They never claim a chunk somebody
+`/f fixture standards` gives each of them a real banner, planted on their own land under open sky
+and designated the same way a player would — nine flags worth stealing. That one is for the power
+rules: proving a captured standard's bonus stays **flat** across three trophies needs three factions
+to take flags from, which two people cannot arrange either.
+
+They are not mocks: ordinary factions with ordinary claims and ordinary standards, held by ordinary
+offline players whose UUIDs are derived exactly as an offline-mode server derives them. They never claim a chunk somebody
 already holds, and `clear` matches on the leader as well as the name, so a real faction that happens
 to share a name survives.
 

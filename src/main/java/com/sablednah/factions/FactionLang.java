@@ -327,6 +327,8 @@ public final class FactionLang {
         // Test fixtures.
         Lang.contribute("msg.factions.fixtures_seeded",
                 "{term.prefix} &7Invented &f{count}&7 neighbours. {term.dim}(/f fixture clear to remove them)");
+        Lang.contribute("msg.factions.fixtures_standards",
+                "{term.prefix} &7Planted a flag for &f{count}&7 neighbour(s). {term.dim}(go and take one — they are real standards on real land)");
         Lang.contribute("msg.factions.fixtures_row", " {term.dim}-&r &7{row}");
         Lang.contribute("msg.factions.fixtures_cleared",
                 "{term.prefix} &7Removed &f{count}&7 invented {term.factions}.");
