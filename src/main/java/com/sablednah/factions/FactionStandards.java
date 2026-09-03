@@ -177,6 +177,16 @@ public final class FactionStandards {
                     .anyMatch(other -> !other.id().equals(faction.id())
                             && store.capturedStandards(other.id()).contains(victimId));
             if (theyStillFlyIt || somebodyElseHasIt) {
+                // Strip the claim off the block while we are here. Refusing it and leaving it
+                // standing there still calling itself somebody's standard is the worst of both:
+                // it looks like a trophy, it is worth nothing, and its holder has no way to learn
+                // the difference except by trying to plant it somewhere else.
+                //
+                // Identity on a placed banner IS its custom name — that is what whoseStandardBlock
+                // reads — so clearing the name is the whole de-tagging. The banner it drops when
+                // broken is an ordinary banner, which is what it has actually been since the
+                // moment its owner raised a replacement.
+                detag(level, pos);
                 Feedback.chat(player, Lang.get("msg.factions.standard_not_the_real_one"));
                 return false;
             }
@@ -335,6 +345,25 @@ public final class FactionStandards {
             }
         }
         MARKED.clear();
+    }
+
+    /**
+     * Take a banner's claim to be somebody's standard off it, permanently.
+     *
+     * <p>Only the name is removed — the colour and pattern somebody designed stay exactly as they
+     * are. It is a de-flagging, not a confiscation: what they hold is still the banner they took,
+     * it just stops asserting something that stopped being true when its owner raised another.</p>
+     */
+    private static void detag(ServerLevel level, BlockPos pos) {
+        if (!(level.getBlockEntity(pos) instanceof BannerBlockEntity banner)) {
+            return;
+        }
+        banner.setComponents(net.minecraft.core.component.DataComponentMap.builder()
+                .addAll(banner.components())
+                .set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, null)
+                .build());
+        banner.setChanged();
+        level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), 3);
     }
 
     /** Whose standard this item is, from the marker rather than from its name. */
