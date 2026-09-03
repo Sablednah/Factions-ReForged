@@ -50,6 +50,14 @@
   rest alone. `/f standard` lists them with where each stands and whether it is uncovered — an
   address for each, because every one is somewhere an enemy can walk to.
 
+- **`/f fixture standards`** — plants a real, stealable flag for every seeded neighbour, on their
+  own claimed land, through the ordinary designation path. Behind the same `debug.fixtures` flag as
+  the rest, and off on a live server.
+
+  It exists because the flat-bonus rule **cannot be tested by two people**: proving that three
+  trophies pay the same as one needs three factions to take flags from. The fixtures were already
+  real factions with real claims; this gives them something worth raiding.
+
 - **`raidGatesOverclaim`** — optionally, land only changes hands during a declared raid.
   **Off by default**, so no existing server's game changes on update. On, overclaiming becomes an
   event with a beginning and an end.
