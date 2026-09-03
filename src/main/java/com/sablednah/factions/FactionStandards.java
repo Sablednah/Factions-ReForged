@@ -359,10 +359,21 @@ public final class FactionStandards {
         if (!(level.getBlockEntity(pos) instanceof BannerBlockEntity banner)) {
             return;
         }
-        banner.setComponents(net.minecraft.core.component.DataComponentMap.builder()
-                .addAll(banner.components())
-                .set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, null)
-                .build());
+        // NOT setComponents(). That assigns the component map and nothing else, while a banner's
+        // name lives in a field of its own — BannerBlockEntity.name — which setComponents never
+        // touches. Worse, collectImplicitComponents writes that field back into the dropped item,
+        // so a de-tag done that way looks like it worked and the name returns the moment somebody
+        // breaks the block. Watched happening: refused, "stopped pretending", broken, replanted,
+        // refused again.
+        //
+        // applyComponents runs applyImplicitComponents, which is what actually assigns the field.
+        // Feeding it a patch with the patterns and no name clears the name and keeps the design.
+        // The base colour is a final field taken from the block state, so it is never at risk.
+        banner.applyComponents(net.minecraft.core.component.DataComponentMap.EMPTY,
+                net.minecraft.core.component.DataComponentPatch.builder()
+                        .set(net.minecraft.core.component.DataComponents.BANNER_PATTERNS,
+                                banner.getPatterns())
+                        .build());
         banner.setChanged();
         level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), 3);
     }
