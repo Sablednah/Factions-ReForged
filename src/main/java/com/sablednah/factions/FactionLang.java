@@ -167,7 +167,7 @@ public final class FactionLang {
         Lang.contribute("msg.factions.standard_taken_down",
                 "{term.prefix} &7Standard taken down. {term.dim}(plant it again to raise it)");
         Lang.contribute("msg.factions.standard_not_the_real_one",
-                "&cThat is not the real one. {term.dim}(their standard is accounted for)");
+                "&cThat is not the real one, and it has stopped pretending to be. {term.dim}(their standard is accounted for; what you are holding is now an ordinary banner)");
         Lang.contribute("msg.factions.standard_item", "&f{name}&7's standard");
         Lang.contribute("msg.factions.standard_planted_trophy",
                 "{term.prefix} &6You are flying &f{name}&6's standard. {term.dim}(they can see where — and come for it)");
