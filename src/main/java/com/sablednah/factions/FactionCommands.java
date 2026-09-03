@@ -200,6 +200,8 @@ public final class FactionCommands {
                                 .executes(ctx -> seedFixtures(ctx,
                                         com.mojang.brigadier.arguments.IntegerArgumentType
                                                 .getInteger(ctx, "chunksEach")))))
+                .then(Commands.literal("standards")
+                        .executes(FactionCommands::seedFixtureStandards))
                 .then(Commands.literal("clear").executes(FactionCommands::clearFixtures));
     }
 
@@ -208,6 +210,24 @@ public final class FactionCommands {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         List<String> report = FactionFixtures.seed(player, chunksEach);
         Feedback.chat(player, Lang.fmt("msg.factions.fixtures_seeded", "count", report.size()));
+        for (String row : report) {
+            Feedback.chat(player, Lang.fmt("msg.factions.fixtures_row", "row", row));
+        }
+        return report.size();
+    }
+
+    /**
+     * {@code /f fixture standards} — plant a real flag for every seeded neighbour.
+     *
+     * <p>Separate from {@code seed} on purpose. Seeding is cheap and repeatable; this one edits the
+     * world, so it should be a thing somebody asked for rather than a side effect of asking for
+     * something else.</p>
+     */
+    private static int seedFixtureStandards(CommandContext<CommandSourceStack> ctx)
+            throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        List<String> report = FactionFixtures.standards(player);
+        Feedback.chat(player, Lang.fmt("msg.factions.fixtures_standards", "count", report.size()));
         for (String row : report) {
             Feedback.chat(player, Lang.fmt("msg.factions.fixtures_row", "row", row));
         }

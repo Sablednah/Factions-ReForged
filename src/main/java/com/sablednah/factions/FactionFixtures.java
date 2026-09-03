@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -60,18 +61,24 @@ public final class FactionFixtures {
         PEACEFUL
     }
 
-    private record Seed(String faction, String tag, String leader, Stance stance) {}
+    /**
+     * @param colour the banner they fly. 26.2 folded the sixteen banner blocks into one
+     *               {@code ColorCollection}, so the branch stores the dye and picks the block —
+     *               where 1.21.11 names {@code Blocks.RED_BANNER} directly.
+     */
+    private record Seed(String faction, String tag, String leader, Stance stance,
+            net.minecraft.world.item.DyeColor colour) {}
 
     private static final List<Seed> SEEDS = List.of(
-            new Seed("Ashfell", "ASH", "Corvin", Stance.HOSTILE),
-            new Seed("Marrowgate", "MAR", "Delya", Stance.HOSTILE),
-            new Seed("Thornhold", "THN", "Bracken", Stance.ALLY),
-            new Seed("Saltmere", "SLT", "Iva", Stance.OFFERS_YOU),
-            new Seed("Greyhollow", "GRY", "Ottoline", Stance.OFFERS_YOU),
-            new Seed("Quillrest", "QLL", "Fenner", Stance.AWAITS_YOU),
-            new Seed("Deepmarch", "DPM", "Rook", Stance.NEUTRAL),
-            new Seed("Lantern Vale", "LTV", "Sepha", Stance.PEACEFUL),
-            new Seed("Stillwater", "STW", "Mabry", Stance.PEACEFUL));
+            new Seed("Ashfell", "ASH", "Corvin", Stance.HOSTILE, net.minecraft.world.item.DyeColor.RED),
+            new Seed("Marrowgate", "MAR", "Delya", Stance.HOSTILE, net.minecraft.world.item.DyeColor.BLACK),
+            new Seed("Thornhold", "THN", "Bracken", Stance.ALLY, net.minecraft.world.item.DyeColor.LIME),
+            new Seed("Saltmere", "SLT", "Iva", Stance.OFFERS_YOU, net.minecraft.world.item.DyeColor.LIGHT_BLUE),
+            new Seed("Greyhollow", "GRY", "Ottoline", Stance.OFFERS_YOU, net.minecraft.world.item.DyeColor.GRAY),
+            new Seed("Quillrest", "QLL", "Fenner", Stance.AWAITS_YOU, net.minecraft.world.item.DyeColor.PURPLE),
+            new Seed("Deepmarch", "DPM", "Rook", Stance.NEUTRAL, net.minecraft.world.item.DyeColor.ORANGE),
+            new Seed("Lantern Vale", "LTV", "Sepha", Stance.PEACEFUL, net.minecraft.world.item.DyeColor.WHITE),
+            new Seed("Stillwater", "STW", "Mabry", Stance.PEACEFUL, net.minecraft.world.item.DyeColor.CYAN));
 
     /** Exactly how an offline-mode server derives a UUID from a name. */
     private static UUID offlineId(String name) {
@@ -134,6 +141,60 @@ public final class FactionFixtures {
             String stance = mine.map(m -> apply(store, id, m.id(), seed.stance()))
                     .orElse("no faction of yours to relate to");
             report.add(seed.faction() + " [" + seed.tag() + "] — " + took + " chunks, " + stance);
+        }
+        return report;
+    }
+
+    /**
+     * Give every fixture faction a real, planted, stealable standard.
+     *
+     * <p>Separate from {@link #seed} because it needs the world rather than only the store — and
+     * because it is the half a two-person test cannot fake. Testing that the power bonus is flat
+     * across several trophies needs several factions to take flags <em>from</em>, and inventing
+     * nine banners by hand is an evening.</p>
+     *
+     * <p>It plants a real banner block on their own claimed land and then calls the ordinary
+     * {@link FactionStandards#designate} — the same path a player walks. Nothing here has a private
+     * route into the store, so if designation has a bug the fixtures hit it too, which is the only
+     * way a fixture is worth having.</p>
+     */
+    public static List<String> standards(ServerPlayer player) {
+        ServerLevel level = player.level();
+        MinecraftServer server = level.getServer();
+        FactionStore store = FactionStore.get(server);
+        String dim = FactionBridge.dimensionOf(level);
+
+        List<String> report = new ArrayList<>();
+        for (Seed seed : SEEDS) {
+            Optional<FactionStore.Faction> f = store.lookup(seed.faction());
+            if (f.isEmpty()) {
+                continue; // not seeded; say nothing rather than nine lines of noise
+            }
+            if (store.hasStandard(f.get().id())) {
+                report.add(seed.faction() + ": already flying one");
+                continue;
+            }
+            List<ChunkPos> theirs = store.claimsOf(f.get().id(), dim);
+            if (theirs.isEmpty()) {
+                report.add(seed.faction() + ": no land in this dimension");
+                continue;
+            }
+            ChunkPos chunk = theirs.get(0);
+            // Force the chunk before asking about blocks. An unloaded chunk answers with defaults,
+            // so the heightmap would site the flag underground and designate() would refuse it for
+            // not seeing the sky — which reads as a bug in the sky rule.
+            level.getChunk(chunk.x(), chunk.z());
+            BlockPos ground = level.getHeightmapPos(
+                    net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                    chunk.getMiddleBlockPosition(level.getMinY()));
+            level.setBlockAndUpdate(ground,
+                    net.minecraft.world.level.block.Blocks.BANNER
+                            .pick(seed.colour()).defaultBlockState());
+            if (!FactionStandards.designate(player, level, ground, f.get())) {
+                report.add(seed.faction() + ": refused at " + ground.toShortString());
+                continue;
+            }
+            report.add(seed.faction() + " — flag at " + ground.toShortString());
         }
         return report;
     }
