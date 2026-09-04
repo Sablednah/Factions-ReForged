@@ -27,6 +27,10 @@ public final class FactionLang {
         Lang.contribute("msg.factions.created",
                 "{term.prefix} &7Founded &f{name}&7. {term.dim}(/f claim to take the land you are stood on)");
         Lang.contribute("msg.factions.name_taken", "&cSomething is already called &f{name}&c.");
+        Lang.contribute("msg.factions.name_length",
+                "&cA faction name must be between one and &f{max}&c characters.");
+        Lang.contribute("msg.factions.name_bad",
+                "&cThat name will not do. {term.dim}(no colour codes, no double or trailing spaces, and at least one letter or digit)");
         Lang.contribute("msg.factions.already_in_one",
                 "&cYou are already in a {term.faction} — leave it first.");
         Lang.contribute("msg.factions.they_are_in_one",
