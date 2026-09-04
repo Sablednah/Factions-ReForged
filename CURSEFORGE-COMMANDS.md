@@ -232,7 +232,10 @@ needs protecting is the one with nobody online. Peaceful factions neither raid n
 A cooldown stops the same attacker raiding the same target repeatedly. A raid never survives a
 server restart.
 
-`/f raids` (or a bare `/f raid`) lists what is running.
+`/f raids` (or a bare `/f raid`) lists what is running. **`/f raids top`** ranks factions by raids
+won — showing *taken* (won attacking) and *held* (won defending) separately, because a great raider
+and a faction nobody can crack are different achievements and one column hides that. `/f who`
+carries the same record once a faction has been in a raid.
 
 ### `/f bypass [on|off|toggle]` — server operator, or `factions.bypass`
 

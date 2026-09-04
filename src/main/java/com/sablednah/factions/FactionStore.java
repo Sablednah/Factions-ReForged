@@ -148,6 +148,38 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
      * <p>Stored for everyone, including players in no faction — they may join one tomorrow, and a
      * player who could wipe their losses by leaving for an afternoon would.</p>
      */
+    /**
+     * A faction's raid record, both sides of it.
+     *
+     * <p>Four numbers rather than won/lost, because <em>which end</em> a faction wins at is the
+     * interesting part: a great raider who cannot hold their own ground reads very differently
+     * from a fortress nobody can crack, and a single win column hides the difference entirely.</p>
+     *
+     * <p>Note {@code attacksWon} and the victim's {@code defencesLost} are the same event counted
+     * from each side, which is exactly why both are stored — a leaderboard wants to sort by either.
+     */
+    public record RaidRecord(String faction, int attacksWon, int attacksLost,
+            int defencesHeld, int defencesLost) {
+
+        static final Codec<RaidRecord> CODEC = RecordCodecBuilder.create(i -> i.group(
+                Codec.STRING.fieldOf("faction").forGetter(RaidRecord::faction),
+                Codec.INT.optionalFieldOf("attacksWon", 0).forGetter(RaidRecord::attacksWon),
+                Codec.INT.optionalFieldOf("attacksLost", 0).forGetter(RaidRecord::attacksLost),
+                Codec.INT.optionalFieldOf("defencesHeld", 0).forGetter(RaidRecord::defencesHeld),
+                Codec.INT.optionalFieldOf("defencesLost", 0).forGetter(RaidRecord::defencesLost))
+                .apply(i, RaidRecord::new));
+
+        /** Raids fought, either way round. The denominator for anything expressed as a rate. */
+        public int fought() {
+            return attacksWon + attacksLost + defencesHeld + defencesLost;
+        }
+
+        /** Raids come out in your favour, either way round. */
+        public int won() {
+            return attacksWon + defencesHeld;
+        }
+    }
+
     private record Power(UUID player, double power) {
         static final Codec<Power> CODEC = RecordCodecBuilder.create(i -> i.group(
                 UUIDUtil.STRING_CODEC.fieldOf("player").forGetter(Power::player),
@@ -188,7 +220,7 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
     }
 
     private record Snapshot(List<Faction> factions, List<Claim> claims, List<Bank> banks,
-            List<Power> power, List<Standard> standards) {
+            List<Power> power, List<Standard> standards, List<RaidRecord> raidRecords) {
         static final Codec<Snapshot> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Faction.CODEC.listOf().optionalFieldOf("factions", List.of()).forGetter(Snapshot::factions),
                 Claim.CODEC.listOf().optionalFieldOf("claims", List.of()).forGetter(Snapshot::claims),
@@ -198,7 +230,12 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
                 // with it.
                 Power.CODEC.listOf().optionalFieldOf("power", List.of()).forGetter(Snapshot::power),
                 Standard.CODEC.listOf().optionalFieldOf("standards", List.of())
-                        .forGetter(Snapshot::standards))
+                        .forGetter(Snapshot::standards),
+                // Optional and empty by default, like power above: a world saved before raids were
+                // tallied loads with everybody at nought rather than failing to decode and taking
+                // the factions down with it.
+                RaidRecord.CODEC.listOf().optionalFieldOf("raidRecords", List.of())
+                        .forGetter(Snapshot::raidRecords))
                 .apply(i, Snapshot::new));
     }
 
@@ -241,6 +278,9 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
     /** Flyer to the flags they have planted: at most one of their own, plus trophies. */
     private final Map<String, List<Standard>> standards = new LinkedHashMap<>();
 
+    /** faction id → its raid record. Absent means it has never been in one. */
+    private final Map<String, RaidRecord> raidRecords = new LinkedHashMap<>();
+
     private FactionStore(Snapshot snapshot) {
         snapshot.factions().forEach(f -> factions.put(f.id(), f));
         snapshot.claims().forEach(c -> claims.put(key(c.dimension(), c.x(), c.z()), c.faction()));
@@ -248,6 +288,7 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
         snapshot.power().forEach(row -> power.put(row.player(), row.power()));
         snapshot.standards().forEach(st -> standards
                 .computeIfAbsent(st.faction(), k -> new ArrayList<>()).add(st));
+        snapshot.raidRecords().forEach(r -> raidRecords.put(r.faction(), r));
     }
 
     private Snapshot snapshot() {
@@ -267,7 +308,7 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
         List<Standard> flags = new ArrayList<>();
         standards.values().forEach(flags::addAll);
         return new Snapshot(List.copyOf(factions.values()), out, money, powers,
-                List.copyOf(flags));
+                List.copyOf(flags), List.copyOf(raidRecords.values()));
     }
 
     public static FactionStore get(MinecraftServer server) {
@@ -418,6 +459,7 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
         // The bank too. Money in a disbanded faction's account is money nobody can ever reach,
         // and a recycled id inheriting it would be worse.
         banks.remove(id);
+        raidRecords.remove(id);
         // Power is NOT cleared: it belongs to the players, not to the faction they were in, and
         // disbanding to wipe your losses would be the first thing anybody tried.
         standards.remove(id);
@@ -648,6 +690,36 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
                 return;
             }
         }
+    }
+
+    /** This faction's raid record — all zeroes if it has never been in one. */
+    public RaidRecord raidRecord(String factionId) {
+        return raidRecords.getOrDefault(factionId, new RaidRecord(factionId, 0, 0, 0, 0));
+    }
+
+    /** Every faction that has ever been in a raid, for a leaderboard to sort as it likes. */
+    public List<RaidRecord> raidRecords() {
+        return List.copyOf(raidRecords.values());
+    }
+
+    /**
+     * Settle a finished raid into both sides' records.
+     *
+     * <p>One call rather than two, because the two halves are the same event and recording them
+     * apart is how they drift: any path that credited a win without debiting the corresponding
+     * loss would leave a leaderboard that does not add up, and nothing would report it.</p>
+     */
+    public void recordRaid(String attackerId, String defenderId, boolean attackerWon) {
+        RaidRecord a = raidRecord(attackerId);
+        raidRecords.put(attackerId, new RaidRecord(attackerId,
+                a.attacksWon() + (attackerWon ? 1 : 0), a.attacksLost() + (attackerWon ? 0 : 1),
+                a.defencesHeld(), a.defencesLost()));
+        RaidRecord d = raidRecord(defenderId);
+        raidRecords.put(defenderId, new RaidRecord(defenderId,
+                d.attacksWon(), d.attacksLost(),
+                d.defencesHeld() + (attackerWon ? 0 : 1),
+                d.defencesLost() + (attackerWon ? 1 : 0)));
+        setDirty();
     }
 
     // --- the bank ---
