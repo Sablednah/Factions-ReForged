@@ -3,7 +3,7 @@
 Three systems the 2012 plugin had that this one does not, designed together because they turn out
 to be one system wearing three coats.
 
-**Status: built. Power, the bank and the standard shipped in 1.1.0; `/f raid` (section 5) and multiple standards (section 6) were built 2026-09-02. Raids have been driven with two clients — the win conditions below are the result of that; the side glow and the restart case are still untested.** Power, the four land-control
+**Status: built and shipped in 1.3.0.** Power, the bank and the standard shipped in 1.1.0; `/f raid` (section 5) and multiple standards (section 6) followed on 2026-09-02, and were driven to completion with **three** clients on 2026-09-04 — all 39 checks in `TESTING.md`, including the side glow, the restart case and the flagless win. The win conditions below were rewritten twice as a result of playing them, which is the whole argument for playing them. Power, the four land-control
 modes, the faction bank's other half and the capturable standard are all in the game and were
 played through on 1.21.11, 26.1.2 and 26.2 — power draining on death, restoring with time and
 experience, `/f power` showing exposure, and overclaiming an over-extended neighbour.

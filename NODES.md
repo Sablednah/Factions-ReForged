@@ -1,6 +1,6 @@
 # Permissions and access
 
-**Status: accurate as of 1.2.0, and hand-written — unlike Standards' `NODES.md`, which is
+**Status: accurate as of 1.3.0, and hand-written — unlike Standards' `NODES.md`, which is
 generated.** The difference is the point of this document.
 
 ## Factions declares exactly one permission node
