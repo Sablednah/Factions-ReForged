@@ -59,6 +59,26 @@
   Only the name comes off; the colour and pattern they designed stay exactly as they are. A
   de-flagging, not a confiscation.
 
+- **Raid records, and `/f raids top`.** Every finished raid is tallied to both sides, and
+  `/f who` carries a faction's record once it has been in one.
+
+  **Four counters rather than won and lost**, because which *end* a faction wins at is the
+  interesting part: a great raider who cannot hold their own ground reads very differently from a
+  fortress nobody can crack, and a single win column hides the difference. The board shows `taken`
+  (won attacking) and `held` (won defending) beside the headline. A faction that has never been in
+  a raid is absent from it rather than sitting at the bottom on nought — a leaderboard of everybody
+  is just a list.
+
+- **Faction names with spaces are addressable at last.** `/f who Lantern Vale`, `/f raid
+  Lantern Vale` and the rest took `word()`, which accepts letters, digits and `_.+-` and nothing
+  else — so such a faction was not refused, it was **unparseable**, answering "Expected whitespace
+  to end one argument". The fourth time that trap has cost a feature across these two mods.
+
+  Terminal name arguments are greedy now. `/f money pay` cannot be, since an amount follows it, so
+  it takes `"Lantern Vale"` in quotes and the tab-complete supplies them. `create` and `rename`
+  gained the rules `word()` had been silently enforcing: 24 characters, no colour codes, no double
+  or trailing spaces, at least one letter or digit.
+
 - **A faction in two raids at once now sees the one ending soonest.** It can happen easily —
   attacking one target while somebody else attacks you — and there is a single action bar and a
   single glow colour between them. The old code took whichever raid the map yielded first, so the
