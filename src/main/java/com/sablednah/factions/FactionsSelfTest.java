@@ -24,11 +24,12 @@ public final class FactionsSelfTest {
         if (!Boolean.getBoolean("standards.selftest")) {
             return;
         }
-        new FactionsSelfTest().run();
+        new FactionsSelfTest().run(event.getServer());
     }
 
-    private void run() {
+    private void run(net.minecraft.server.MinecraftServer server) {
         Factions.LOGGER.info("=== Factions self-test ===");
+        checkNamesWithSpaces(server);
         checkEntitlement();
         checkOverreach();
         checkModes();
@@ -41,6 +42,54 @@ public final class FactionsSelfTest {
             Factions.LOGGER.error("=== Factions self-test FAILED ({} of {}) ===",
                     failed, passed + failed);
         }
+    }
+
+    /**
+     * That a faction name with a space in it can actually be <b>typed</b>.
+     *
+     * <p>This is the check that was missing, and its absence has now cost four features across the
+     * two mods. Every one of them tested the <em>logic</em> while nothing had ever managed to enter
+     * the input: {@code word()} accepts letters, digits and {@code _.+-} and nothing else, so
+     * "Lantern Vale" was not refused by any rule here — it was <b>unparseable</b>, and brigadier
+     * answered "Expected whitespace to end one argument", which names nothing and reads like the
+     * typist's fault.</p>
+     *
+     * <p>So it parses the real dispatcher rather than asking any of our own code a question. Both
+     * directions, because a tree that swallowed anything would pass every positive assertion: a
+     * name with a space must reach an executable node, and a bare {@code /f who} must not.</p>
+     */
+    private void checkNamesWithSpaces(net.minecraft.server.MinecraftServer server) {
+        com.mojang.brigadier.CommandDispatcher<net.minecraft.commands.CommandSourceStack> d =
+                server.getCommands().getDispatcher();
+        net.minecraft.commands.CommandSourceStack src = server.createCommandSourceStack();
+        check("a faction name with a space parses for /f who", executable(d, src, "f who Lantern Vale"));
+        check("...and for /f raid", executable(d, src, "f raid Lantern Vale"));
+        check("...and for /f ally", executable(d, src, "f ally Lantern Vale"));
+        check("...and for /f create", executable(d, src, "f create Lantern Vale"));
+        // The one that cannot be greedy, because an amount follows it. Quoted, and the
+        // tab-complete supplies the quotes.
+        check("a quoted name parses for /f bank pay",
+                executable(d, src, "f bank pay \"Lantern Vale\" 100"));
+        check("...and an unquoted single word still does",
+                executable(d, src, "f bank pay Ashfell 100"));
+        // Negative: a tree that matched anything would pass everything above.
+        check("a bare /f who is still not executable", !executable(d, src, "f who"));
+    }
+
+    /**
+     * Whether this input parses all the way to something that would run.
+     *
+     * <p>Parsing alone proves nothing — a partial parse with a dangling argument reports no
+     * exception. It has to have consumed the input AND landed on a node with a command on it.</p>
+     */
+    private boolean executable(
+            com.mojang.brigadier.CommandDispatcher<net.minecraft.commands.CommandSourceStack> d,
+            net.minecraft.commands.CommandSourceStack src, String input) {
+        com.mojang.brigadier.ParseResults<net.minecraft.commands.CommandSourceStack> parse =
+                d.parse(input, src);
+        return parse.getExceptions().isEmpty()
+                && !parse.getReader().canRead()
+                && parse.getContext().getLastChild().getCommand() != null;
     }
 
     /**
@@ -154,6 +203,20 @@ public final class FactionsSelfTest {
             FactionRaid.plantedStandard("drifter", "target");
             check("planting outside a raid records nothing",
                     !FactionRaid.hasPlanted("drifter"));
+
+            // Two raids at once — attacking one faction while another attacks you. There is one
+            // action bar and one glow colour between them, and taking whichever the map yielded
+            // first meant the second raid's clock never appeared at all.
+            FactionRaid.begin("busy", "slow_target", now, false);          // ends later
+            FactionRaid.begin("aggressor", "busy", now - 60_000L, false);  // ends sooner
+            check("a faction can be in two raids at once",
+                    FactionRaid.attacking("busy").isPresent()
+                            && FactionRaid.defending("busy").isPresent());
+            check("the soonest-ending one is the one reported",
+                    FactionRaid.active().stream()
+                            .filter(r -> r.involves("busy"))
+                            .min(java.util.Comparator.comparingLong(FactionRaid.Raid::endsAtMillis))
+                            .map(r -> r.attackerId().equals("aggressor")).orElse(false));
         } finally {
             FactionRaid.clear();
             check("the raid fixtures are gone", FactionRaid.active().isEmpty()

@@ -321,7 +321,18 @@ public final class FactionRaid {
         }
         String id = mine.get().id();
         synchronized (ACTIVE) {
-            return ACTIVE.values().stream().filter(r -> r.involves(id)).findFirst();
+            // The one ending SOONEST, not the first one the map happens to hold.
+            //
+            // A faction can be in two raids at once — attacking one target while somebody else
+            // attacks them — and there is one action bar and one glow colour between them. Taking
+            // whichever came out of the map first meant the other raid's clock simply never
+            // appeared, with nothing to say a second raid existed at all.
+            //
+            // Soonest-ending is the useful answer rather than merely a deterministic one: the raid
+            // about to resolve is the one worth being told about, and as each settles the next
+            // takes the bar.
+            return ACTIVE.values().stream().filter(r -> r.involves(id))
+                    .min(java.util.Comparator.comparingLong(Raid::endsAtMillis));
         }
     }
 

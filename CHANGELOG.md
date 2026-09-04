@@ -59,6 +59,11 @@
   Only the name comes off; the colour and pattern they designed stay exactly as they are. A
   de-flagging, not a confiscation.
 
+- **A faction in two raids at once now sees the one ending soonest.** It can happen easily —
+  attacking one target while somebody else attacks you — and there is a single action bar and a
+  single glow colour between them. The old code took whichever raid the map yielded first, so the
+  second one's clock never appeared and nothing said it existed.
+
 - **A ticking countdown on the action bar while a raid runs**, for everybody in it. The action bar
   rather than chat, for the reason Standards' teleport warmup uses it: chat would bury the fight
   under two hundred identical lines.
