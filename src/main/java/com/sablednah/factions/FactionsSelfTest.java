@@ -247,6 +247,22 @@ public final class FactionsSelfTest {
         check("a raider and a fortress can tie on the headline",
                 raider.won() == fortress.won() && raider.fought() == fortress.fought());
         check("...and still be told apart", raider.attacksWon() != fortress.attacksWon());
+
+        // The ORDER, not just the arithmetic. The first board shipped ascending — the faction that
+        // had won nothing sat at the top — because .reversed() written after each key reverses the
+        // composed comparator rather than the last one, undoing the first reversal. It reads
+        // correctly, compiles, and is backwards. Everything above passed while it was wrong,
+        // because all of it tested the numbers and none of it tested the sort.
+        java.util.List<FactionStore.RaidRecord> board = new java.util.ArrayList<>(java.util.List.of(
+                new FactionStore.RaidRecord("none", 0, 1, 0, 0),
+                new FactionStore.RaidRecord("best", 5, 0, 0, 0),
+                new FactionStore.RaidRecord("some", 2, 0, 0, 0)));
+        board.sort(java.util.Comparator
+                .comparingInt(FactionStore.RaidRecord::won)
+                .thenComparingInt(FactionStore.RaidRecord::fought)
+                .reversed());
+        check("the leaderboard puts the most wins first", board.get(0).faction().equals("best"));
+        check("...and the fewest last", board.get(2).faction().equals("none"));
     }
 
     /** A finished raid must not leave its standard-sighting behind for the next one. */
