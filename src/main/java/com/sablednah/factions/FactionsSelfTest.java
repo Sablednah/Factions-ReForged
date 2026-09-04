@@ -234,16 +234,16 @@ public final class FactionsSelfTest {
      * debited would produce a leaderboard that does not add up, and nothing anywhere would say so.
      */
     private void checkRaidRecords() {
-        FactionStore.RaidRecord fresh = new FactionStore.RaidRecord("a", 0, 0, 0, 0);
+        FactionStore.RaidRecord fresh = new FactionStore.RaidRecord("a", "A", 0, 0, 0, 0);
         check("a faction that has never raided has fought nothing", fresh.fought() == 0);
         check("...and won nothing", fresh.won() == 0);
 
-        FactionStore.RaidRecord raider = new FactionStore.RaidRecord("a", 3, 2, 1, 4);
+        FactionStore.RaidRecord raider = new FactionStore.RaidRecord("a", "A", 3, 2, 1, 4);
         check("fought counts both ends", raider.fought() == 10);
         check("won counts both ends", raider.won() == 4);
         // The distinction the four columns exist for: these two have identical won/fought and are
         // completely different factions to be next door to.
-        FactionStore.RaidRecord fortress = new FactionStore.RaidRecord("b", 0, 0, 4, 6);
+        FactionStore.RaidRecord fortress = new FactionStore.RaidRecord("b", "B", 0, 0, 4, 6);
         check("a raider and a fortress can tie on the headline",
                 raider.won() == fortress.won() && raider.fought() == fortress.fought());
         check("...and still be told apart", raider.attacksWon() != fortress.attacksWon());
@@ -254,9 +254,9 @@ public final class FactionsSelfTest {
         // correctly, compiles, and is backwards. Everything above passed while it was wrong,
         // because all of it tested the numbers and none of it tested the sort.
         java.util.List<FactionStore.RaidRecord> board = new java.util.ArrayList<>(java.util.List.of(
-                new FactionStore.RaidRecord("none", 0, 1, 0, 0),
-                new FactionStore.RaidRecord("best", 5, 0, 0, 0),
-                new FactionStore.RaidRecord("some", 2, 0, 0, 0)));
+                new FactionStore.RaidRecord("none", "None", 0, 1, 0, 0),
+                new FactionStore.RaidRecord("best", "Best", 5, 0, 0, 0),
+                new FactionStore.RaidRecord("some", "Some", 2, 0, 0, 0)));
         board.sort(java.util.Comparator
                 .comparingInt(FactionStore.RaidRecord::won)
                 .thenComparingInt(FactionStore.RaidRecord::fought)
