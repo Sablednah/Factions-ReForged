@@ -292,6 +292,23 @@ busy server is not frozen, but "declare a raid every ten minutes forever" is not
 **A raid never survives a restart.** It is a fight between people who are present; one that outlived
 a server bounce could expire while nobody was online to defend it.
 
+**Everybody in it gets a clock.** A countdown on the action bar, tightening as it runs — `4m 12s`,
+then `45s`, then a bare number in the last ten seconds — for every member of both factions, not
+just whoever is swinging. A defender knowing how long they must hold is exactly as useful as an
+attacker knowing how long they have left, and a raid whose end surprises one side is a raid that
+gets re-fought out of confusion. Bystanders get the announcements and no clock.
+
+**And it all goes on the board.** `/f raids top` ranks factions by raids won, and `/f who` carries a
+faction's record. Four numbers rather than won and lost, because *which end* you win at is the
+interesting part: **taken** counts raids won attacking, **held** counts raids won defending. A
+brilliant raider who cannot hold their own ground and a fortress nobody can crack are different
+achievements, and one column would hide the difference.
+
+A faction that has never raided is simply absent — a leaderboard of everybody is a list. A faction
+that has **disbanded** keeps its place, marked as gone, wearing the name it last had: the raids
+people fought against them still happened, and if disbanding erased your opponents' wins it would
+be the cheapest grief in the mod.
+
 ### Optionally, raids are what move land
 
 Off by default, so nothing changes on a server that updates. Turned on, **land only changes hands
