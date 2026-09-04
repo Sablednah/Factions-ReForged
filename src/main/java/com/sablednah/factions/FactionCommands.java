@@ -36,19 +36,17 @@ public final class FactionCommands {
         return Commands.literal(literal)
                 .executes(FactionCommands::mine)
                 .then(Commands.literal("create")
-                        .then(Commands.argument("name", StringArgumentType.word())
+                        .then(Commands.argument("name", StringArgumentType.greedyString())
                                 .executes(FactionCommands::create)))
                 .then(Commands.literal("disband").executes(FactionCommands::disband))
                 .then(Commands.literal("invite")
                         .then(Commands.argument("player", EntityArgument.player())
                                 .executes(FactionCommands::invite)))
                 .then(Commands.literal("join")
-                        .then(Commands.argument("faction", StringArgumentType.word())
-                                .suggests(FactionCommands::suggestFactions)
+                        .then(factionName()
                                 .executes(FactionCommands::join)))
                 .then(Commands.literal("request")
-                        .then(Commands.argument("faction", StringArgumentType.word())
-                                .suggests(FactionCommands::suggestFactions)
+                        .then(factionName()
                                 .executes(FactionCommands::request)))
                 .then(Commands.literal("requests").executes(FactionCommands::requests))
                 .then(Commands.literal("accept")
@@ -79,7 +77,7 @@ public final class FactionCommands {
                         .then(Commands.argument("tag", StringArgumentType.word())
                                 .executes(FactionCommands::tag)))
                 .then(Commands.literal("rename")
-                        .then(Commands.argument("name", StringArgumentType.word())
+                        .then(Commands.argument("name", StringArgumentType.greedyString())
                                 .executes(FactionCommands::rename)))
                 .then(Commands.literal("peaceful").executes(FactionCommands::peaceful))
                 .then(Commands.literal("raid")
@@ -88,8 +86,7 @@ public final class FactionCommands {
                         // Same lesson as Standards' bare /nick: a command that knows its own name
                         // should never answer 'unknown or incomplete'.
                         .executes(FactionCommands::raids)
-                        .then(Commands.argument("faction", StringArgumentType.word())
-                                .suggests(FactionCommands::suggestFactions)
+                        .then(factionName()
                                 .executes(FactionCommands::raid)))
                 .then(Commands.literal("raids")
                         .requires(src -> FactionsConfig.ENABLE_RAIDS.get())
@@ -99,8 +96,7 @@ public final class FactionCommands {
                 .then(relation("neutral", FactionStore.Relation.NEUTRAL))
                 .then(Commands.literal("list").executes(FactionCommands::list))
                 .then(Commands.literal("who")
-                        .then(Commands.argument("faction", StringArgumentType.word())
-                                .suggests(FactionCommands::suggestFactions)
+                        .then(factionName()
                                 .executes(ctx -> who(ctx,
                                         StringArgumentType.getString(ctx, "faction")))))
                 .then(Commands.literal("map")
@@ -152,8 +148,7 @@ public final class FactionCommands {
                                                         .doubleArg(0.01D))
                                         .executes(ctx -> moveMoney(ctx, false))))
                         .then(Commands.literal("pay")
-                                .then(Commands.argument("faction", StringArgumentType.word())
-                                        .suggests(FactionCommands::suggestFactions)
+                                .then(quotedName()
                                         .then(Commands.argument("amount",
                                                         com.mojang.brigadier.arguments
                                                                 .DoubleArgumentType.doubleArg(0.01D))
@@ -245,8 +240,7 @@ public final class FactionCommands {
     private static LiteralArgumentBuilder<CommandSourceStack> relation(
             String literal, FactionStore.Relation relation) {
         return Commands.literal(literal)
-                .then(Commands.argument("faction", StringArgumentType.word())
-                        .suggests(FactionCommands::suggestFactions)
+                .then(factionName()
                         .executes(ctx -> declare(ctx, relation)));
     }
 
@@ -255,6 +249,9 @@ public final class FactionCommands {
     private static int create(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         String name = StringArgumentType.getString(ctx, "name");
+        if (!nameIsSane(player, name)) {
+            return 0;
+        }
         Optional<FactionStore.Faction> made = store(ctx).create(name, player.getUUID());
         if (made.isEmpty()) {
             Feedback.chat(player, store(ctx).of(player.getUUID()).isPresent()
@@ -772,6 +769,9 @@ public final class FactionCommands {
     private static int rename(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         String name = StringArgumentType.getString(ctx, "name");
+        if (!nameIsSane(player, name)) {
+            return 0;
+        }
         Optional<FactionStore.Faction> f = atLeast(ctx, player, FactionStore.Rank.LEADER);
         if (f.isEmpty()) {
             return 0;
@@ -1589,11 +1589,82 @@ public final class FactionCommands {
         }
     }
 
+    /**
+     * A faction-name argument that can actually hold a faction name.
+     *
+     * <p><b>{@code word()} accepts letters, digits and {@code _.+-} and nothing else</b> — so a
+     * faction called "Lantern Vale" was unaddressable by every command that took one. Not refused:
+     * <em>unparseable</em>, answering "Expected whitespace to end one argument", which names
+     * nothing and reads like the typist's mistake. The same trap has now cost this pair four
+     * features (see Standards' {@code CLAUDE.md}); it is a rule, not an anecdote.</p>
+     *
+     * <p>Greedy, so it takes the rest of the line. That is only safe where the name is the
+     * <b>last</b> argument — {@code /f bank pay} has an amount after it and uses {@link #quotedName}
+     * instead.</p>
+     */
+    private static com.mojang.brigadier.builder.RequiredArgumentBuilder<CommandSourceStack, String>
+            factionName() {
+        return Commands.argument("faction", StringArgumentType.greedyString())
+                .suggests(FactionCommands::suggestFactions);
+    }
+
+    /**
+     * A faction name with something after it.
+     *
+     * <p>{@code string()} reads a bare word, or a quoted phrase when the input opens with a quote —
+     * so {@code /f bank pay Ashfell 100} is unchanged and {@code /f bank pay "Lantern Vale" 100}
+     * now works. Nobody types those quotes by hand, which is the usual objection; here they do not
+     * have to, because {@link #suggestQuotedFactions} puts them in.</p>
+     */
+    private static com.mojang.brigadier.builder.RequiredArgumentBuilder<CommandSourceStack, String>
+            quotedName() {
+        return Commands.argument("faction", StringArgumentType.string())
+                .suggests(FactionCommands::suggestQuotedFactions);
+    }
+
+    /** Longest a faction name may be. Long enough for a phrase, short enough for a chat prefix. */
+    private static final int MAX_NAME = 24;
+
+    /**
+     * Whether a name is one somebody may actually have, complaining if not.
+     *
+     * <p>Needed the moment the argument stopped being {@code word()}: brigadier used to reject a
+     * name with a space, a colour code or two hundred characters in it by refusing to parse, and
+     * nothing here had to think about it. Greedy takes the lot, so the rules move into code — where
+     * they belong anyway, because now the message can say <em>which</em> rule was broken.</p>
+     */
+    private static boolean nameIsSane(ServerPlayer player, String name) {
+        if (name.isBlank() || name.length() > MAX_NAME) {
+            Feedback.chat(player, Lang.fmt("msg.factions.name_length", "max", MAX_NAME));
+            return false;
+        }
+        // A name is printed on every chat line and every claim message. Codes in one would let a
+        // faction paint the rest of the line, or wear a colour it did not earn.
+        if (name.indexOf('&') >= 0 || name.indexOf('\u00a7') >= 0
+                || !name.equals(name.trim()) || name.contains("  ")
+                || name.chars().noneMatch(Character::isLetterOrDigit)) {
+            Feedback.chat(player, Lang.get("msg.factions.name_bad"));
+            return false;
+        }
+        return true;
+    }
+
     private static java.util.concurrent.CompletableFuture<com.mojang.brigadier.suggestion.Suggestions>
             suggestFactions(CommandContext<CommandSourceStack> ctx,
                     com.mojang.brigadier.suggestion.SuggestionsBuilder builder) {
         return SharedSuggestionProvider.suggest(
                 store(ctx).all().stream().map(FactionStore.Faction::name).toList(), builder);
+    }
+
+    /** The same names, quoted where they need to be, for the one argument that is not greedy. */
+    private static java.util.concurrent.CompletableFuture<com.mojang.brigadier.suggestion.Suggestions>
+            suggestQuotedFactions(CommandContext<CommandSourceStack> ctx,
+                    com.mojang.brigadier.suggestion.SuggestionsBuilder builder) {
+        return SharedSuggestionProvider.suggest(store(ctx).all().stream()
+                .map(FactionStore.Faction::name)
+                .map(n -> n.chars().allMatch(c -> Character.isLetterOrDigit(c)
+                        || "_.+-".indexOf(c) >= 0) ? n : '"' + n + '"')
+                .toList(), builder);
     }
 
     private FactionCommands() {}
