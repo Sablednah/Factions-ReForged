@@ -49,6 +49,7 @@ public final class FactionLang {
                 "{term.prefix} &6&lRAIDS&r &7— won, of fought. {term.dim}(taken = raids you won attacking; held = raids you won defending)");
         Lang.contribute("msg.factions.raid_top_row",
                 "  &7{place}. &f{name}&7 — &f{won}&7 of &f{fought}&7 {term.dim}(taken {taken}, held {held})");
+        Lang.contribute("msg.factions.raid_top_disbanded", "&8 (disbanded)");
         Lang.contribute("msg.factions.raid_top_none",
                 "&7Nobody has finished a raid yet. {term.dim}(the board fills itself the first time somebody tries)");
         Lang.contribute("msg.factions.who_raids",
