@@ -1614,9 +1614,14 @@ public final class FactionCommands {
         FactionStore store = store(ctx);
         List<FactionStore.RaidRecord> rows = store.raidRecords().stream()
                 .filter(r -> r.fought() > 0)
+                // Build the ascending order and reverse the WHOLE thing exactly once. Writing
+                // .reversed() after each key looks right and is not: the trailing call reverses
+                // the composed comparator, undoing the first reversal, and the board came out
+                // with the faction that had won nothing at the top.
                 .sorted(java.util.Comparator
-                        .comparingInt(FactionStore.RaidRecord::won).reversed()
-                        .thenComparingInt(FactionStore.RaidRecord::fought).reversed())
+                        .comparingInt(FactionStore.RaidRecord::won)
+                        .thenComparingInt(FactionStore.RaidRecord::fought)
+                        .reversed())
                 .limit(10)
                 .toList();
         if (rows.isEmpty()) {
