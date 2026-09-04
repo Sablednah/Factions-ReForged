@@ -36,6 +36,7 @@ public final class FactionsSelfTest {
         checkStandardColours();
         checkBypass();
         checkRaids();
+        checkRaidRecords();
         if (failed == 0) {
             Factions.LOGGER.info("=== Factions self-test PASSED ({} checks) ===", passed);
         } else {
@@ -68,10 +69,10 @@ public final class FactionsSelfTest {
         check("...and for /f create", executable(d, src, "f create Lantern Vale"));
         // The one that cannot be greedy, because an amount follows it. Quoted, and the
         // tab-complete supplies the quotes.
-        check("a quoted name parses for /f bank pay",
-                executable(d, src, "f bank pay \"Lantern Vale\" 100"));
+        check("a quoted name parses for /f money pay",
+                executable(d, src, "f money pay \"Lantern Vale\" 100"));
         check("...and an unquoted single word still does",
-                executable(d, src, "f bank pay Ashfell 100"));
+                executable(d, src, "f money pay Ashfell 100"));
         // Negative: a tree that matched anything would pass everything above.
         check("a bare /f who is still not executable", !executable(d, src, "f who"));
     }
@@ -222,6 +223,30 @@ public final class FactionsSelfTest {
             check("the raid fixtures are gone", FactionRaid.active().isEmpty()
                     && FactionRaid.cooldownLeft("a", "b", 1_000_000_000_000L) == 0);
         }
+    }
+
+    /**
+     * The raid tally, and above all that the two sides agree.
+     *
+     * <p>Pure arithmetic on a record, so it can be checked without a world. The property worth
+     * asserting is not that a win increments a counter — it is that <b>one raid moves exactly one
+     * number on each side</b>. A tally where a win were credited without the matching loss being
+     * debited would produce a leaderboard that does not add up, and nothing anywhere would say so.
+     */
+    private void checkRaidRecords() {
+        FactionStore.RaidRecord fresh = new FactionStore.RaidRecord("a", 0, 0, 0, 0);
+        check("a faction that has never raided has fought nothing", fresh.fought() == 0);
+        check("...and won nothing", fresh.won() == 0);
+
+        FactionStore.RaidRecord raider = new FactionStore.RaidRecord("a", 3, 2, 1, 4);
+        check("fought counts both ends", raider.fought() == 10);
+        check("won counts both ends", raider.won() == 4);
+        // The distinction the four columns exist for: these two have identical won/fought and are
+        // completely different factions to be next door to.
+        FactionStore.RaidRecord fortress = new FactionStore.RaidRecord("b", 0, 0, 4, 6);
+        check("a raider and a fortress can tie on the headline",
+                raider.won() == fortress.won() && raider.fought() == fortress.fought());
+        check("...and still be told apart", raider.attacksWon() != fortress.attacksWon());
     }
 
     /** A finished raid must not leave its standard-sighting behind for the next one. */

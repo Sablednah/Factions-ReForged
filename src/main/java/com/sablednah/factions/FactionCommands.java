@@ -86,6 +86,7 @@ public final class FactionCommands {
                         // Same lesson as Standards' bare /nick: a command that knows its own name
                         // should never answer 'unknown or incomplete'.
                         .executes(FactionCommands::raids)
+                        .then(Commands.literal("top").executes(FactionCommands::raidTop))
                         .then(factionName()
                                 .executes(FactionCommands::raid)))
                 .then(Commands.literal("raids")
@@ -1155,6 +1156,14 @@ public final class FactionCommands {
                 "land", store(ctx).claimCount(f.id()),
                 "count", f.members().size(),
                 "members", members));
+        // Only once they have actually been in one. A row of noughts on every faction says
+        // nothing and pushes the members list further down the screen.
+        FactionStore.RaidRecord raids = store(ctx).raidRecord(f.id());
+        if (raids.fought() > 0) {
+            Feedback.chat(viewer, Lang.fmt("msg.factions.who_raids",
+                    "won", raids.won(), "fought", raids.fought(),
+                    "taken", raids.attacksWon(), "held", raids.defencesHeld()));
+        }
         return 1;
     }
 
@@ -1587,6 +1596,45 @@ public final class FactionCommands {
                 Feedback.chat(online, message);
             }
         }
+    }
+
+    /**
+     * {@code /f raids top} — who is actually winning them.
+     *
+     * <p>Ranked by raids <b>won</b>, either end, and a faction that has never been in one is simply
+     * absent rather than sitting at the bottom on nought: a leaderboard of everybody is a list, and
+     * the interesting property is that appearing on it at all means you turned up.</p>
+     *
+     * <p>Both columns are shown because they answer different questions. A faction can be top by
+     * raiding constantly and top by never losing their ground, and flattening those into one number
+     * would hide the more interesting of the two.</p>
+     */
+    private static int raidTop(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        FactionStore store = store(ctx);
+        List<FactionStore.RaidRecord> rows = store.raidRecords().stream()
+                .filter(r -> r.fought() > 0)
+                .sorted(java.util.Comparator
+                        .comparingInt(FactionStore.RaidRecord::won).reversed()
+                        .thenComparingInt(FactionStore.RaidRecord::fought).reversed())
+                .limit(10)
+                .toList();
+        if (rows.isEmpty()) {
+            Feedback.chat(player, Lang.get("msg.factions.raid_top_none"));
+            return 0;
+        }
+        Feedback.chat(player, Lang.get("msg.factions.raid_top_header"));
+        int place = 0;
+        for (FactionStore.RaidRecord r : rows) {
+            place++;
+            Feedback.chat(player, Lang.fmt("msg.factions.raid_top_row",
+                    "place", place,
+                    "name", store.byId(r.faction()).map(FactionStore.Faction::name)
+                            .orElse(r.faction()),
+                    "won", r.won(), "fought", r.fought(),
+                    "taken", r.attacksWon(), "held", r.defencesHeld()));
+        }
+        return rows.size();
     }
 
     /**

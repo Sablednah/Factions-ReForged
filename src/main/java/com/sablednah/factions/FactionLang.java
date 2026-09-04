@@ -45,6 +45,14 @@ public final class FactionLang {
         Lang.contribute("msg.factions.raid_bar", "&6&lRAID&r &f{time}");
         Lang.contribute("msg.factions.raid_bar_urgent", "&c&lRAID&r &c&l{time}");
         Lang.contribute("msg.factions.raid_bar_over", "&8&lRAID OVER");
+        Lang.contribute("msg.factions.raid_top_header",
+                "{term.prefix} &6&lRAIDS&r &7— won, of fought. {term.dim}(taken = raids you won attacking; held = raids you won defending)");
+        Lang.contribute("msg.factions.raid_top_row",
+                "  &7{place}. &f{name}&7 — &f{won}&7 of &f{fought}&7 {term.dim}(taken {taken}, held {held})");
+        Lang.contribute("msg.factions.raid_top_none",
+                "&7Nobody has finished a raid yet. {term.dim}(the board fills itself the first time somebody tries)");
+        Lang.contribute("msg.factions.who_raids",
+                "&7Raids: &f{won}&7 won of &f{fought}&7 {term.dim}(taken {taken}, held {held})");
         Lang.contribute("msg.factions.raid_over_planted",
                 "&6&l⚔ &r&f{attacker}&6 has planted &f{defender}&6's standard on their own ground. The raid is won.");
         Lang.contribute("msg.factions.raid_over_land",

@@ -166,6 +166,11 @@ public final class FactionRaidEvents {
         // the countdown would otherwise simply stop mid-number.
         OVER_UNTIL.put(raid.attackerId(), now + 3_000L);
         OVER_UNTIL.put(raid.defenderId(), now + 3_000L);
+        // Both sides, from the one outcome. HELD and ATTACKERS_GONE are defender wins; the two
+        // ways of taking something are attacker wins.
+        store.recordRaid(raid.attackerId(), raid.defenderId(),
+                outcome == FactionRaid.Outcome.STANDARD_PLANTED
+                        || outcome == FactionRaid.Outcome.LAND_TAKEN);
         String attacker = store.byId(raid.attackerId())
                 .map(FactionStore.Faction::name).orElse("?");
         String defender = store.byId(raid.defenderId())
