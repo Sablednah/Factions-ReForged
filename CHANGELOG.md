@@ -62,6 +62,12 @@
 - **Raid records, and `/f raids top`.** Every finished raid is tallied to both sides, and
   `/f who` carries a faction's record once it has been in one.
 
+  A **disbanded** faction keeps its place, marked `(disbanded)` and wearing the name it last had.
+  Deleting the row was the obvious thing and it was wrong twice over: everybody else's wins against
+  them still count — erasing those would make disbanding the cheapest grief in the mod — so a
+  deleted row leaves a board that visibly does not add up, and on a small server you can see there
+  was a raid with no trace of who it was against.
+
   **Four counters rather than won and lost**, because which *end* a faction wins at is the
   interesting part: a great raider who cannot hold their own ground reads very differently from a
   fortress nobody can crack, and a single win column hides the difference. The board shows `taken`

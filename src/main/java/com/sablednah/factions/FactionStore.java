@@ -158,11 +158,15 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
      * <p>Note {@code attacksWon} and the victim's {@code defencesLost} are the same event counted
      * from each side, which is exactly why both are stored — a leaderboard wants to sort by either.
      */
-    public record RaidRecord(String faction, int attacksWon, int attacksLost,
+    public record RaidRecord(String faction, String name, int attacksWon, int attacksLost,
             int defencesHeld, int defencesLost) {
 
         static final Codec<RaidRecord> CODEC = RecordCodecBuilder.create(i -> i.group(
                 Codec.STRING.fieldOf("faction").forGetter(RaidRecord::faction),
+                // The name is remembered HERE rather than looked up, because the row outlives the
+                // faction: a disbanded one must still be nameable on the board it earned a place
+                // on. Refreshed on every raid, so a rename is picked up.
+                Codec.STRING.optionalFieldOf("name", "").forGetter(RaidRecord::name),
                 Codec.INT.optionalFieldOf("attacksWon", 0).forGetter(RaidRecord::attacksWon),
                 Codec.INT.optionalFieldOf("attacksLost", 0).forGetter(RaidRecord::attacksLost),
                 Codec.INT.optionalFieldOf("defencesHeld", 0).forGetter(RaidRecord::defencesHeld),
@@ -458,7 +462,18 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
         // The bank too. Money in a disbanded faction's account is money nobody can ever reach,
         // and a recycled id inheriting it would be worse.
         banks.remove(id);
-        raidRecords.remove(id);
+        // The raid record STAYS, unlike the bank. Two reasons, and the second was found by
+        // reading a real board:
+        //
+        //  - erasing it would erase everybody else's wins along with it, or leave them counting
+        //    raids against a faction nobody can see. If disbanding scrubbed your opponents'
+        //    records it would be the cheapest grief in the mod — the same call already made for
+        //    power below;
+        //  - and deleting only THIS row leaves a board that visibly does not add up. On a big
+        //    server nobody would notice; on a small one you can see there was a third raid and no
+        //    trace of it, which is exactly what happened the first time somebody disbanded.
+        //
+        // So the row survives, wearing the name it last had, and the board marks it as gone.
         // Power is NOT cleared: it belongs to the players, not to the faction they were in, and
         // disbanding to wipe your losses would be the first thing anybody tried.
         standards.remove(id);
@@ -693,7 +708,8 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
 
     /** This faction's raid record — all zeroes if it has never been in one. */
     public RaidRecord raidRecord(String factionId) {
-        return raidRecords.getOrDefault(factionId, new RaidRecord(factionId, 0, 0, 0, 0));
+        return raidRecords.getOrDefault(factionId, new RaidRecord(factionId,
+                byId(factionId).map(Faction::name).orElse(""), 0, 0, 0, 0));
     }
 
     /** Every faction that has ever been in a raid, for a leaderboard to sort as it likes. */
@@ -710,15 +726,25 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
      */
     public void recordRaid(String attackerId, String defenderId, boolean attackerWon) {
         RaidRecord a = raidRecord(attackerId);
-        raidRecords.put(attackerId, new RaidRecord(attackerId,
+        raidRecords.put(attackerId, new RaidRecord(attackerId, nameOf(attackerId, a),
                 a.attacksWon() + (attackerWon ? 1 : 0), a.attacksLost() + (attackerWon ? 0 : 1),
                 a.defencesHeld(), a.defencesLost()));
         RaidRecord d = raidRecord(defenderId);
-        raidRecords.put(defenderId, new RaidRecord(defenderId,
+        raidRecords.put(defenderId, new RaidRecord(defenderId, nameOf(defenderId, d),
                 d.attacksWon(), d.attacksLost(),
                 d.defencesHeld() + (attackerWon ? 0 : 1),
                 d.defencesLost() + (attackerWon ? 1 : 0)));
         setDirty();
+    }
+
+    /** Their name now if they still exist, otherwise whatever the row last remembered. */
+    private String nameOf(String factionId, RaidRecord existing) {
+        return byId(factionId).map(Faction::name).orElse(existing.name());
+    }
+
+    /** Whether this row belongs to a faction that no longer exists. */
+    public boolean isDisbanded(RaidRecord record) {
+        return byId(record.faction()).isEmpty();
     }
 
     // --- the bank ---

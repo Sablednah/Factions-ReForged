@@ -1632,10 +1632,15 @@ public final class FactionCommands {
         int place = 0;
         for (FactionStore.RaidRecord r : rows) {
             place++;
+            // A disbanded faction keeps its place and is said to be gone. Dropping the row
+            // instead leaves a board that visibly does not add up on a small server — you can
+            // see there was another raid and no trace of who it was against.
+            boolean gone = store.isDisbanded(r);
+            String shown = store.byId(r.faction()).map(FactionStore.Faction::name)
+                    .orElseGet(() -> r.name().isEmpty() ? r.faction() : r.name());
             Feedback.chat(player, Lang.fmt("msg.factions.raid_top_row",
                     "place", place,
-                    "name", store.byId(r.faction()).map(FactionStore.Faction::name)
-                            .orElse(r.faction()),
+                    "name", shown + (gone ? Lang.get("msg.factions.raid_top_disbanded") : ""),
                     "won", r.won(), "fought", r.fought(),
                     "taken", r.attacksWon(), "held", r.defencesHeld()));
         }
