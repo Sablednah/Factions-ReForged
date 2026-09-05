@@ -29,6 +29,17 @@ territory you can read the shape of.
 the outline stays one pixel wide at every level. `/f map` on its own gives the classic chat grid,
 for when you have no hands free.
 
+**Or the same claims washed over the real landscape.** `/f map item terrain` draws the rivers,
+forest and coastline underneath, so you can see where a border actually falls rather than which
+abstract square it is in.
+
+It is deliberately close in — 256 blocks across — and that is not a preference. Claims are known
+from the store whether or not the world is loaded, which is exactly why the atlas above can be
+complete; terrain is not, and drawing it at one chunk per pixel would mean **generating** sixteen
+thousand chunks and handing you a map of country nobody has walked. So the survey reads only what
+is already in memory. Two maps answering two questions: who owns this region, and where exactly is
+that line relative to the river.
+
 ## Borders you can walk
 
 Not a grid. **Each side of a chunk is drawn only where ownership actually changes**, so interior

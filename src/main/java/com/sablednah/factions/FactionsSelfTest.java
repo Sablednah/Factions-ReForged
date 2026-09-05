@@ -37,6 +37,7 @@ public final class FactionsSelfTest {
         checkBypass();
         checkRaids();
         checkRaidRecords();
+        checkMapPalette();
         if (failed == 0) {
             Factions.LOGGER.info("=== Factions self-test PASSED ({} checks) ===", passed);
         } else {
@@ -222,6 +223,45 @@ public final class FactionsSelfTest {
             FactionRaid.clear();
             check("the raid fixtures are gone", FactionRaid.active().isEmpty()
                     && FactionRaid.cooldownLeft("a", "b", 1_000_000_000_000L) == 0);
+        }
+    }
+
+    /**
+     * The terrain map's colour arithmetic.
+     *
+     * <p>A map pixel is an index into 64 colours by four brightnesses, not an RGB value, so the
+     * "wash" of claim colour over terrain is done in software and then snapped to whatever the
+     * palette can actually say. Both halves are pure and worth pinning down, because a fault in
+     * either produces a picture that is merely <em>wrong</em> rather than broken — the kind
+     * nothing reports.</p>
+     */
+    private void checkMapPalette() {
+        int black = 0xFF000000;
+        int white = 0xFFFFFFFF;
+        check("mixing none of the second colour leaves the first",
+                FactionMap.mix(black, white, 0) == black);
+        check("mixing all of it gives the second", FactionMap.mix(black, white, 100) == white);
+        int half = FactionMap.mix(black, white, 50) & 0xFF;
+        check("half lands halfway", half > 120 && half < 136);
+        check("the mix stays opaque", (FactionMap.mix(black, white, 50) >>> 24) == 0xFF);
+
+        // The strong property: a colour the palette already holds must come back as itself. If
+        // the snap cannot round-trip an exact entry it will not be close on anything else.
+        for (net.minecraft.world.level.material.MapColor c : new net.minecraft.world.level.material.MapColor[] {
+                net.minecraft.world.level.material.MapColor.GRASS,
+                net.minecraft.world.level.material.MapColor.WATER,
+                net.minecraft.world.level.material.MapColor.COLOR_RED,
+                net.minecraft.world.level.material.MapColor.STONE }) {
+            for (net.minecraft.world.level.material.MapColor.Brightness b
+                    : net.minecraft.world.level.material.MapColor.Brightness.values()) {
+                check("the palette round-trips " + c.id + "/" + b.id,
+                        FactionMap.nearest(c.calculateARGBColor(b)) == c.getPackedId(b));
+            }
+        }
+        // NONE renders as a hole. It must never be the answer to anything.
+        for (int rgb : new int[] {black, white, 0xFF7F7F7F, 0xFF204080, 0xFF80FF20}) {
+            check("the snap never answers NONE for " + Integer.toHexString(rgb),
+                    ((FactionMap.nearest(rgb) & 0xFF) >> 2) != 0);
         }
     }
 

@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **`/f map item terrain` — claims washed over the real landscape.** Rivers, forest and coastline
+  underneath the colours, so you can see where a border actually falls rather than which abstract
+  square it is in.
+
+  **Close in on purpose, and it is a constraint rather than a preference.** The existing atlas is
+  one chunk per pixel and therefore spans 16,384 chunks; it can be complete because claims come from
+  the store whether or not the world is loaded. Terrain does not, and drawing it at that size would
+  mean *generating* sixteen thousand chunks — a server stall, a lot of disk, and a free map of
+  country nobody has walked. So the survey is 256 blocks across, reads only chunks already in
+  memory, and falls back to flat claim colour where the world is not loaded.
+
+  A map pixel is an index into 64 colours by four brightnesses rather than an RGB value, so there is
+  no transparency to be had: the wash is mixed in software and snapped to the nearest colour the
+  palette can say. Relief shading is vanilla's own north-slope comparison, without which the ground
+  reads as flat blobs; borders are drawn as *more tint* rather than more brightness, which would
+  fight that shading.
+
+  The existing `/f map item` is untouched — its completeness is the whole point of it.
+
 ## 1.3.0 — 2026-09-04
 
 ### Added
