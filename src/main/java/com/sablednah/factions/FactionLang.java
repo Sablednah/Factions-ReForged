@@ -333,6 +333,9 @@ public final class FactionLang {
         Lang.contribute("msg.factions.map_legend",
                 "{term.dim}  &a# yours  &b# allied  &c# hostile  &f# other  &8- wilderness  &e+ you");
         Lang.contribute("msg.factions.map_title", "&bClaims Atlas");
+        Lang.contribute("msg.factions.map_title_terrain", "&bClaims Survey");
+        Lang.contribute("msg.factions.map_given_terrain",
+                "{term.prefix} &7A survey of the &f{blocks}&7 blocks around you, with claims washed over the ground. {term.dim}(only land already loaded is drawn — walk it and make another)");
         Lang.contribute("msg.factions.map_given",
                 "{term.prefix} &7An atlas of the land around you. {term.dim}({chunks} chunks across)");
         Lang.contribute("msg.factions.map_failed", "&cCould not draw the atlas.");

@@ -131,6 +131,23 @@ outline stays one pixel wide at every level. `map.pixelsPerChunk` sets the defau
 The map is **locked**, the way a cartography table locks one, so vanilla does not slowly repaint it
 with terrain as you carry it.
 
+### `/f map item terrain [zoom]`
+
+The same claims, **washed over the real landscape** — rivers, forest, coastline — so you can see
+where a border actually falls rather than which abstract square it is in.
+
+Close in by default: two blocks a pixel, 256 blocks across. That is not a preference, it is what
+makes it possible. The atlas above is one chunk per pixel and therefore spans 16,384 chunks; claims
+are known from the store whether or not the world is loaded, but terrain is not, and drawing it at
+that size would mean **generating** sixteen thousand chunks. So the survey reads only chunks already
+in memory, and land that is not loaded falls back to flat claim colour. Walk somewhere and take
+another.
+
+A map pixel is an index into 64 colours by four brightnesses, not an RGB value, so there is no
+transparency to be had — the wash is mixed in software and snapped to the nearest colour the palette
+can say.
+
+
 ### `/f borders`
 
 Show the outline of nearby claims in particles. **Or just hold a compass** — pick the tool up, see
