@@ -101,15 +101,27 @@ public final class FactionCommands {
                                 .executes(ctx -> who(ctx,
                                         StringArgumentType.getString(ctx, "faction")))))
                 .then(Commands.literal("map")
-                        .executes(ctx -> map(ctx, false, 0))
+                        .executes(ctx -> map(ctx, false, 0, false))
                         .then(Commands.literal("item")
-                                .executes(ctx -> map(ctx, true, 0))
+                                .executes(ctx -> map(ctx, true, 0, false))
+                                // The terrain map is its own literal rather than a flag on zoom,
+                                // because it is a different map: close in, real landscape, and only
+                                // as complete as the chunks already loaded around you.
+                                .then(Commands.literal("terrain")
+                                        .executes(ctx -> map(ctx, true, 0, true))
+                                        .then(Commands.argument("zoom",
+                                                        com.mojang.brigadier.arguments
+                                                                .IntegerArgumentType.integer(4, 16))
+                                                .executes(ctx -> map(ctx, true,
+                                                        com.mojang.brigadier.arguments
+                                                                .IntegerArgumentType
+                                                                .getInteger(ctx, "zoom"), true))))
                                 .then(Commands.argument("zoom",
                                                 com.mojang.brigadier.arguments.IntegerArgumentType
                                                         .integer(1, 8))
                                         .executes(ctx -> map(ctx, true,
                                                 com.mojang.brigadier.arguments.IntegerArgumentType
-                                                        .getInteger(ctx, "zoom"))))))
+                                                        .getInteger(ctx, "zoom"), false)))))
                 .then(Commands.literal("chat")
                         .executes(ctx -> chat(ctx, null))
                         .then(Commands.literal("public").executes(ctx -> chat(ctx, FactionChat.Channel.PUBLIC)))
@@ -1190,8 +1202,8 @@ public final class FactionCommands {
      *             than a literal because "how far in" is a quantity, and because the useful
      *             values are decided by the size of the factions on the server rather than by us.
      */
-    private static int map(CommandContext<CommandSourceStack> ctx, boolean asItem, int zoom)
-            throws CommandSyntaxException {
+    private static int map(CommandContext<CommandSourceStack> ctx, boolean asItem, int zoom,
+            boolean terrain) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         ServerLevel level = player.level();
         if (!asItem) {
@@ -1201,9 +1213,13 @@ public final class FactionCommands {
             Feedback.chat(player, Lang.get("msg.factions.map_legend"));
             return 1;
         }
-        int ppc = zoom > 0 ? zoom : FactionsConfig.MAP_PIXELS_PER_CHUNK.get();
+        // The terrain map defaults far closer in. Eight pixels a chunk is two blocks a pixel, so
+        // the whole picture is 256 blocks across — inside any view distance, which is what lets it
+        // read real ground without loading a single chunk.
+        int ppc = zoom > 0 ? zoom
+                : terrain ? 8 : FactionsConfig.MAP_PIXELS_PER_CHUNK.get();
         Optional<net.minecraft.world.item.ItemStack> atlas =
-                FactionMap.create(player, level, ppc);
+                FactionMap.create(player, level, ppc, terrain);
         if (atlas.isEmpty()) {
             Feedback.chat(player, Lang.get("msg.factions.map_failed"));
             return 0;
@@ -1213,8 +1229,10 @@ public final class FactionCommands {
         }
         // Says what it is showing, because two atlases in a chest look identical and the whole
         // point of asking for a zoom is that you wanted a different one.
-        Feedback.chat(player, Lang.fmt("msg.factions.map_given",
-                "chunks", 128 / Integer.highestOneBit(Math.min(8, ppc))));
+        Feedback.chat(player, Lang.fmt(terrain
+                        ? "msg.factions.map_given_terrain" : "msg.factions.map_given",
+                "chunks", 128 / Integer.highestOneBit(Math.min(16, ppc)),
+                "blocks", 128 * (16 / Integer.highestOneBit(Math.min(16, ppc)))));
         return 1;
     }
 
