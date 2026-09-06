@@ -30,6 +30,7 @@ Requires **[SableCraft Standards](../SableCraft-Standards)**, and not optionally
 /f unclaimall                 release the lot
 /f sethome | home             on your own land, with Standards' warmup and safe landing
 /f map [item [zoom]]          see below
+/f map item terrain [zoom]    the same, over real ground
 /f borders                    show the edges
 
   who you are, and to whom
@@ -76,6 +77,12 @@ outlined territory you can read the shape of.
 
 An unmodded client renders all of this. The server owns the pixels and sends them; there is no
 client mod, no resource pack and no rendering code.
+
+`/f map item terrain` washes the claims over the **real landscape** instead of a flat field. It is
+close in — 256 blocks — and that is a constraint rather than a taste: claims are known from the
+store whether or not the world is loaded, which is why the atlas can be complete, but terrain is
+not. Drawing it at one chunk per pixel would mean generating 16,384 chunks. So the survey reads only
+what is already in memory and falls back to flat claim colour elsewhere.
 
 `/f map item <zoom>` trades coverage for detail in exact steps, because a pixel covers
 `1 << scale` blocks and there is nothing in between: **2** pixels per chunk shows 64 chunks, **4**
