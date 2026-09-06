@@ -25,16 +25,25 @@ import net.minecraft.server.level.ServerPlayer;
  * nobody was online to defend, which is a defeat nobody was there for. The same reasoning ends a
  * raid when every attacker logs off.</p>
  *
- * <h2>Three ways out, and only one of them is the clock</h2>
+ * <h2>Four ways out, and only one of them is the clock</h2>
  *
  * <ul>
- * <li><b>The standard is taken</b> — the attackers win. The flag already existed and already had a
- *     carrier glow; making it the objective is what turns a raid from a period of time into
- *     something with a point.</li>
+ * <li><b>Their standard is taken <em>and planted on your own land</em></b> — the attackers win.
+ *     Taking it is one lucky sprint; the walk home through the people whose flag it is has always
+ *     been the good part, and an earlier version that ended the raid at the moment of theft
+ *     deleted exactly that half. So the raid runs on after the theft and the attackers can go for
+ *     land as well.</li>
+ * <li><b>Ground is taken from a faction flying no standard</b> — the attackers win. That raid was
+ *     otherwise literally unwinnable, found by playing it; the one-claim-per-raid limit means it
+ *     costs them a single chunk. It switches off the instant they raise a flag.</li>
  * <li><b>Every attacker is dead or gone</b> — the defenders win. "We repelled them" has to be a
  *     real outcome or defending is just waiting.</li>
  * <li><b>The timer expires</b> — the defenders held. A backstop, not the mechanism.</li>
  * </ul>
+ *
+ * <p>Both win conditions were rewritten after the feature shipped, by playing it. The reasoning is
+ * in {@code POWER.md} §5; this list is the summary and has been wrong once already, so keep them
+ * together.</p>
  */
 public final class FactionRaid {
 
