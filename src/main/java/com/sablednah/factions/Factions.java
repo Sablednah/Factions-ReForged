@@ -49,6 +49,8 @@ public final class Factions {
             // the file on this very start rather than the next one.
             FactionLang.contribute();
             LOGGER.info("Factions ReForged: strings contributed to the Standards catalogue");
+            // After the strings, so a button's tooltip key exists by the time anything reads it.
+            FactionActions.registerAll();
         }));
 
         NeoForge.EVENT_BUS.register(FactionsEvents.class);

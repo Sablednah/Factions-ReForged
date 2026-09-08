@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- **Four buttons on Standards' action bar**: faction home, claim, auto-claim and the map. Auto-claim
+  is a *state* rather than an act, so the bar lights it while it is running — which is the whole
+  reason it is worth a button rather than a command you have to remember you left on.
+
+  Each is offered only when it would do something: home appears only with a home set, and the rest
+  only to somebody in a faction. A bar full of buttons that can only answer "you are not in a
+  faction" is worse than a bar with nothing on it.
+
+  Registered through Standards' public seam from this repository, which is the only real evidence
+  that seam works for somebody who did not write it. Guarded against a Standards too old to have it,
+  so losing four buttons cannot cost anyone the mod.
+
 ## 1.4.0 — 2026-09-06
 
 ### Added
