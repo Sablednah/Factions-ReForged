@@ -60,12 +60,19 @@ public final class FactionActions {
                 FactionActions::inFaction,
                 FactionAutoClaim::isOn));
 
+        // The panel. Its command prints the same facts for a client that cannot draw, so this is
+        // a nicer surface rather than a second capability.
+        Actions.register(new Action("factions:panel", 61,
+                Identifier.withDefaultNamespace("writable_book"), "msg.factions.action_panel",
+                "f panel",
+                FactionActions::inFaction));
+
         Actions.register(new Action("factions:map", 57,
                 Identifier.withDefaultNamespace("filled_map"), "msg.factions.action_map",
                 "f map",
                 p -> true));
 
-        Factions.LOGGER.info("Factions: registered 4 action bar buttons");
+        Factions.LOGGER.info("Factions: registered 5 action bar buttons");
     }
 
     private static boolean inFaction(ServerPlayer player) {
