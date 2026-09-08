@@ -1,7 +1,7 @@
 package com.sablednah.factions.client;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -41,7 +41,7 @@ public final class FactionPanelScreen extends Screen {
     /** Called when the payload lands — the answer arriving is what opens the screen. */
     public static void openWith(FactionPanelPayload payload) {
         Minecraft.getInstance().execute(() ->
-                Minecraft.getInstance().setScreen(new FactionPanelScreen(payload)));
+                Minecraft.getInstance().setScreenAndShow(new FactionPanelScreen(payload)));
     }
 
     @Override
@@ -103,16 +103,20 @@ public final class FactionPanelScreen extends Screen {
         onClose();
     }
 
+    // 26.x reworked GUI rendering: a Screen's render(..) is extractRenderState(..), GuiGraphics is
+    // GuiGraphicsExtractor, drawString is text and drawCenteredString is centeredText. See
+    // Standards' CROSS-VERSION.md — the client half is where these lines actually diverge.
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partial) {
-        super.render(graphics, mouseX, mouseY, partial);
+    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY,
+            float partial) {
+        super.extractRenderState(graphics, mouseX, mouseY, partial);
         int left = (width - WIDTH) / 2;
         int y = 12;
 
         String title = data.name()
                 + (data.tag().isEmpty() ? "" : " [" + data.tag() + "]")
                 + (data.peaceful() ? " (peaceful)" : "");
-        graphics.drawCenteredString(font, title, width / 2, y, 0xFFFFFF);
+        graphics.centeredText(font, title, width / 2, y, 0xFFFFFF);
 
         y = 58;
         switch (tab) {
@@ -149,18 +153,18 @@ public final class FactionPanelScreen extends Screen {
                     }
                     // Online state as colour rather than as a word: a column of "(online)" would
                     // cost more width than it earns, and green reads without being read.
-                    graphics.drawString(font, member.name(), left, y,
+                    graphics.text(font, member.name(), left, y,
                             member.online() ? 0xFF55FF55 : 0xFF888888);
-                    graphics.drawString(font, member.rank(), left + 110, y, 0xFFAAAAAA);
+                    graphics.text(font, member.rank(), left + 110, y, 0xFFAAAAAA);
                     y += ROW + 6;
                 }
             }
         }
     }
 
-    private void line(GuiGraphics graphics, int left, int y, String label, String value) {
-        graphics.drawString(font, label, left, y, 0xFFAAAAAA);
-        graphics.drawString(font, value, left + 90, y, 0xFFFFFFFF);
+    private void line(GuiGraphicsExtractor graphics, int left, int y, String label, String value) {
+        graphics.text(font, label, left, y, 0xFFAAAAAA);
+        graphics.text(font, value, left + 90, y, 0xFFFFFFFF);
     }
 
     /** Whole numbers without a trailing .0, which reads as noise on a bank balance. */
