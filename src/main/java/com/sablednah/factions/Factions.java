@@ -44,6 +44,8 @@ public final class Factions {
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.COMMON,
                 FactionsConfig.SPEC);
 
+        modEventBus.addListener(FactionsNetwork::register);
+
         modEventBus.addListener((FMLCommonSetupEvent event) -> event.enqueueWork(() -> {
             // Before Standards writes messages.yml at ServerAboutToStartEvent, so these appear in
             // the file on this very start rather than the next one.

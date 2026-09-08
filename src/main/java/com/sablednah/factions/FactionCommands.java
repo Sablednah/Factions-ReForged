@@ -178,6 +178,7 @@ public final class FactionCommands {
                                 .executes(ctx -> power(ctx,
                                         StringArgumentType.getString(ctx, "player")))))
                 .then(Commands.literal("status").executes(FactionCommands::status))
+                .then(Commands.literal("panel").executes(FactionCommands::panel))
                 .then(fixtures())
                 .then(Commands.literal("borders").executes(FactionCommands::borders));
     }
@@ -1351,6 +1352,88 @@ public final class FactionCommands {
                             ? "msg.factions.standard_state_flying"
                             : "msg.factions.standard_state_covered")));
         }
+    }
+
+    /**
+     * {@code /f panel} — the whole picture at once.
+     *
+     * <p>On a client with the mod it sends the data and a screen opens. On any other client it
+     * prints the same facts as text. <b>Not a fallback being polite about</b>: the text version is
+     * the interface, and the screen is a nicer surface for identical answers. Nothing on the panel
+     * can be learned only by having the panel.</p>
+     */
+    private static int panel(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        FactionStore store = store(ctx);
+        Optional<FactionStore.Faction> mine = store.of(player.getUUID());
+        if (mine.isEmpty()) {
+            Feedback.chat(player, Lang.get("msg.factions.not_in_one"));
+            return 0;
+        }
+        FactionStore.Faction f = mine.get();
+        MinecraftServer server = ctx.getSource().getServer();
+        var names = com.sablednah.standards.neoforge.StandardsData.get(server);
+
+        List<FactionPanelPayload.Member> members = new java.util.ArrayList<>();
+        // memberIds + rankOf rather than reaching for the private Member record: the store keeps
+        // that internal on purpose, and the two public accessors say the same thing.
+        for (UUID id : f.memberIds()) {
+            members.add(new FactionPanelPayload.Member(
+                    names.nameOf(id).orElse("?"),
+                    f.rankOf(id).key(),
+                    server.getPlayerList().getPlayer(id) != null));
+        }
+        var record = store.raidRecord(f.id());
+        FactionPanelPayload payload = new FactionPanelPayload(
+                f.name(), f.tag(), f.peaceful(),
+                store.powerOf(f),
+                FactionsConfig.POWER_MAX.get() * f.members().size(),
+                store.claimCount(f.id()),
+                FactionPower.entitlement(f.members().size(), store.powerOf(f),
+                        FactionsConfig.POWER_MAX.get(),
+                        FactionsConfig.CLAIM_LIMIT_PER_MEMBER.get()),
+                store.balanceOf(f.id()),
+                Lang.get(FactionPowerEvents.standardState(server, store, f.id())),
+                store.capturedStandards(f.id()).size(),
+                record.won(), record.fought(),
+                f.allies().stream().map(id -> store.byId(id)
+                        .map(FactionStore.Faction::name).orElse(id)).toList(),
+                f.enemies().stream().map(id -> store.byId(id)
+                        .map(FactionStore.Faction::name).orElse(id)).toList(),
+                members,
+                f.rankOf(player.getUUID()).key());
+
+        // sendIfAble: a vanilla client never negotiated the channel, and sending anyway would kick
+        // them. If they are not listening they get the text below instead, which is the point.
+        if (com.sablednah.standards.neoforge.Net.listening(player, FactionPanelPayload.TYPE)) {
+            com.sablednah.standards.neoforge.Net.sendIfAble(player, payload);
+            return 1;
+        }
+        return describeAsText(player, payload);
+    }
+
+    /** The same facts, for a client that cannot draw them. */
+    private static int describeAsText(ServerPlayer player, FactionPanelPayload d) {
+        Feedback.chat(player, Lang.fmt("msg.factions.panel_header",
+                "name", d.name(), "tag", d.tag().isEmpty() ? "-" : d.tag()));
+        Feedback.chat(player, Lang.fmt("msg.factions.panel_power",
+                "power", FactionPowerEvents.trim(d.power()),
+                "max", FactionPowerEvents.trim(d.maxPower()),
+                "claims", d.claims(), "entitled", d.entitlement()));
+        Feedback.chat(player, Lang.fmt("msg.factions.panel_bank",
+                "bank", FactionPowerEvents.trim(d.bank()), "standard", d.standardState()));
+        if (d.raidsFought() > 0) {
+            Feedback.chat(player, Lang.fmt("msg.factions.panel_raids",
+                    "won", d.raidsWon(), "fought", d.raidsFought()));
+        }
+        Feedback.chat(player, Lang.fmt("msg.factions.panel_relations",
+                "allies", d.allies().isEmpty() ? "-" : String.join(", ", d.allies()),
+                "enemies", d.enemies().isEmpty() ? "-" : String.join(", ", d.enemies())));
+        Feedback.chat(player, Lang.fmt("msg.factions.panel_members",
+                "members", d.members().stream()
+                        .map(m -> m.name() + " (" + m.rank() + ")")
+                        .reduce((a, b) -> a + ", " + b).orElse("-")));
+        return 1;
     }
 
     /** {@code /f power [player]} — yours, or theirs, and what it entitles your faction to. */
