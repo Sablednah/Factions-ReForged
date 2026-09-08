@@ -4,7 +4,20 @@
 
 ### Added
 
-- **Four buttons on Standards' action bar**: faction home, claim, auto-claim and the map. Auto-claim
+- **`/f panel` — the faction at a glance**, and a real screen for it on a modded client: power,
+  land against entitlement, bank, standard, raid record, relations, and the member list with
+  promote/demote/kick.
+
+  **The command is the interface and the screen is the surface.** `/f panel` prints the same facts
+  as text for anybody who cannot draw them — so the two paths are the *same command*, differing only
+  in whether the client was listening for a richer answer. There is no serverbound payload and no
+  second code path: every button on the panel sends a command too, so the rank checks that already
+  guard `/f kick` apply unchanged.
+
+  Promote, demote and kick are drawn only for a leader or officer. A button that always answers
+  "you may not" teaches a player to ignore buttons.
+
+- **Five buttons on Standards' action bar**: faction home, claim, auto-claim and the map. Auto-claim
   is a *state* rather than an act, so the bar lights it while it is running — which is the whole
   reason it is worth a button rather than a command you have to remember you left on.
 
