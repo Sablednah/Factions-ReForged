@@ -5,7 +5,7 @@ import java.util.List;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 
 import com.sablednah.factions.FactionPanelPayload;
@@ -171,7 +171,7 @@ public final class FactionPanel implements InventoryPanel {
     }
 
     @Override
-    public void render(GuiGraphics graphics, Font font,
+    public void render(GuiGraphicsExtractor graphics, Font font,
             int x, int y, int width, int height, int mouseX, int mouseY) {
         HOTSPOTS.clear();
         tooltip = null;
@@ -181,13 +181,14 @@ public final class FactionPanel implements InventoryPanel {
 
         FactionPanelPayload data = FactionPanelData.latest();
         if (data == null) {
-            graphics.drawString(font, "Asking the server\u2026", x + PAD, y + PAD, DIM);
+            graphics.text(font, "Asking the server\u2026", x + PAD, y + PAD, DIM);
             return;
         }
         if (data.isNone()) {
             none(graphics, font, x, y, width, mouseX, mouseY);
             if (tooltip != null) {
-                graphics.setTooltipForNextFrame(font, Component.literal(tooltip), mouseX, mouseY);
+                // 26.x dropped the Font argument: the tooltip renderer takes the component alone.
+            graphics.setTooltipForNextFrame(Component.literal(tooltip), mouseX, mouseY);
             }
             return;
         }
@@ -199,7 +200,7 @@ public final class FactionPanel implements InventoryPanel {
         // or a leader's name would clip where a member's did not.
         int pencils = mayEdit ? MARK * 2 + 2 : 0;
         String title = data.name() + (data.tag().isEmpty() ? "" : " [" + data.tag() + "]");
-        graphics.drawString(font, clip(font, title, width - PAD * 2 - pencils), x + PAD, line,
+        graphics.text(font, clip(font, title, width - PAD * 2 - pencils), x + PAD, line,
                 VALUE);
         if (mayEdit) {
             int px = x + width - PAD - MARK * 2 - 2;
@@ -210,7 +211,7 @@ public final class FactionPanel implements InventoryPanel {
         }
         line += ROW + 2;
         if (data.peaceful()) {
-            graphics.drawString(font, "peaceful", x + PAD, line, 0xFF77DDFF);
+            graphics.text(font, "peaceful", x + PAD, line, 0xFF77DDFF);
             line += ROW;
         }
 
@@ -225,7 +226,8 @@ public final class FactionPanel implements InventoryPanel {
                     mouseX, mouseY);
         }
         if (tooltip != null) {
-            graphics.setTooltipForNextFrame(font, Component.literal(tooltip), mouseX, mouseY);
+            // 26.x dropped the Font argument: the tooltip renderer takes the component alone.
+            graphics.setTooltipForNextFrame(Component.literal(tooltip), mouseX, mouseY);
         }
     }
 
@@ -291,10 +293,10 @@ public final class FactionPanel implements InventoryPanel {
      * membership. A button withheld from the player who most needs it is a feature that only ever
      * reaches people who already have it.</p>
      */
-    private static void none(GuiGraphics graphics, Font font, int x, int y, int width,
+    private static void none(GuiGraphicsExtractor graphics, Font font, int x, int y, int width,
             int mouseX, int mouseY) {
         int line = y + PAD;
-        graphics.drawString(font, "No faction", x + PAD, line, VALUE);
+        graphics.text(font, "No faction", x + PAD, line, VALUE);
         line += ROW + 4;
         // What it is for, before what to press. Two short lines rather than a paragraph: this is a
         // pane, and anybody who wanted the manual would have typed /f help.
@@ -302,7 +304,7 @@ public final class FactionPanel implements InventoryPanel {
                 "Claim land nobody can build in,",
                 "pool money, and hold a standard",
                 "that pays you back in power." }) {
-            graphics.drawString(font, pitch, x + PAD, line, DIM);
+            graphics.text(font, pitch, x + PAD, line, DIM);
             line += ROW;
         }
         line += 6;
@@ -318,7 +320,7 @@ public final class FactionPanel implements InventoryPanel {
      * <p>Hand-drawn like everything else here — see the class note. A vanilla {@code Button} would
      * bring its own 20-pixel minimum height and its own idea of where it is.</p>
      */
-    private static int wide(GuiGraphics graphics, Font font, int x, int y, int width,
+    private static int wide(GuiGraphicsExtractor graphics, Font font, int x, int y, int width,
             int mouseX, int mouseY, String label, String tip, Runnable action) {
         int x0 = x + PAD;
         int x1 = x + width - PAD;
@@ -327,7 +329,7 @@ public final class FactionPanel implements InventoryPanel {
         graphics.fill(x0, y, x1, y + h, hover ? 0xFF4A3A6A : 0xFF2A2A32);
         graphics.fill(x0, y, x1, y + 1, hover ? 0xFF9A7AD0 : 0xFF4A4A55);
         graphics.fill(x0, y + h - 1, x1, y + h, hover ? 0xFF9A7AD0 : 0xFF4A4A55);
-        graphics.drawString(font, label, x0 + (x1 - x0 - font.width(label)) / 2, y + 5,
+        graphics.text(font, label, x0 + (x1 - x0 - font.width(label)) / 2, y + 5,
                 hover ? 0xFFFFFFFF : 0xFFDDDDDD);
         if (hover) {
             tooltip = tip;
@@ -352,7 +354,7 @@ public final class FactionPanel implements InventoryPanel {
     }
 
     /** The Overview / Relations / Members chips. */
-    private static int tabs(GuiGraphics graphics, Font font, int x, int y, int width) {
+    private static int tabs(GuiGraphicsExtractor graphics, Font font, int x, int y, int width) {
         String[] names = {"Overview", "Relations", "Members"};
         Tab[] values = Tab.values();
         int chip = (width - PAD * 2) / names.length;
@@ -361,7 +363,7 @@ public final class FactionPanel implements InventoryPanel {
             boolean on = tab == values[i];
             graphics.fill(cx, y, cx + chip - 2, y + TAB_H, on ? 0xFF3A2A5A : 0xFF1A1A22);
             graphics.fill(cx, y + TAB_H - 1, cx + chip - 2, y + TAB_H, on ? 0xFF9A7AD0 : 0xFF2A2A32);
-            graphics.drawString(font, names[i],
+            graphics.text(font, names[i],
                     cx + (chip - 2 - font.width(names[i])) / 2, y + 3, on ? VALUE : DIM);
             final Tab which = values[i];
             HOTSPOTS.add(new Hot(cx, y, cx + chip - 2, y + TAB_H, () -> {
@@ -372,7 +374,7 @@ public final class FactionPanel implements InventoryPanel {
         return y + TAB_H + 4;
     }
 
-    private static void overview(GuiGraphics graphics, Font font, FactionPanelPayload d,
+    private static void overview(GuiGraphicsExtractor graphics, Font font, FactionPanelPayload d,
             int x, int y, int width) {
         y = row(graphics, font, x, y, width, "Power", trim(d.power()) + " / " + trim(d.maxPower()));
         y = row(graphics, font, x, y, width, "Land", d.claims() + " of " + d.entitlement());
@@ -391,30 +393,30 @@ public final class FactionPanel implements InventoryPanel {
         }
     }
 
-    private static void relations(GuiGraphics graphics, Font font, FactionPanelPayload d,
+    private static void relations(GuiGraphicsExtractor graphics, Font font, FactionPanelPayload d,
             int x, int y, int bottom, int width) {
-        graphics.drawString(font, "Allies", x + PAD, y, LABEL);
+        graphics.text(font, "Allies", x + PAD, y, LABEL);
         y += ROW;
         y = names(graphics, font, d.allies(), x, y, bottom, width, 0xFF77DD77);
         y += 4;
         if (y + ROW <= bottom) {
-            graphics.drawString(font, "Enemies", x + PAD, y, LABEL);
+            graphics.text(font, "Enemies", x + PAD, y, LABEL);
             y += ROW;
             names(graphics, font, d.enemies(), x, y, bottom, width, 0xFFDD7777);
         }
     }
 
-    private static int names(GuiGraphics graphics, Font font, List<String> list,
+    private static int names(GuiGraphicsExtractor graphics, Font font, List<String> list,
             int x, int y, int bottom, int width, int colour) {
         if (list.isEmpty()) {
-            graphics.drawString(font, "  none", x + PAD, y, DIM);
+            graphics.text(font, "  none", x + PAD, y, DIM);
             return y + ROW;
         }
         for (String name : list) {
             if (y + ROW > bottom) {
                 return y;
             }
-            graphics.drawString(font, "  " + clip(font, name, width - PAD * 2 - 8), x + PAD, y,
+            graphics.text(font, "  " + clip(font, name, width - PAD * 2 - 8), x + PAD, y,
                     colour);
             y += ROW;
         }
@@ -428,7 +430,7 @@ public final class FactionPanel implements InventoryPanel {
      * "you may not" teaches a player to ignore buttons. The server checks again regardless — this
      * decides what to <em>show</em>, exactly as the action bar's capability set does.</p>
      */
-    private static void members(GuiGraphics graphics, Font font, FactionPanelPayload d,
+    private static void members(GuiGraphicsExtractor graphics, Font font, FactionPanelPayload d,
             int x, int y, int bottom, int width, int mouseX, int mouseY) {
         boolean mayManage = d.yourRank().equalsIgnoreCase("leader")
                 || d.yourRank().equalsIgnoreCase("officer");
@@ -452,14 +454,14 @@ public final class FactionPanel implements InventoryPanel {
             FactionPanelPayload.Member member = all.get(i);
             // Online state as colour rather than as a word: a column of "(online)" would cost more
             // width than it earns, and green reads without being read.
-            graphics.drawString(font, clip(font, member.name(), nameWidth), x + PAD, y + 2,
+            graphics.text(font, clip(font, member.name(), nameWidth), x + PAD, y + 2,
                     member.online() ? ONLINE : DIM);
             // Only the ranks worth marking. "member" on eighteen of twenty rows is a column that
             // says nothing and costs the width a long name needed — and an initial (M/O/L) is
             // cheaper still and has to be learned. Blank means member.
             String rank = shortRank(member.rank());
             if (!rank.isEmpty()) {
-                graphics.drawString(font, rank, x + PAD + nameWidth + 4, y + 2, LABEL);
+                graphics.text(font, rank, x + PAD + nameWidth + 4, y + 2, LABEL);
             }
             if (mayManage) {
                 final String who = member.name();
@@ -487,7 +489,7 @@ public final class FactionPanel implements InventoryPanel {
      * <p>Drawn only when there is something to scroll, though its strip is always reserved: an
      * empty track is furniture that means nothing.</p>
      */
-    private static void scrollbar(GuiGraphics graphics, int barX, int top, int bottom,
+    private static void scrollbar(GuiGraphicsExtractor graphics, int barX, int top, int bottom,
             int total, int visible, int maxScroll, int mouseX, int mouseY) {
         // mouseX/mouseY are for the hover highlight only — the click and drag use their own.
         if (maxScroll <= 0) {
@@ -533,7 +535,7 @@ public final class FactionPanel implements InventoryPanel {
      * {@code ✕} beside somebody's name is a button nobody should have to press to find out about.
      * Lit while hovered, so it is visibly a button before it is clicked.</p>
      */
-    private static void mark(GuiGraphics graphics, Font font, int x, int y,
+    private static void mark(GuiGraphicsExtractor graphics, Font font, int x, int y,
             int mouseX, int mouseY, String glyph, String tip, Runnable action) {
         boolean hover = mouseX >= x && mouseX < x + MARK && mouseY >= y && mouseY < y + MARK;
         graphics.fill(x, y, x + MARK, y + MARK, hover ? 0xFF4A3A6A : 0xFF2A2A32);
@@ -541,7 +543,7 @@ public final class FactionPanel implements InventoryPanel {
         graphics.fill(x, y + MARK - 1, x + MARK, y + MARK, hover ? 0xFF9A7AD0 : 0xFF4A4A55);
         // 0xFFFFFFFF, not 0xFFFFFF. drawString takes ARGB, so a bare RGB has an alpha of zero and
         // renders as a dark smudge — the same trap the action bar's child labels fell into.
-        graphics.drawString(font, glyph, x + (MARK - font.width(glyph)) / 2 + 1, y + 2,
+        graphics.text(font, glyph, x + (MARK - font.width(glyph)) / 2 + 1, y + 2,
                 hover ? 0xFFFFFFFF : 0xFFDDDDDD);
         if (hover) {
             tooltip = tip;
@@ -558,10 +560,10 @@ public final class FactionPanel implements InventoryPanel {
         };
     }
 
-    private static int row(GuiGraphics graphics, Font font, int x, int y, int width,
+    private static int row(GuiGraphicsExtractor graphics, Font font, int x, int y, int width,
             String label, String value) {
-        graphics.drawString(font, label, x + PAD, y, LABEL);
-        graphics.drawString(font, clip(font, value, width - PAD - 72), x + PAD + 66, y, VALUE);
+        graphics.text(font, label, x + PAD, y, LABEL);
+        graphics.text(font, clip(font, value, width - PAD - 72), x + PAD + 66, y, VALUE);
         return y + ROW;
     }
 
