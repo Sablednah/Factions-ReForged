@@ -66,6 +66,14 @@ public final class FactionPanel implements InventoryPanel {
     public static final String ID = "factions:panel";
 
     private static final int WANT_WIDTH = 168;
+    /**
+     * Vanilla's inventory height, as the floor for our own.
+     *
+     * <p>A number rather than a lookup because a panel is deliberately not told what it is sitting
+     * beside — it is handed a rectangle and nothing else. Worth the hardcoding: a pane shorter than
+     * the inventory reads as one that failed to load.</p>
+     */
+    private static final int INVENTORY_HEIGHT = 166;
     private static final int PAD = 6;
     private static final int ROW = 12;
     private static final int TAB_H = 14;
@@ -137,6 +145,42 @@ public final class FactionPanel implements InventoryPanel {
     }
 
     /**
+     * As tall as the tab needs, and never shorter than the inventory beside it.
+     *
+     * <p>The members tab is the reason. Twenty members at twelve pixels is 240, and clamping that
+     * to the inventory's 166 meant scrolling a list that had room to be shown — on any window
+     * bigger than a laptop's, the pane was short because the inventory is, which is not a reason.</p>
+     *
+     * <p>The floor is vanilla's inventory height, written as a number because a panel is not told
+     * what it is sitting beside. A pane shorter than the inventory looks like it failed to load
+     * rather than like it had little to say.</p>
+     *
+     * <p>⚠ Recomputed on every call, and the host calls it every frame — switching tabs changes the
+     * answer, and so does gaining a member. That is the contract, not an optimisation to remove.</p>
+     */
+    @Override
+    public int preferredHeight() {
+        FactionPanelPayload d = FactionPanelData.latest();
+        if (d == null) {
+            return INVENTORY_HEIGHT;
+        }
+        int h = PAD * 2 + ROW + 2 + TAB_H + 4;
+        if (!d.isNone() && d.peaceful()) {
+            h += ROW;
+        }
+        h += switch (tab) {
+            case OVERVIEW -> ROW * (5
+                    + (d.claims() > d.entitlement() ? 1 : 0)
+                    + (d.trophies() > 0 ? 1 : 0)
+                    + (d.raidsFought() > 0 ? 1 : 0));
+            case RELATIONS -> ROW * (2 + Math.max(1, d.allies().size())
+                    + Math.max(1, d.enemies().size())) + 4;
+            case MEMBERS -> ROW * Math.max(1, d.members().size());
+        };
+        return Math.max(INVENTORY_HEIGHT, h);
+    }
+
+    /**
      * Ask the server for a fresh answer, every time the pane is shown.
      *
      * <p>The same {@code f panel} a vanilla client sends. The reply lands in
@@ -186,10 +230,6 @@ public final class FactionPanel implements InventoryPanel {
         }
         if (data.isNone()) {
             none(graphics, font, x, y, width, mouseX, mouseY);
-            if (tooltip != null) {
-                // 26.x dropped the Font argument: the tooltip renderer takes the component alone.
-            graphics.setTooltipForNextFrame(Component.literal(tooltip), mouseX, mouseY);
-            }
             return;
         }
 
@@ -225,6 +265,21 @@ public final class FactionPanel implements InventoryPanel {
             case MEMBERS -> members(graphics, font, data, x, line, bodyBottom, width,
                     mouseX, mouseY);
         }
+    }
+
+    /**
+     * The tooltip, drawn after everything rather than where it was asked for.
+     *
+     * <p>It was at the end of {@link #render}, which worked — but only because vanilla defers
+     * tooltips to the end of the frame anyway. Moving it here means it no longer depends on that:
+     * the host calls this after the pane, after its frame and after anything else it draws, which
+     * is the guarantee LegendQuest needs for a tooltip it renders immediately rather than queues.
+     *
+     * <p>It also gives that callback a consumer before LegendQuest relies on it. A seam method
+     * nobody has ever run is the bug family this repo keeps a section about.</p>
+     */
+    @Override
+    public void renderOverlay(GuiGraphics graphics, Font font, int mouseX, int mouseY) {
         if (tooltip != null) {
             // 26.x dropped the Font argument: the tooltip renderer takes the component alone.
             graphics.setTooltipForNextFrame(Component.literal(tooltip), mouseX, mouseY);
