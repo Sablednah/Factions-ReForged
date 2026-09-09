@@ -6,13 +6,12 @@ import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.client.event.ScreenEvent;
 
 import com.sablednah.factions.FactionPanelPayload;
+import com.sablednah.standards.client.ClientCapabilities;
+import com.sablednah.standards.client.panels.InventoryPanel;
+import com.sablednah.standards.client.panels.Panels;
 
 /**
  * The faction sheet, drawn <b>on</b> the inventory screen rather than instead of it.
@@ -26,15 +25,17 @@ import com.sablednah.factions.FactionPanelPayload;
  * for this one to match it: the button <b>toggles</b> the pane, and pressing it again puts it
  * away.</p>
  *
- * <h2>It opens on the RIGHT, and that is deliberate</h2>
+ * <h2>Standards decides where it goes</h2>
  *
- * <p>The left of the inventory is crowded — vanilla's recipe book, LegendQuest's character and
- * skills panes, and every bauble/curio mod ever written all slide out there, and the action bar
- * already lost a fight for that space and moved underneath. So this goes right, where nothing else
- * is, and it does not touch {@code leftPos}: the inventory does not move, so nothing else that
- * moves it has to be negotiated with. If the window is too narrow for a pane on the right it is
- * drawn overlapping rather than off-screen, because half a pane you can still read beats a pane
- * that is not there.</p>
+ * <p>It went right for one afternoon and landed on two things at once: vanilla's potion effects,
+ * which render at exactly {@code leftPos + imageWidth + 2}, and JEI, whose tooltips went on firing
+ * underneath it because nothing had told JEI it was there. Both were this mod being reasonable on
+ * its own and having no way to see anybody else.</p>
+ *
+ * <p>So the position is not ours any more. This registers with {@code Panels} and is handed a
+ * rectangle: Standards owns the margin, draws the frame, arbitrates one-pane-at-a-time, and stands
+ * the pane down when the recipe book or a LegendQuest pane takes the space. What is left here is
+ * the only part that was ever Factions' business — what a faction panel says.</p>
  *
  * <h2>Everything is drawn by hand</h2>
  *
@@ -56,18 +57,21 @@ import com.sablednah.factions.FactionPanelPayload;
  * and {@code ClientLang} exists to say why: the client cannot reach the server's catalogue, and a
  * second catalogue beside it would drift. Don't start one here.</p>
  */
-public final class FactionPanel {
+public final class FactionPanel implements InventoryPanel {
 
-    private static final int WIDTH = 168;
-    private static final int GAP = 4;
+    /** The one instance, because there is one faction panel and Standards holds it by reference. */
+    public static final FactionPanel INSTANCE = new FactionPanel();
+
+    /** Standards' id for this pane, and the action id that toggles it — deliberately the same. */
+    public static final String ID = "factions:panel";
+
+    private static final int WANT_WIDTH = 168;
     private static final int PAD = 6;
     private static final int ROW = 12;
     private static final int TAB_H = 14;
     /** The little square buttons on a member row — exactly one row tall, see the class note. */
     private static final int MARK = ROW;
 
-    private static final int BG = 0xF0100010;
-    private static final int EDGE = 0xFF3A2A5A;
     private static final int LABEL = 0xFFAAAAAA;
     private static final int VALUE = 0xFFFFFFFF;
     private static final int DIM = 0xFF888888;
@@ -75,14 +79,13 @@ public final class FactionPanel {
 
     private enum Tab { OVERVIEW, RELATIONS, MEMBERS }
 
-    private static boolean open;
     private static Tab tab = Tab.OVERVIEW;
     private static int scroll;
 
     /**
      * Click targets, rebuilt every frame.
      *
-     * <p>Immediate mode: the panel draws itself and records where it drew, and the click handler
+     * <p>Immediate mode: the pane draws itself and records where it drew, and the click handler
      * reads that. The alternative — laying out in one place and hit-testing from another — is two
      * copies of the same arithmetic that drift the first time either is edited, and the symptom is
      * a button that works everywhere except where it is drawn.</p>
@@ -95,40 +98,45 @@ public final class FactionPanel {
      * The tooltip to draw at the end of this frame, if anything under the cursor asked for one.
      *
      * <p>Collected during the draw and rendered last, because a tooltip drawn where it is asked for
-     * would be painted over by whatever the panel draws next.</p>
+     * would be painted over by whatever the pane draws next.</p>
      */
-    private static String TOOLTIP;
+    private static String tooltip;
 
-    /** Where the pane was drawn last frame, for deciding whether a scroll belongs to us. */
-    private static int paneX;
-    private static int paneY;
-    private static int paneH;
+    /** Whether the pane is showing — the bar asks, so its button can light up. */
+    public static boolean isOpen() {
+        return Panels.isOpen(ID);
+    }
 
     /**
      * The action-bar button's handler: show it, or put it away.
      *
-     * <p>Registered through Standards' {@code Actions.registerHandler}, so the button runs this
-     * instead of sending {@code f panel}. Opening still sends the command — see {@link #refresh} —
-     * because the data has to come from the server either way, and asking for it here is what keeps
-     * the modded and vanilla paths the same command.</p>
+     * <p>Standards does the arbitrating, so this does not have to know that opening the pane closes
+     * whatever else was open.</p>
      */
     public static void toggle() {
-        open = !open;
-        if (open) {
-            scroll = 0;
-            refresh();
-        }
+        Panels.toggle(ID);
+    }
+
+    @Override
+    public int preferredWidth() {
+        return WANT_WIDTH;
     }
 
     /**
-     * Ask the server for a fresh answer.
+     * Ask the server for a fresh answer, every time the pane is shown.
      *
      * <p>The same {@code f panel} a vanilla client sends. The reply lands in
      * {@link FactionPanelData} and the next frame draws it; until then the pane draws whatever it
      * had, or says it is asking. Deliberately not a blocking wait — an empty box for one tick reads
      * as broken, and last tick's power is a better answer than no answer.</p>
+     *
+     * <p>Asked on every open rather than once, because the numbers do not stay true: power
+     * regenerates, land changes hands, people log in. A stale power figure presented as current is
+     * worse than no pane at all.</p>
      */
-    private static void refresh() {
+    @Override
+    public void onOpen() {
+        scroll = 0;
         Minecraft mc = Minecraft.getInstance();
         if (mc.getConnection() != null) {
             mc.getConnection().sendCommand("f panel");
@@ -136,95 +144,84 @@ public final class FactionPanel {
     }
 
     /**
-     * Reopening the inventory brings the pane back, and asks again.
+     * Offered only while the server is still offering the button that opens it.
      *
-     * <p>It stays open across an inventory close on purpose — the button is the only thing that
-     * changes that, which is what "toggles it on and off" means. But the numbers behind it do not
-     * stay true: power regenerates, land changes hands, people log in. So an open pane asks again
-     * every time the inventory opens rather than showing whatever it last heard, because a stale
-     * power figure presented as current is worse than no pane at all.</p>
+     * <p>Left the faction while the pane was open? Then the button has already been withheld, and a
+     * pane still showing a faction you are no longer in would be the only thing on screen insisting
+     * you are. Asking Standards' capability set is the same question the bar asks, so the pane and
+     * the button cannot disagree.</p>
      */
-    @SubscribeEvent
-    static void onInit(ScreenEvent.Init.Post event) {
-        HOTSPOTS.clear();
-        if (open && event.getScreen() instanceof InventoryScreen) {
-            refresh();
-        }
+    @Override
+    public boolean available() {
+        return ClientCapabilities.has(ID);
     }
 
-    @SubscribeEvent
-    static void onRender(ScreenEvent.Render.Post event) {
+    @Override
+    public void render(GuiGraphics graphics, Font font,
+            int x, int y, int width, int height, int mouseX, int mouseY) {
         HOTSPOTS.clear();
-        if (!open || !(event.getScreen() instanceof InventoryScreen screen)) {
-            return;
-        }
-        // Left the faction while the pane was open? Then the button that opens it has already been
-        // withheld, and a pane still showing a faction you are no longer in would be the only thing
-        // on screen insisting you are. Asking Standards' capability set is the same question the
-        // bar asks, so the pane and the button cannot disagree.
-        if (!com.sablednah.standards.client.ClientCapabilities.has("factions:panel")) {
-            open = false;
-            return;
-        }
-        Minecraft mc = Minecraft.getInstance();
-        Font font = mc.font;
-        GuiGraphics graphics = event.getGuiGraphics();
-        AbstractContainerScreen<?> container = screen;
-        int mouseX = event.getMouseX();
-        int mouseY = event.getMouseY();
-        TOOLTIP = null;
-
-        int height = Math.min(screen.height - 20, container.getYSize());
-        int x = container.getGuiLeft() + container.getXSize() + GAP;
-        // Overlap rather than disappear. A pane hanging off the right edge is unreadable and
-        // silent about it; a pane sitting over the inventory is obviously in the way and can be
-        // put back with the same button that opened it.
-        if (x + WIDTH > screen.width) {
-            x = Math.max(0, screen.width - WIDTH);
-        }
-        int y = container.getGuiTop();
-        paneX = x;
-        paneY = y;
-        paneH = height;
-
-        graphics.fill(x, y, x + WIDTH, y + height, BG);
-        border(graphics, x, y, x + WIDTH, y + height);
+        tooltip = null;
 
         FactionPanelPayload data = FactionPanelData.latest();
         if (data == null) {
-            graphics.drawString(font, "Asking the server…", x + PAD, y + PAD, DIM);
+            graphics.drawString(font, "Asking the server\u2026", x + PAD, y + PAD, DIM);
             return;
         }
 
         int line = y + PAD;
         String title = data.name() + (data.tag().isEmpty() ? "" : " [" + data.tag() + "]");
-        graphics.drawString(font, title, x + PAD, line, VALUE);
-        if (data.peaceful()) {
-            graphics.drawString(font, "peaceful", x + WIDTH - PAD - font.width("peaceful"), line,
-                    0xFF77DDFF);
-        }
+        graphics.drawString(font, clip(font, title, width - PAD * 2), x + PAD, line, VALUE);
         line += ROW + 2;
+        if (data.peaceful()) {
+            graphics.drawString(font, "peaceful", x + PAD, line, 0xFF77DDFF);
+            line += ROW;
+        }
 
-        line = tabs(graphics, font, x, line);
+        line = tabs(graphics, font, x, line, width);
         // Everything below the chips scrolls, and nothing above does — so the tabs stay reachable
         // however far down a long members list you are.
-        int bodyTop = line;
         int bodyBottom = y + height - PAD;
         switch (tab) {
-            case OVERVIEW -> overview(graphics, font, data, x, bodyTop);
-            case RELATIONS -> relations(graphics, font, data, x, bodyTop, bodyBottom);
-            case MEMBERS -> members(graphics, font, data, x, bodyTop, bodyBottom, mouseX, mouseY);
+            case OVERVIEW -> overview(graphics, font, data, x, line, width);
+            case RELATIONS -> relations(graphics, font, data, x, line, bodyBottom, width);
+            case MEMBERS -> members(graphics, font, data, x, line, bodyBottom, width,
+                    mouseX, mouseY);
         }
-        if (TOOLTIP != null) {
-            graphics.setTooltipForNextFrame(font, Component.literal(TOOLTIP), mouseX, mouseY);
+        if (tooltip != null) {
+            graphics.setTooltipForNextFrame(font, Component.literal(tooltip), mouseX, mouseY);
         }
     }
 
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (button != 0) {
+            return false;
+        }
+        for (Hot hot : HOTSPOTS) {
+            if (mouseX >= hot.x0() && mouseX < hot.x1()
+                    && mouseY >= hot.y0() && mouseY < hot.y1()) {
+                hot.action().run();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Only the members tab has anything to scroll, so only it claims the wheel. */
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        if (tab != Tab.MEMBERS) {
+            return false;
+        }
+        scroll = Math.max(0, scroll - (int) Math.signum(delta));
+        return true;
+    }
+
     /** The Overview / Relations / Members chips. */
-    private static int tabs(GuiGraphics graphics, Font font, int x, int y) {
+    private static int tabs(GuiGraphics graphics, Font font, int x, int y, int width) {
         String[] names = {"Overview", "Relations", "Members"};
         Tab[] values = Tab.values();
-        int chip = (WIDTH - PAD * 2) / names.length;
+        int chip = (width - PAD * 2) / names.length;
         for (int i = 0; i < names.length; i++) {
             int cx = x + PAD + i * chip;
             boolean on = tab == values[i];
@@ -242,39 +239,39 @@ public final class FactionPanel {
     }
 
     private static void overview(GuiGraphics graphics, Font font, FactionPanelPayload d,
-            int x, int y) {
-        y = row(graphics, font, x, y, "Power", trim(d.power()) + " / " + trim(d.maxPower()));
-        y = row(graphics, font, x, y, "Land", d.claims() + " of " + d.entitlement());
+            int x, int y, int width) {
+        y = row(graphics, font, x, y, width, "Power", trim(d.power()) + " / " + trim(d.maxPower()));
+        y = row(graphics, font, x, y, width, "Land", d.claims() + " of " + d.entitlement());
         // Overreach decides whether they can be raided, so it is said outright rather than left to
         // be worked out from the two numbers above.
         if (d.claims() > d.entitlement()) {
-            y = row(graphics, font, x, y, "Exposed", (d.claims() - d.entitlement()) + " takeable");
+            y = row(graphics, font, x, y, width, "Exposed", (d.claims() - d.entitlement()) + " takeable");
         }
-        y = row(graphics, font, x, y, "Bank", trim(d.bank()));
-        y = row(graphics, font, x, y, "Standard", colored(d.standardState()));
+        y = row(graphics, font, x, y, width, "Bank", trim(d.bank()));
+        y = row(graphics, font, x, y, width, "Standard", colored(d.standardState()));
         if (d.trophies() > 0) {
-            y = row(graphics, font, x, y, "Trophies", String.valueOf(d.trophies()));
+            y = row(graphics, font, x, y, width, "Trophies", String.valueOf(d.trophies()));
         }
         if (d.raidsFought() > 0) {
-            row(graphics, font, x, y, "Raids", d.raidsWon() + " of " + d.raidsFought());
+            row(graphics, font, x, y, width, "Raids", d.raidsWon() + " of " + d.raidsFought());
         }
     }
 
     private static void relations(GuiGraphics graphics, Font font, FactionPanelPayload d,
-            int x, int y, int bottom) {
+            int x, int y, int bottom, int width) {
         graphics.drawString(font, "Allies", x + PAD, y, LABEL);
         y += ROW;
-        y = names(graphics, font, d.allies(), x, y, bottom, 0xFF77DD77);
+        y = names(graphics, font, d.allies(), x, y, bottom, width, 0xFF77DD77);
         y += 4;
         if (y + ROW <= bottom) {
             graphics.drawString(font, "Enemies", x + PAD, y, LABEL);
             y += ROW;
-            names(graphics, font, d.enemies(), x, y, bottom, 0xFFDD7777);
+            names(graphics, font, d.enemies(), x, y, bottom, width, 0xFFDD7777);
         }
     }
 
     private static int names(GuiGraphics graphics, Font font, List<String> list,
-            int x, int y, int bottom, int colour) {
+            int x, int y, int bottom, int width, int colour) {
         if (list.isEmpty()) {
             graphics.drawString(font, "  none", x + PAD, y, DIM);
             return y + ROW;
@@ -283,7 +280,7 @@ public final class FactionPanel {
             if (y + ROW > bottom) {
                 return y;
             }
-            graphics.drawString(font, "  " + clip(font, name, WIDTH - PAD * 2 - 8), x + PAD, y,
+            graphics.drawString(font, "  " + clip(font, name, width - PAD * 2 - 8), x + PAD, y,
                     colour);
             y += ROW;
         }
@@ -298,7 +295,7 @@ public final class FactionPanel {
      * decides what to <em>show</em>, exactly as the action bar's capability set does.</p>
      */
     private static void members(GuiGraphics graphics, Font font, FactionPanelPayload d,
-            int x, int y, int bottom, int mouseX, int mouseY) {
+            int x, int y, int bottom, int width, int mouseX, int mouseY) {
         boolean mayManage = d.yourRank().equalsIgnoreCase("leader")
                 || d.yourRank().equalsIgnoreCase("officer");
         List<FactionPanelPayload.Member> all = d.members();
@@ -309,7 +306,7 @@ public final class FactionPanel {
         scroll = Math.max(0, Math.min(scroll, maxScroll));
 
         int marks = mayManage ? MARK * 3 + 2 : 0;
-        int nameWidth = WIDTH - PAD * 2 - marks - 26;
+        int nameWidth = width - PAD * 2 - marks - 26;
         for (int i = scroll; i < all.size() && y + ROW <= bottom; i++) {
             FactionPanelPayload.Member member = all.get(i);
             // Online state as colour rather than as a word: a column of "(online)" would cost more
@@ -325,7 +322,7 @@ public final class FactionPanel {
             }
             if (mayManage) {
                 final String who = member.name();
-                int mx = x + WIDTH - PAD - MARK * 3 - 2;
+                int mx = x + width - PAD - MARK * 3 - 2;
                 mark(graphics, font, mx, y, mouseX, mouseY, "\u25b2", "Promote " + who,
                         () -> send("f promote " + who));
                 mark(graphics, font, mx + MARK + 1, y, mouseX, mouseY, "\u25bc", "Demote " + who,
@@ -338,7 +335,7 @@ public final class FactionPanel {
         if (maxScroll > 0) {
             String more = (scroll + visible >= all.size())
                     ? "▲ " + all.size() : "▼ " + all.size();
-            graphics.drawString(font, more, x + WIDTH - PAD - font.width(more), bottom - ROW + 2,
+            graphics.drawString(font, more, x + width - PAD - font.width(more), bottom - ROW + 2,
                     DIM);
         }
     }
@@ -361,7 +358,7 @@ public final class FactionPanel {
         graphics.drawString(font, glyph, x + (MARK - font.width(glyph)) / 2 + 1, y + 2,
                 hover ? 0xFFFFFFFF : 0xFFDDDDDD);
         if (hover) {
-            TOOLTIP = tip;
+            tooltip = tip;
         }
         HOTSPOTS.add(new Hot(x, y, x + MARK, y + MARK, action));
     }
@@ -375,18 +372,11 @@ public final class FactionPanel {
         };
     }
 
-    private static int row(GuiGraphics graphics, Font font, int x, int y,
+    private static int row(GuiGraphics graphics, Font font, int x, int y, int width,
             String label, String value) {
         graphics.drawString(font, label, x + PAD, y, LABEL);
-        graphics.drawString(font, clip(font, value, WIDTH - PAD - 72), x + PAD + 66, y, VALUE);
+        graphics.drawString(font, clip(font, value, width - PAD - 72), x + PAD + 66, y, VALUE);
         return y + ROW;
-    }
-
-    private static void border(GuiGraphics graphics, int x0, int y0, int x1, int y1) {
-        graphics.fill(x0, y0, x1, y0 + 1, EDGE);
-        graphics.fill(x0, y1 - 1, x1, y1, EDGE);
-        graphics.fill(x0, y0, x0 + 1, y1, EDGE);
-        graphics.fill(x1 - 1, y0, x1, y1, EDGE);
     }
 
     /** Cut a name to the width it has, with an ellipsis, rather than letting it run into a button. */
@@ -414,41 +404,6 @@ public final class FactionPanel {
             mc.getConnection().sendCommand(command);
             mc.getConnection().sendCommand("f panel");
         }
-    }
-
-    @SubscribeEvent
-    static void onClick(ScreenEvent.MouseButtonPressed.Pre event) {
-        if (!open || event.getButton() != 0 || HOTSPOTS.isEmpty()) {
-            return;
-        }
-        for (Hot hot : HOTSPOTS) {
-            if (event.getMouseX() >= hot.x0() && event.getMouseX() < hot.x1()
-                    && event.getMouseY() >= hot.y0() && event.getMouseY() < hot.y1()) {
-                hot.action().run();
-                event.setCanceled(true);
-                return;
-            }
-        }
-    }
-
-    /**
-     * The wheel scrolls the members list, but only while the cursor is over the pane.
-     *
-     * <p>Cancelled when it is, so the scroll does not also reach whatever is underneath — and
-     * <b>not</b> cancelled when it is not, because the inventory's own scrolling is somebody
-     * else's and stealing it would be a bug in a mod that looks unrelated.</p>
-     */
-    @SubscribeEvent
-    static void onScroll(ScreenEvent.MouseScrolled.Pre event) {
-        if (!open || tab != Tab.MEMBERS) {
-            return;
-        }
-        if (event.getMouseX() < paneX || event.getMouseX() >= paneX + WIDTH
-                || event.getMouseY() < paneY || event.getMouseY() >= paneY + paneH) {
-            return;
-        }
-        scroll = Math.max(0, scroll - (int) Math.signum(event.getScrollDeltaY()));
-        event.setCanceled(true);
     }
 
     /**
