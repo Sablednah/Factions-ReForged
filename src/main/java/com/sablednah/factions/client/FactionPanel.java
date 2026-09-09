@@ -167,10 +167,30 @@ public final class FactionPanel implements InventoryPanel {
             graphics.drawString(font, "Asking the server\u2026", x + PAD, y + PAD, DIM);
             return;
         }
+        if (data.isNone()) {
+            none(graphics, font, x, y, width, mouseX, mouseY);
+            if (tooltip != null) {
+                graphics.setTooltipForNextFrame(font, Component.literal(tooltip), mouseX, mouseY);
+            }
+            return;
+        }
 
         int line = y + PAD;
+        boolean mayEdit = data.yourRank().equalsIgnoreCase("leader");
+        // The pencils sit on the title line, so the name and the button that changes it are the
+        // same thing to look at. Reserved out of the title's width whether or not they are drawn,
+        // or a leader's name would clip where a member's did not.
+        int pencils = mayEdit ? MARK * 2 + 2 : 0;
         String title = data.name() + (data.tag().isEmpty() ? "" : " [" + data.tag() + "]");
-        graphics.drawString(font, clip(font, title, width - PAD * 2), x + PAD, line, VALUE);
+        graphics.drawString(font, clip(font, title, width - PAD * 2 - pencils), x + PAD, line,
+                VALUE);
+        if (mayEdit) {
+            int px = x + width - PAD - MARK * 2 - 2;
+            mark(graphics, font, px, line - 2, mouseX, mouseY, "\u270e",
+                    "Rename the faction\nOpens chat, pre-filled", () -> prefill("/f rename "));
+            mark(graphics, font, px + MARK + 2, line - 2, mouseX, mouseY, "#",
+                    "Set the tag\nOpens chat, pre-filled", () -> prefill("/f tag "));
+        }
         line += ROW + 2;
         if (data.peaceful()) {
             graphics.drawString(font, "peaceful", x + PAD, line, 0xFF77DDFF);
@@ -215,6 +235,73 @@ public final class FactionPanel implements InventoryPanel {
         }
         scroll = Math.max(0, scroll - (int) Math.signum(delta));
         return true;
+    }
+
+    /**
+     * What the pane says to somebody in no faction: what one is for, and an offer to make one.
+     *
+     * <p>This state is the reason the panel button is the one Factions button not gated on
+     * membership. A button withheld from the player who most needs it is a feature that only ever
+     * reaches people who already have it.</p>
+     */
+    private static void none(GuiGraphics graphics, Font font, int x, int y, int width,
+            int mouseX, int mouseY) {
+        int line = y + PAD;
+        graphics.drawString(font, "No faction", x + PAD, line, VALUE);
+        line += ROW + 4;
+        // What it is for, before what to press. Two short lines rather than a paragraph: this is a
+        // pane, and anybody who wanted the manual would have typed /f help.
+        for (String pitch : new String[] {
+                "Claim land nobody can build in,",
+                "pool money, and hold a standard",
+                "that pays you back in power." }) {
+            graphics.drawString(font, pitch, x + PAD, line, DIM);
+            line += ROW;
+        }
+        line += 6;
+        line = wide(graphics, font, x, line, width, mouseX, mouseY, "Create a faction",
+                "Opens chat, pre-filled with /f create", () -> prefill("/f create "));
+        wide(graphics, font, x, line, width, mouseX, mouseY, "Who is out there?",
+                "Runs /f list", () -> send("f list"));
+    }
+
+    /**
+     * A full-width button, for the one or two things a pane offers rather than a list of them.
+     *
+     * <p>Hand-drawn like everything else here — see the class note. A vanilla {@code Button} would
+     * bring its own 20-pixel minimum height and its own idea of where it is.</p>
+     */
+    private static int wide(GuiGraphics graphics, Font font, int x, int y, int width,
+            int mouseX, int mouseY, String label, String tip, Runnable action) {
+        int x0 = x + PAD;
+        int x1 = x + width - PAD;
+        int h = ROW + 6;
+        boolean hover = mouseX >= x0 && mouseX < x1 && mouseY >= y && mouseY < y + h;
+        graphics.fill(x0, y, x1, y + h, hover ? 0xFF4A3A6A : 0xFF2A2A32);
+        graphics.fill(x0, y, x1, y + 1, hover ? 0xFF9A7AD0 : 0xFF4A4A55);
+        graphics.fill(x0, y + h - 1, x1, y + h, hover ? 0xFF9A7AD0 : 0xFF4A4A55);
+        graphics.drawString(font, label, x0 + (x1 - x0 - font.width(label)) / 2, y + 5,
+                hover ? 0xFFFFFFFF : 0xFFDDDDDD);
+        if (hover) {
+            tooltip = tip;
+        }
+        HOTSPOTS.add(new Hot(x0, y, x1, y + h, action));
+        return y + h + 4;
+    }
+
+    /**
+     * Open the chat box with a command already typed, for the things that need words.
+     *
+     * <p>A faction's name is text, and a pane has no text field — the panel seam hands out a
+     * rectangle and the mouse, not the keyboard. Pre-filling chat is what LegendQuest's party panel
+     * does for the same problem, and it is better than a hand-rolled text box would be: the player
+     * gets vanilla's own editing, history and paste, and the command they end up sending is one
+     * they can see and could have typed. Closes the pane, because the inventory has to go.</p>
+     */
+    private static void prefill(String command) {
+        Panels.close();
+        Minecraft.getInstance().setScreen(
+                new net.minecraft.client.gui.screens.ChatScreen(command, false));
     }
 
     /** The Overview / Relations / Members chips. */

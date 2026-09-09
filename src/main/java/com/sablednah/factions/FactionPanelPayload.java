@@ -33,6 +33,30 @@ public record FactionPanelPayload(
     /** One row of the member list. */
     public record Member(String name, String rank, boolean online) {}
 
+    /**
+     * The answer for somebody who is in no faction.
+     *
+     * <p>Sent rather than withheld, so the pane can offer to create one. The panel button used to
+     * be gated on being in a faction and the pane on having been sent something — which meant the
+     * one player who most needed to be told what factions are was the only one shown nothing.</p>
+     */
+    public static FactionPanelPayload none() {
+        return new FactionPanelPayload("", "", false, 0, 0, 0, 0, 0, "", 0, 0, 0,
+                List.of(), List.of(), List.of(), "");
+    }
+
+    /**
+     * Whether this is the no-faction answer.
+     *
+     * <p>An empty name is the sentinel, and it is unambiguous rather than merely convenient: a
+     * faction cannot be created without one, so there is no real faction this could collide with.
+     * The alternative was a boolean field, which is a wire change for a fact the name already
+     * carries.</p>
+     */
+    public boolean isNone() {
+        return name.isEmpty();
+    }
+
     public static final Type<FactionPanelPayload> TYPE =
             new Type<>(Identifier.fromNamespaceAndPath(Factions.MODID, "panel"));
 
