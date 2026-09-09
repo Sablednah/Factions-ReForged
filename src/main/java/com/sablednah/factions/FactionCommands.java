@@ -1403,10 +1403,10 @@ public final class FactionCommands {
                 members,
                 f.rankOf(player.getUUID()).key());
 
-        // sendIfAble: a vanilla client never negotiated the channel, and sending anyway would kick
-        // them. If they are not listening they get the text below instead, which is the point.
-        if (com.sablednah.standards.neoforge.Net.listening(player, FactionPanelPayload.TYPE)) {
-            com.sablednah.standards.neoforge.Net.sendIfAble(player, payload);
+        // One check, not two. The first version asked Net.listening and then sent — a prediction
+        // and an action that can disagree, and when the screen did not open there was no way to
+        // tell which had been wrong. sendIfAble now reports what it actually did.
+        if (com.sablednah.standards.neoforge.Net.sendIfAble(player, payload)) {
             return 1;
         }
         return describeAsText(player, payload);
@@ -1433,6 +1433,10 @@ public final class FactionCommands {
                 "members", d.members().stream()
                         .map(m -> m.name() + " (" + m.rank() + ")")
                         .reduce((a, b) -> a + ", " + b).orElse("-")));
+        // Says WHY it is text. A vanilla player deserves to know the screen exists and that
+        // nothing is broken; and when somebody who does have the mod sees this line, it names the
+        // fault immediately rather than looking like the panel is simply unfinished.
+        Feedback.chat(player, Lang.get("msg.factions.panel_no_client"));
         return 1;
     }
 
