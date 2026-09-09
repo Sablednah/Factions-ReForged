@@ -1401,6 +1401,14 @@ public final class FactionCommands {
         FactionStore store = store(ctx);
         Optional<FactionStore.Faction> mine = store.of(player.getUUID());
         if (mine.isEmpty()) {
+            // Answered rather than refused. A modded client draws the pane's "create a faction"
+            // state from this; a vanilla one gets the same sentence it always did. The player with
+            // no faction is the one who most needs telling what a faction is for, and they used to
+            // be the only one shown nothing at all.
+            if (com.sablednah.standards.neoforge.Net.sendIfAble(player,
+                    FactionPanelPayload.none())) {
+                return 1;
+            }
             Feedback.chat(player, Lang.get("msg.factions.not_in_one"));
             return 0;
         }

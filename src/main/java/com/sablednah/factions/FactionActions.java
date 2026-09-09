@@ -62,10 +62,17 @@ public final class FactionActions {
 
         // The panel. Its command prints the same facts for a client that cannot draw, so this is
         // a nicer surface rather than a second capability.
+        //
+        // ⚠ The ONE button here not gated on being in a faction, and the exception is the point:
+        // the pane's no-faction state is an offer to create one, and gating it meant the player who
+        // most needed it was the only one who never saw it. It also cost an afternoon — four of
+        // these five being correctly withheld read as "the panel button just draws the chat map",
+        // because the only button left was the map. See the fourth bug family in Standards'
+        // CLAUDE.md, and `/actions all`, which exists because of that day.
         Actions.register(new Action("factions:panel", 61,
                 Identifier.withDefaultNamespace("writable_book"), "msg.factions.action_panel",
                 "f panel",
-                FactionActions::inFaction));
+                p -> true));
 
         Actions.register(new Action("factions:map", 57,
                 Identifier.withDefaultNamespace("filled_map"), "msg.factions.action_map",
