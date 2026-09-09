@@ -126,6 +126,12 @@ The buttons send `/f promote`, `/f demote` and `/f kick` exactly as if you had t
 rank checks are the same ones and there is no second path to get wrong. Nothing here is a capability
 a vanilla player lacks — it is the same answer, laid out.
 
+**With no faction it says so, and offers to fix that** — what a faction is for, and a button that
+opens the chat box pre-filled with `/f create `. A leader gets the same treatment on the title line:
+✎ pre-fills `/f rename `, # pre-fills `/f tag `. Anything that needs words hands you vanilla's own
+chat box rather than a home-made text field, so you keep editing, history and paste, and the command
+you send is one you can read first.
+
 ### `/f map`
 
 The classic chat grid, nine chunks square, coloured by your relation to each owner, with `+` for

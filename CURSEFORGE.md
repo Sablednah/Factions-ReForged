@@ -266,6 +266,10 @@ leader or an officer. It opens from a button on
 [Standards](https://www.curseforge.com/minecraft/mc-mods/sablecraft-standards)' action bar and
 closes with the same button.
 
+With no faction, the pane says what one is for and offers a button to create it; a leader can rename
+the faction or set its tag from the title line. Anything needing words opens the chat box pre-filled
+rather than a home-made text field, so the command you send is one you can read first.
+
 **The client half is optional and always will be.** Every button sends the command you could have
 typed, so the pane is a nicer surface for answers a vanilla player already gets — never a capability
 they do not have. Your players install nothing unless they want to.

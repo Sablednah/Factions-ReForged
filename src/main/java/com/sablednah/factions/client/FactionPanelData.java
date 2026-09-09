@@ -1,6 +1,10 @@
 package com.sablednah.factions.client;
 
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+
 import com.sablednah.factions.FactionPanelPayload;
+import com.sablednah.standards.client.panels.Panels;
 
 /**
  * The last panel the server sent, and whether a screen is waiting for it.
@@ -15,11 +19,30 @@ public final class FactionPanelData {
 
     public static void accept(FactionPanelPayload payload) {
         latest = payload;
-        // Stored, and nothing else. It used to open a screen from here — the answer arriving was
-        // what opened it — which was right while the panel WAS a screen and wrong the moment it
-        // became a pane you toggle: a reply landing would have re-opened a pane you had just put
-        // away, and every promote/kick sends a fresh request. The pane decides whether it is
-        // showing; this only decides what it shows.
+        // ⚠ Storing it is not enough, and thinking it was broke `/f panel` typed in chat.
+        //
+        // While the panel was a Screen, the reply arriving is what opened it — so typing the
+        // command worked. Turning it into a pane the button toggles made this a pure store, and a
+        // player who typed `/f panel` got a payload, no chat message (the server had answered) and
+        // nothing on screen. The command silently did nothing on exactly the clients that had gone
+        // to the trouble of installing the mod.
+        //
+        // So a reply still opens the pane — but only when it is not already showing, which is what
+        // keeps the toggle honest: every refresh (onOpen, and after a promote or kick) arrives
+        // while it IS open and changes nothing.
+        if (Panels.isOpen(FactionPanel.ID)) {
+            return;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        mc.execute(() -> {
+            Panels.open(FactionPanel.ID);
+            // A pane only draws on the inventory screen, so a command typed in the world would
+            // open something the player cannot see. Show them the inventory it lives on — but
+            // never replace a screen they are already in the middle of.
+            if (mc.screen == null && mc.player != null) {
+                mc.setScreen(new InventoryScreen(mc.player));
+            }
+        });
     }
 
     public static FactionPanelPayload latest() {

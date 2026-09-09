@@ -81,6 +81,14 @@ public final class FactionsSelfTest {
         // /f panel earned a check the hard way: a whole afternoon went into deciding whether it
         // was reaching FactionCommands::panel at all, and nothing here could have answered that.
         check("/f panel parses to something executable", executable(d, src, "f panel"));
+        // The pane's no-faction state offers these two, pre-filled into the chat box. A button
+        // that pre-fills a command nobody can complete is worse than no button, and the pane
+        // cannot tell — it never sees the parse.
+        check("/f create parses, for the pane's create button",
+                executable(d, src, "f create Lantern Vale"));
+        check("/f rename parses, for the pane's rename pencil",
+                executable(d, src, "f rename Lantern Vale"));
+        check("/f tag parses, for the pane's tag pencil", executable(d, src, "f tag LTV"));
         if (FactionsConfig.FIXTURES.get()) {
             check("/f fixture members parses", executable(d, src, "f fixture members"));
             check("...and with a count", executable(d, src, "f fixture members 20"));
