@@ -76,6 +76,35 @@ public final class FactionsSelfTest {
                 executable(d, src, "f money pay Ashfell 100"));
         // Negative: a tree that matched anything would pass everything above.
         check("a bare /f who is still not executable", !executable(d, src, "f who"));
+
+        // The panel button's command, and the fixtures that make the panel worth looking at.
+        // /f panel earned a check the hard way: a whole afternoon went into deciding whether it
+        // was reaching FactionCommands::panel at all, and nothing here could have answered that.
+        check("/f panel parses to something executable", executable(d, src, "f panel"));
+        if (FactionsConfig.FIXTURES.get()) {
+            check("/f fixture members parses", executable(d, src, "f fixture members"));
+            check("...and with a count", executable(d, src, "f fixture members 20"));
+            // Bounded 1..32, and brigadier must be the thing that says so — a fixture command that
+            // accepts 10000 invents ten thousand players into a real faction.
+            check("...but not with an absurd one", !executable(d, src, "f fixture members 10000"));
+            check("...nor with none", !executable(d, src, "f fixture members 0"));
+        }
+
+        // ⚠ Every name a fixture can invent must be usable with the commands the panel's buttons
+        // send. Those take a brigadier word(), which accepts letters, digits and _.+- and nothing
+        // else — so a fixture name with a space would be unkickable, and would read as a broken
+        // button rather than as a name nobody could really have. This is the word() trap, checked
+        // against the real dispatcher rather than against a regex that agrees with itself.
+        boolean allKickable = true;
+        for (String name : FactionFixtures.recruitNames()) {
+            if (!executable(d, src, "f kick " + name)
+                    || !executable(d, src, "f promote " + name)) {
+                allKickable = false;
+            }
+        }
+        check("every fixture recruit's name survives /f kick and /f promote", allKickable);
+        // Negative, so the loop above is not passing because it tests nothing.
+        check("...and a name with a space does not", !executable(d, src, "f kick Lantern Vale"));
     }
 
     /**

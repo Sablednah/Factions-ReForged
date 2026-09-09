@@ -111,6 +111,21 @@ take *every one* before it stops paying, and each of them is standing somewhere 
 
 ## Seeing
 
+### `/f panel`
+
+Everything about your faction in one place: power against its maximum, land against your
+entitlement, how much is exposed if you are over it, the bank, the standard's state, trophies and
+your raid record — plus tabs for allies and enemies and for the member list.
+
+**On a vanilla client it prints as text**, which is the whole of it. On a client that also has
+Standards and Factions installed it draws as a pane on the inventory screen instead, with the member
+list scrolling and promote / demote / kick beside each name for a leader or officer. The pane is
+opened by the faction button on Standards' action bar and closed by pressing it again.
+
+The buttons send `/f promote`, `/f demote` and `/f kick` exactly as if you had typed them, so the
+rank checks are the same ones and there is no second path to get wrong. Nothing here is a capability
+a vanilla player lacks — it is the same answer, laid out.
+
 ### `/f map`
 
 The classic chat grid, nine chunks square, coloured by your relation to each owner, with `+` for
@@ -294,7 +309,7 @@ money arriving with no explanation is money the recipient treats as a bug.
 
 ## Testing
 
-### `/f fixture seed [chunks]` · `/f fixture standards` · `/f fixture clear` — operator, and off unless enabled
+### `/f fixture seed [chunks]` · `/f fixture standards` · `/f fixture members [n]` · `/f fixture clear` — operator, and off unless enabled
 
 Invents nine neighbour factions around you covering **every** relation state: allied, offered to
 you, waiting on you, hostile, neutral and peaceful.
@@ -303,6 +318,12 @@ Two people cannot test a relation system — those states need four counterparti
 friends to sit still while you declare war on them is not a test plan.
 
 `/f fixture standards` gives each of them a real banner, planted on their own land under open sky
+
+`/f fixture members [n]` recruits invented players into **your own** faction — twenty by default, up
+to thirty-two. For looking at a members list that has something in it: the panel's rows, its
+per-member buttons and its scrolling are all invisible with two members. Every fourth is made an
+officer, so the officer row and the member row can be told apart. `/f fixture clear` sends them home
+again as well as removing the neighbour factions.
 and designated the same way a player would — nine flags worth stealing. That one is for the power
 rules: proving a captured standard's bonus stays **flat** across three trophies needs three factions
 to take flags from, which two people cannot arrange either.

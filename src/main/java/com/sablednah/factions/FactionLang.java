@@ -362,6 +362,10 @@ public final class FactionLang {
         Lang.contribute("msg.factions.fixtures_standards",
                 "{term.prefix} &7Planted a flag for &f{count}&7 neighbour(s). {term.dim}(go and take one — they are real standards on real land)");
         Lang.contribute("msg.factions.fixtures_row", " {term.dim}-&r &7{row}");
+        Lang.contribute("msg.factions.fixtures_members",
+                "{term.prefix} &7Recruited &f{count}&7 into your faction:");
+        Lang.contribute("msg.factions.fixtures_members_cleared",
+                "{term.prefix} &7Sent &f{count}&7 invented member(s) home.");
         Lang.contribute("msg.factions.fixtures_cleared",
                 "{term.prefix} &7Removed &f{count}&7 invented {term.factions}.");
 

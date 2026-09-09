@@ -15,9 +15,11 @@ public final class FactionPanelData {
 
     public static void accept(FactionPanelPayload payload) {
         latest = payload;
-        // Opened here rather than by the button, because the data has to exist before the screen
-        // can draw anything. The button asks; the answer arriving is what opens it.
-        FactionPanelScreen.openWith(payload);
+        // Stored, and nothing else. It used to open a screen from here — the answer arriving was
+        // what opened it — which was right while the panel WAS a screen and wrong the moment it
+        // became a pane you toggle: a reply landing would have re-opened a pane you had just put
+        // away, and every promote/kick sends a fresh request. The pane decides whether it is
+        // showing; this only decides what it shows.
     }
 
     public static FactionPanelPayload latest() {

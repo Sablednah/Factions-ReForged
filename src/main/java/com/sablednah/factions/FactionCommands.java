@@ -211,6 +211,16 @@ public final class FactionCommands {
                                                 .getInteger(ctx, "chunksEach")))))
                 .then(Commands.literal("standards")
                         .executes(FactionCommands::seedFixtureStandards))
+                // Its own literal rather than a flag on `seed`, for the same reason `standards` is:
+                // this one edits YOUR faction, and that should be a thing somebody asked for.
+                .then(Commands.literal("members")
+                        .executes(ctx -> seedFixtureMembers(ctx, 20))
+                        .then(Commands.argument("count",
+                                        com.mojang.brigadier.arguments.IntegerArgumentType
+                                                .integer(1, 32))
+                                .executes(ctx -> seedFixtureMembers(ctx,
+                                        com.mojang.brigadier.arguments.IntegerArgumentType
+                                                .getInteger(ctx, "count")))))
                 .then(Commands.literal("clear").executes(FactionCommands::clearFixtures));
     }
 
@@ -243,12 +253,36 @@ public final class FactionCommands {
         return report.size();
     }
 
+    /**
+     * {@code /f fixture members [count]} — recruit invented players into your own faction.
+     *
+     * <p>For looking at a members list that has something in it: the panel's rows, its buttons and
+     * its scrolling are all invisible at two members.</p>
+     */
+    private static int seedFixtureMembers(CommandContext<CommandSourceStack> ctx, int count)
+            throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        List<String> report = FactionFixtures.members(player, count);
+        Feedback.chat(player, Lang.fmt("msg.factions.fixtures_members", "count", report.size()));
+        for (String row : report) {
+            Feedback.chat(player, Lang.fmt("msg.factions.fixtures_row", "row", row));
+        }
+        return report.size();
+    }
+
     private static int clearFixtures(CommandContext<CommandSourceStack> ctx)
             throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         int gone = FactionFixtures.clear(ctx.getSource().getServer());
+        // Recruits go too, or `clear` would leave twenty invented members standing in a real
+        // faction with nothing that removes them — the fixture outliving the fixtures command.
+        int recruits = FactionFixtures.clearMembers(ctx.getSource().getServer());
         Feedback.chat(player, Lang.fmt("msg.factions.fixtures_cleared", "count", gone));
-        return gone;
+        if (recruits > 0) {
+            Feedback.chat(player, Lang.fmt("msg.factions.fixtures_members_cleared",
+                    "count", recruits));
+        }
+        return gone + recruits;
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> relation(
