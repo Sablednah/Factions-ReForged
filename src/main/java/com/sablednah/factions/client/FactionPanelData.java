@@ -7,11 +7,25 @@ import com.sablednah.factions.FactionPanelPayload;
 import com.sablednah.standards.client.panels.Panels;
 
 /**
- * The last panel the server sent, and whether a screen is waiting for it.
+ * The last panel the server sent, and what to do when one arrives.
  *
- * <p>Holds data and nothing else — no rendering type is named here, so it is safe to reference from
- * the common-side payload handler. The screen that draws it is a separate class the dedicated
- * server never loads.</p>
+ * <h2>⚠ Referenced from common code, and no longer free of client types</h2>
+ *
+ * <p>This class used to say it named no rendering type, and that this was what made it safe to
+ * reference from {@code FactionsNetwork}'s common-side payload handler. <b>That stopped being true
+ * the moment it learned to open the pane</b> — it now names {@code Minecraft} and
+ * {@code InventoryScreen} — and a stale safety claim is worse than none, because the next person
+ * moves the reference somewhere on the strength of it.</p>
+ *
+ * <p>The guarantee that actually holds is about <em>invocation</em>, not purity: the lambda in
+ * {@code FactionsNetwork.register} is a {@code playToClient} handler, so a dedicated server
+ * registers it and never calls it. Creating a lambda does not load the classes its body names —
+ * only running it does — so this class is never loaded on a server. That is the stronger claim
+ * anyway, since a class naming no rendering type could still reference one that does.</p>
+ *
+ * <p>Verified rather than reasoned: the dedicated-server self-test passes on all three Minecraft
+ * lines with Factions installed, and a vanilla client joins because every clientbound payload here
+ * is registered {@code optional()}.</p>
  */
 public final class FactionPanelData {
 
