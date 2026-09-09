@@ -230,6 +230,113 @@ public final class FactionFixtures {
         return "";
     }
 
+    /**
+     * Names for invented members, drawn on in order.
+     *
+     * <p>Written out rather than generated as {@code Member1..MemberN} because the thing they are
+     * for is judging a members list at a glance: names of one length in one shape tell you nothing
+     * about whether a column lines up or whether a long name runs into the buttons beside it. These
+     * vary in length on purpose, and several are the full <b>sixteen</b> characters Minecraft
+     * allows — the real worst case a row has to survive, rather than an invented one.</p>
+     *
+     * <p>⚠ <b>No spaces, and that is not cosmetic.</b> {@code /f kick}, {@code promote} and
+     * {@code demote} take a brigadier {@code word()}, which accepts letters, digits and
+     * {@code _.+-} and nothing else. A fixture called "Morrowind Thistlebottom" would be
+     * unkickable — and would look exactly like a bug in the panel's buttons rather than like a
+     * fixture nobody could have. Real usernames cannot contain a space either, so the names here
+     * are held to the same rule the real ones are.</p>
+     */
+    private static final List<String> RECRUITS = List.of(
+            "Bex", "Corwenna", "Dov", "Elspeth", "Fitch", "Gwynabel", "Hollis", "Ir",
+            "Jessamy", "Kestrel", "Lun", "Thistlebottom999", "Nyx", "Oriel", "Pike",
+            "Quilla", "Rhod", "Sennet", "Tamsin", "Ull", "Vesper", "Wren", "Xanthe", "Yarrow",
+            "Zeb", "Ashlin_Bramwell", "Cato", "Delphine", "Eamon", "Fennick_Grier", "Hob",
+            "Ingrid_Sallow001");
+
+    /** The recruit names, so the self-test can prove every one of them is a usable command argument. */
+    public static List<String> recruitNames() {
+        return RECRUITS;
+    }
+
+    /**
+     * {@code /f fixture members} — fill your own faction up, so a members list has something in it.
+     *
+     * <p>The panel's members tab, its scrolling and its per-row buttons are all invisible with two
+     * members and obvious with twenty. Same argument as the neighbours above: the states that only
+     * appear on a busy server were the states never being looked at.</p>
+     *
+     * <p>Ranks are dealt round rather than all-member: an officer row and a member row draw
+     * differently and carry different buttons, and a list of twenty identical rows would prove the
+     * layout for one case and hide it for the other. Every fourth is an officer.</p>
+     *
+     * @param count how many to add
+     * @return a line per recruit, or a single line saying why none were added
+     */
+    public static List<String> members(ServerPlayer player, int count) {
+        MinecraftServer server = player.level().getServer();
+        FactionStore store = FactionStore.get(server);
+        StandardsData names = StandardsData.get(server);
+        List<String> report = new ArrayList<>();
+
+        Optional<FactionStore.Faction> mine = store.of(player.getUUID());
+        if (mine.isEmpty()) {
+            report.add("you are in no faction");
+            return report;
+        }
+        String id = mine.get().id();
+
+        int added = 0;
+        // Walks the whole list rather than stopping at `count`, because a name already in the
+        // faction is skipped rather than counted — running the command twice should top up to the
+        // number asked for, not refuse because the first name is taken.
+        for (String name : RECRUITS) {
+            if (added >= count) {
+                break;
+            }
+            UUID who = offlineId(name);
+            if (store.of(who).isPresent()) {
+                continue;
+            }
+            // Named in Standards' cache first: addMember succeeding and the row still reading as
+            // eight hex characters is the bug this whole fixture exists to avoid.
+            names.rememberName(who, name);
+            FactionStore.Rank rank = added % 4 == 3
+                    ? FactionStore.Rank.OFFICER : FactionStore.Rank.MEMBER;
+            if (!store.addMember(id, who, rank)) {
+                report.add(name + ": refused");
+                continue;
+            }
+            report.add(name + " joined as " + rank.key());
+            added++;
+        }
+        if (added == 0 && report.isEmpty()) {
+            report.add("no names left — they are all in a faction already");
+        }
+        return report;
+    }
+
+    /**
+     * Take the invented members back out of whatever faction they joined.
+     *
+     * <p>Separate from {@link #clear}, which only knows about the neighbour factions. A recruit
+     * joined <em>your</em> faction, so sweeping them up by disbanding is not on offer.</p>
+     */
+    public static int clearMembers(MinecraftServer server) {
+        FactionStore store = FactionStore.get(server);
+        int gone = 0;
+        for (String name : RECRUITS) {
+            UUID who = offlineId(name);
+            Optional<FactionStore.Faction> in = store.of(who);
+            // Never the leader: removing one leaves a faction nobody can administer, and a fixture
+            // that can do that to a real faction is worse than no fixture.
+            if (in.isPresent() && !in.get().leader().equals(who)) {
+                store.removeMember(in.get().id(), who);
+                gone++;
+            }
+        }
+        return gone;
+    }
+
     /** Take them all away again, land and all. */
     public static int clear(MinecraftServer server) {
         FactionStore store = FactionStore.get(server);

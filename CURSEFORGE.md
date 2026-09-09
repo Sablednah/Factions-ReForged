@@ -255,6 +255,21 @@ trusted with it without being made a full operator. Everything else under `/f` i
 inside your own faction, which is game state rather than a permission: you become an officer by
 being promoted, and no permissions mod should be able to hand that out.
 
+## One place to look — `/f panel`
+
+Power, land, entitlement, bank, standard, trophies, raid record, allies, enemies and the member
+list, without stringing five commands together. `/f panel` prints all of it as text on any client.
+
+Install Factions **on the client** as well and the same command draws a pane on the inventory
+screen: tabs, a scrolling member list, and promote / demote / kick beside each name if you are a
+leader or an officer. It opens from a button on
+[Standards](https://www.curseforge.com/minecraft/mc-mods/sablecraft-standards)' action bar and
+closes with the same button.
+
+**The client half is optional and always will be.** Every button sends the command you could have
+typed, so the pane is a nicer surface for answers a vanilla player already gets — never a capability
+they do not have. Your players install nothing unless they want to.
+
 ## Requirements
 
 Built for three Minecraft lines. **Take the jar that names your version** — every file carries it,
