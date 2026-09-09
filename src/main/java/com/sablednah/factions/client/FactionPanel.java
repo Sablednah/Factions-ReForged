@@ -71,6 +71,8 @@ public final class FactionPanel implements InventoryPanel {
     private static final int TAB_H = 14;
     /** The little square buttons on a member row — exactly one row tall, see the class note. */
     private static final int MARK = ROW;
+    /** The scrollbar. Narrow on purpose: it is a position indicator that happens to be draggable. */
+    private static final int BAR_W = 4;
 
     private static final int LABEL = 0xFFAAAAAA;
     private static final int VALUE = 0xFFFFFFFF;
@@ -81,6 +83,18 @@ public final class FactionPanel implements InventoryPanel {
 
     private static Tab tab = Tab.OVERVIEW;
     private static int scroll;
+
+    /** Mid-drag on the scrollbar. Set on a press in the track, cleared on release. */
+    private static boolean dragging;
+
+    // Where the track was drawn last frame. A drag arrives knowing only the cursor, so the
+    // geometry has to be remembered rather than recomputed — recomputing it means a second copy
+    // of the layout arithmetic, which is the drift this pane is built to avoid.
+    private static int trackX;
+    private static int trackTop;
+    private static int trackHeight;
+    private static int trackThumb;
+    private static int trackMax;
 
     /**
      * Click targets, rebuilt every frame.
@@ -161,6 +175,9 @@ public final class FactionPanel implements InventoryPanel {
             int x, int y, int width, int height, int mouseX, int mouseY) {
         HOTSPOTS.clear();
         tooltip = null;
+        // Cleared every frame and set only by a drawn scrollbar, so switching to a tab that has
+        // none cannot leave a strip of dead space that still scrolls the members list.
+        trackMax = 0;
 
         FactionPanelPayload data = FactionPanelData.latest();
         if (data == null) {
@@ -217,6 +234,14 @@ public final class FactionPanel implements InventoryPanel {
         if (button != 0) {
             return false;
         }
+        // The track first: it overlaps nothing, but it is the one control that needs the click's
+        // own coordinates rather than a Runnable recorded during the draw.
+        if (trackMax > 0 && mouseX >= trackX && mouseX < trackX + BAR_W
+                && mouseY >= trackTop && mouseY < trackTop + trackHeight) {
+            dragging = true;
+            scrollTo(mouseY, trackTop, trackHeight, trackThumb, trackMax);
+            return true;
+        }
         for (Hot hot : HOTSPOTS) {
             if (mouseX >= hot.x0() && mouseX < hot.x1()
                     && mouseY >= hot.y0() && mouseY < hot.y1()) {
@@ -225,6 +250,28 @@ public final class FactionPanel implements InventoryPanel {
             }
         }
         return false;
+    }
+
+    /**
+     * Dragging the scrollbar thumb.
+     *
+     * <p>No bounds check on the cursor, and Standards does not apply one either: a thumb pulled
+     * quickly is outside the pane within a frame, and one that stops tracking when the cursor
+     * strays looks broken rather than bounded.</p>
+     */
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button,
+            double dragX, double dragY) {
+        if (!dragging || trackMax <= 0) {
+            return false;
+        }
+        scrollTo(mouseY, trackTop, trackHeight, trackThumb, trackMax);
+        return true;
+    }
+
+    @Override
+    public void mouseReleased(double mouseX, double mouseY, int button) {
+        dragging = false;
     }
 
     /** Only the members tab has anything to scroll, so only it claims the wheel. */
@@ -386,14 +433,21 @@ public final class FactionPanel implements InventoryPanel {
         boolean mayManage = d.yourRank().equalsIgnoreCase("leader")
                 || d.yourRank().equalsIgnoreCase("officer");
         List<FactionPanelPayload.Member> all = d.members();
+        int top = y;
         int visible = Math.max(1, (bottom - y) / ROW);
         int maxScroll = Math.max(0, all.size() - visible);
         // Clamped here rather than at the scroll event, because the number of rows that fit is not
         // known until the pane has been laid out — and it changes with the window.
         scroll = Math.max(0, Math.min(scroll, maxScroll));
 
+        // ⚠ The bar's strip is reserved whether or not there is anything to scroll. Reserving it
+        // only when needed would shift every row sideways the moment a faction outgrew the pane,
+        // which is a layout that changes under you as people join.
+        int barX = x + width - PAD - BAR_W;
+        int rowRight = barX - 3;
+
         int marks = mayManage ? MARK * 3 + 2 : 0;
-        int nameWidth = width - PAD * 2 - marks - 26;
+        int nameWidth = rowRight - (x + PAD) - marks - 26;
         for (int i = scroll; i < all.size() && y + ROW <= bottom; i++) {
             FactionPanelPayload.Member member = all.get(i);
             // Online state as colour rather than as a word: a column of "(online)" would cost more
@@ -409,7 +463,7 @@ public final class FactionPanel implements InventoryPanel {
             }
             if (mayManage) {
                 final String who = member.name();
-                int mx = x + width - PAD - MARK * 3 - 2;
+                int mx = rowRight - MARK * 3 - 2;
                 mark(graphics, font, mx, y, mouseX, mouseY, "\u25b2", "Promote " + who,
                         () -> send("f promote " + who));
                 mark(graphics, font, mx + MARK + 1, y, mouseX, mouseY, "\u25bc", "Demote " + who,
@@ -419,12 +473,57 @@ public final class FactionPanel implements InventoryPanel {
             }
             y += ROW;
         }
-        if (maxScroll > 0) {
-            String more = (scroll + visible >= all.size())
-                    ? "▲ " + all.size() : "▼ " + all.size();
-            graphics.drawString(font, more, x + width - PAD - font.width(more), bottom - ROW + 2,
-                    DIM);
+        scrollbar(graphics, barX, top, bottom, all.size(), visible, maxScroll, mouseX, mouseY);
+    }
+
+    /**
+     * A narrow bar down the right of the list.
+     *
+     * <p>It replaces a small {@code \u25bc 20} drawn in the bottom corner, which was the obvious
+     * cheap thing and sat directly on top of the last row's kick button — a count nobody could read
+     * over a button nobody could press. A bar has somewhere of its own to live, says how far down
+     * you are and how much there is at a glance rather than as a number, and can be dragged.</p>
+     *
+     * <p>Drawn only when there is something to scroll, though its strip is always reserved: an
+     * empty track is furniture that means nothing.</p>
+     */
+    private static void scrollbar(GuiGraphics graphics, int barX, int top, int bottom,
+            int total, int visible, int maxScroll, int mouseX, int mouseY) {
+        // mouseX/mouseY are for the hover highlight only — the click and drag use their own.
+        if (maxScroll <= 0) {
+            return;
         }
+        int height = bottom - top;
+        graphics.fill(barX, top, barX + BAR_W, bottom, 0xFF1A1A22);
+
+        // At least a few pixels tall however long the list gets: a thumb proportional all the way
+        // down becomes one pixel at two hundred members, which is accurate and unusable.
+        int thumbH = Math.max(8, height * visible / Math.max(1, total));
+        int thumbY = top + (height - thumbH) * scroll / maxScroll;
+        boolean hover = mouseX >= barX && mouseX < barX + BAR_W
+                && mouseY >= top && mouseY < bottom;
+        graphics.fill(barX, thumbY, barX + BAR_W, thumbY + thumbH,
+                hover || dragging ? 0xFF9A7AD0 : 0xFF5A4A7A);
+
+        // Remembered for the click and the drag, both of which arrive knowing only the cursor.
+        trackX = barX;
+        trackTop = top;
+        trackHeight = height;
+        trackThumb = thumbH;
+        trackMax = maxScroll;
+
+        // ⚠ Deliberately NOT a hotspot. A Hot carries a Runnable, so it would have to close over
+        // this frame's mouse position — and a click handled next frame would jump to where the
+        // cursor was when the bar was drawn rather than where it was clicked. Near enough to look
+        // right and wrong every time. The track is hit-tested in mouseClicked against the real
+        // click instead; the remembered geometry above is what lets it.
+    }
+
+    /** Put the thumb's middle where the cursor is, clamped to the track. */
+    private static void scrollTo(double mouseY, int top, int height, int thumbH, int maxScroll) {
+        int travel = Math.max(1, height - thumbH);
+        double at = mouseY - top - thumbH / 2.0;
+        scroll = (int) Math.round(Math.max(0, Math.min(1, at / travel)) * maxScroll);
     }
 
     /**
