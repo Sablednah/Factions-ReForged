@@ -279,7 +279,7 @@ public final class FactionPanel implements InventoryPanel {
      * nobody has ever run is the bug family this repo keeps a section about.</p>
      */
     @Override
-    public void renderOverlay(GuiGraphics graphics, Font font, int mouseX, int mouseY) {
+    public void renderOverlay(GuiGraphicsExtractor graphics, Font font, int mouseX, int mouseY) {
         if (tooltip != null) {
             graphics.setTooltipForNextFrame(Component.literal(tooltip), mouseX, mouseY);
         }
