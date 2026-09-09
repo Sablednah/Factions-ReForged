@@ -341,6 +341,8 @@ public final class FactionLang {
         Lang.contribute("msg.factions.panel_raids", "&7Raids &f{won}&7 won of &f{fought}");
         Lang.contribute("msg.factions.panel_relations", "&7Allies: &f{allies}&7 — enemies: &f{enemies}");
         Lang.contribute("msg.factions.panel_members", "&7Members: &f{members}");
+        Lang.contribute("msg.factions.panel_no_client",
+                "{term.dim}(shown as text — this client is not running Factions, so there is no panel to draw)");
         Lang.contribute("msg.factions.action_claim", "Claim this chunk");
         Lang.contribute("msg.factions.action_autoclaim", "Auto-claim as you walk");
         Lang.contribute("msg.factions.action_map", "Faction map");
