@@ -39,8 +39,10 @@ public final class FactionPanelData {
             // A pane only draws on the inventory screen, so a command typed in the world would
             // open something the player cannot see. Show them the inventory it lives on — but
             // never replace a screen they are already in the middle of.
-            if (mc.screen == null && mc.player != null) {
-                mc.setScreen(new InventoryScreen(mc.player));
+            // 26.2 moved both of these: Minecraft.screen became Minecraft.gui.screen(), and
+            // setScreen became setScreenAndShow.
+            if (mc.gui.screen() == null && mc.player != null) {
+                mc.setScreenAndShow(new InventoryScreen(mc.player));
             }
         });
     }
