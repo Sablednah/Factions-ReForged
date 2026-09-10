@@ -77,21 +77,45 @@
  *       rather than {@code logs/latest.log}.
  * </ul>
  *
- * <h2>⚠ Still unverified, and one is a whole feature</h2>
+ * <p>And the rest of it, on a second pass:
  *
  * <ul>
- *   <li><b>The two toolbar buttons were not found on screen.</b> The layer toggle and claim mode
- *       register without error and the client plugin logs that it added them, but hovering the
- *       fullscreen toolbar found only JourneyMap's own buttons. They may sit on a page of the
- *       toolbar that was not reached, or need a theme that shows addon buttons. <b>Until they are
- *       seen, claim mode is unreachable</b> — the click handler is gated on a mode nothing can turn
- *       on.
- *   <li>Click-to-claim and right-click-to-unclaim, therefore, have never run. The commands behind
- *       them are self-tested; the path from a click to them is not.
- *   <li>Standard waypoints — no standard was planted during the run.
- *   <li>The fill colour reads washed out over unexplored ground, but that ground was
- *       <em>magenta</em>: see below.
+ *   <li><b>Both toolbar buttons render</b>, with our own icons, in JourneyMap's addon column down
+ *       the right edge of the fullscreen map — not in the top toolbar, which is where I looked
+ *       first. Hovering gives {@code Claim mode off};
+ *   <li><b>claim mode works end to end</b>: toggle it, click a chunk, and the click becomes
+ *       {@code /f claim <x> <z>}. Two chunks were claimed that way —
+ *       {@code Claimed 1, -1. (2/336 chunks)} — and a click on distant ground was refused with
+ *       <em>"Claims must touch land you already hold."</em>, which is the server's own rule
+ *       arriving through the map with nothing special done for it;
+ *   <li><b>the overlay updates live</b> after a claim, which is {@link com.sablednah.factions.FactionsMapEvents}
+ *       doing its job.
  * </ul>
+ *
+ * <h2>⚠ Still unverified</h2>
+ *
+ * <ul>
+ *   <li>Right-click to unclaim — the command is self-tested, the click path is not.
+ *   <li>Standard waypoints: no standard was planted during the run.
+ *   <li>The layer toggle switches the option, but nothing confirmed the polygons actually vanish.
+ * </ul>
+ *
+ * <h2>⚠ How this was nearly reported wrong</h2>
+ *
+ * <p>The first pass concluded the buttons "were not found on screen" and wrote up claim mode as
+ * unreachable. The buttons were fine; <b>the client had lost its connection</b> and the map was
+ * never open, so the keypress did nothing and the callback never fired. A feature was declared
+ * broken on the strength of a test that could not have exercised it.
+ *
+ * <p>The fix was to stop hunting pixels and ask the code — one log line in the button callback,
+ * which then said plainly that JourneyMap had asked and both buttons were added. <b>When a UI looks
+ * absent, first prove the code ran.</b> "Never called" and "drew somewhere I did not look" are
+ * indistinguishable from a screenshot and trivially distinguishable from a log.
+ *
+ * <p>⚠ The connection loss had its own cause worth knowing: <b>the dev server and the dev client
+ * share a Gradle daemon</b>, and stopping the client took the server with it — the server log ends
+ * in {@code BUILD SUCCESSFUL}, which looks like a clean shutdown somebody asked for. Restart the
+ * server after stopping a client, or check the port before trusting a test.
  *
  * <p>⚠ <b>The magenta squares on the test machine are not ours.</b>
  * {@code [RegionTexture] Can't bind texture: java.lang.IllegalArgumentException}, repeatedly, in
