@@ -76,7 +76,27 @@ static String gitOut(File dir, String... args) {
 var buildCommit = gitOut(projectDir, "git", "rev-parse", "--short=8", "HEAD") ?: "unknown"
 var buildBranch = gitOut(projectDir, "git", "rev-parse", "--abbrev-ref", "HEAD") ?: "unknown"
 if (gitOut(projectDir, "git", "status", "--porcelain")) buildCommit += "-dirty"
-var buildTime = new Date().format("yyyy-MM-dd'T'HH:mm:ss'Z'", TimeZone.getTimeZone("UTC"))
+// ⚠ The COMMIT's timestamp, not the wall clock, and it is not a nicety. A wall clock changes on
+// every Gradle invocation, so generateModMetadata's inputs change every invocation, so
+// processResources and jar and everything downstream are NEVER up to date. Measured on Standards:
+// a no-op build went from "11 up-to-date, ~3s" to "6 executed, ~20s" — permanently, on every
+// build. Using the commit's time restores full caching and makes the build reproducible, which a
+// wall clock actively prevents.
+//
+// What it costs: "time" now answers "when was this code committed" rather than "when did I run
+// gradle". That is the better question anyway — the SHA already answers "which bytes", and the
+// jar's own mtime answers "when was this written". On a -dirty build the time is the commit's
+// rather than the build's, and -dirty has ALREADY said the bytes are not the commit's, so nothing
+// is lost that anybody was relying on.
+//
+// ⚠ %ct (epoch) formatted here, NOT %cI. %cI carries whatever UTC offset the committer's machine
+// had, so two builds of the same commit on two machines would stamp differently — a hole in
+// exactly the reproducibility this change is for. LegendQuest caught that one.
+var commitEpoch = gitOut(projectDir, "git", "show", "-s", "--format=%ct", "HEAD")
+var buildTime = commitEpoch
+        ? new Date(commitEpoch.toLong() * 1000L)
+                .format("yyyy-MM-dd'T'HH:mm:ss'Z'", TimeZone.getTimeZone("UTC"))
+        : "unknown"
 logger.lifecycle("Factions build stamp: ${buildCommit} on ${buildBranch} at ${buildTime}")
 
 var generateModMetadata = tasks.register("generateFactionsModMetadata", ProcessResources) {
