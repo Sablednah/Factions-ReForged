@@ -60,6 +60,25 @@ dependencies {
     implementation rootProject
 }
 
+// The build stamp — same four values and the same field names as Standards and LegendQuest, so one
+// reader works everywhere. See Standards' BuildInfo for why a version number is not enough, and why
+// the startup log line is the half that matters. Tolerant of git being absent; an unknown stamp
+// must never fail a build.
+static String gitOut(File dir, String... args) {
+    try {
+        var proc = new ProcessBuilder(args).directory(dir).redirectErrorStream(true).start()
+        var out = proc.inputStream.text.trim()
+        return proc.waitFor() == 0 && !out.isEmpty() ? out : null
+    } catch (Exception ignored) {
+        return null
+    }
+}
+var buildCommit = gitOut(projectDir, "git", "rev-parse", "--short=8", "HEAD") ?: "unknown"
+var buildBranch = gitOut(projectDir, "git", "rev-parse", "--abbrev-ref", "HEAD") ?: "unknown"
+if (gitOut(projectDir, "git", "status", "--porcelain")) buildCommit += "-dirty"
+var buildTime = new Date().format("yyyy-MM-dd'T'HH:mm:ss'Z'", TimeZone.getTimeZone("UTC"))
+logger.lifecycle("Factions build stamp: ${buildCommit} on ${buildBranch} at ${buildTime}")
+
 var generateModMetadata = tasks.register("generateFactionsModMetadata", ProcessResources) {
     var replaceProperties = [
             minecraft_version      : minecraft_version,
@@ -75,6 +94,9 @@ var generateModMetadata = tasks.register("generateFactionsModMetadata", ProcessR
             mod_description        : factions_mod_description,
             standards_mod_id       : mod_id,
             standards_version_range: "[${mod_version},)",
+            build_commit           : buildCommit,
+            build_branch           : buildBranch,
+            build_time             : buildTime,
     ]
     inputs.properties replaceProperties
     expand replaceProperties
@@ -83,6 +105,19 @@ var generateModMetadata = tasks.register("generateFactionsModMetadata", ProcessR
 }
 sourceSets.main.resources.srcDir generateModMetadata
 neoForge.ideSyncTask generateModMetadata
+
+// The same four as manifest attributes, for inspecting a jar without loading it.
+tasks.named('jar', Jar) {
+    manifest {
+        attributes([
+                "Implementation-Title"  : factions_mod_name,
+                "Implementation-Version": factions_mod_version,
+                "Build-Commit"          : buildCommit,
+                "Build-Branch"          : buildBranch,
+                "Build-Time"            : buildTime,
+        ])
+    }
+}
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'

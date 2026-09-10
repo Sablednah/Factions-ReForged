@@ -41,6 +41,8 @@ public final class Factions {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public Factions(IEventBus modEventBus, net.neoforged.fml.ModContainer container) {
+        // Which bytes, not just which release — see BuildInfo. The only record of what actually ran.
+        LOGGER.info("Factions ReForged {}", BuildInfo.describe());
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.COMMON,
                 FactionsConfig.SPEC);
 
