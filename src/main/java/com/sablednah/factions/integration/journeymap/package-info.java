@@ -58,21 +58,46 @@
  * Waypoints go to the owning faction and its allies and nobody else. Same rule as above wearing a
  * different hat: a nicer surface for what you could already learn, never a new capability.
  *
- * <h2>What is not built yet</h2>
+ * <h2>What has actually been seen, 2026-09-11</h2>
+ *
+ * <p>Rendered on a driven client on the test machine, with JourneyMap 6.0.0 present on both server
+ * and client. <b>Confirmed from screenshots, not from logs:</b>
  *
  * <ul>
- *   <li><b>Nothing has been seen on a real map.</b> Every claim here is compile-verified and
- *       reasoned; the polygons, the colours, the icons and the click handling have never been
- *       rendered. JourneyMap is not in the dev server's mods folder yet — CityWorld's notes are
- *       clear that <em>only a real client catches a client-plugin crash</em>, and that both of its
- *       crashes reached a player.
- *   <li><b>Hover info leans on JourneyMap's own polygon tooltip</b> rather than a drawn one. The
- *       title is built in {@link com.sablednah.factions.integration.journeymap.ClaimsOverlay};
- *       whether it presents well is unknown. CityWorld ended up drawing its own on NeoForge's
- *       {@code ScreenEvent.Render.Post} after finding info slots belong to the minimap and the
- *       fullscreen block-info bar is read-only to addons.
- *   <li>No vertical merging of claim runs, no per-player overlay budget, and no minimap-specific
- *       treatment.
+ *   <li>both plugins are discovered and initialise — {@code Found @JourneyMapPlugin} for the client
+ *       half, {@code JourneyMap server API found} for the server half, no exception from either;
+ *   <li>territory polygons draw, on the fullscreen map <em>and</em> the minimap;
+ *   <li><b>relation borders are right</b>: the player's own chunk outlined white, a hostile
+ *       neighbour red, an allied one green, all in one frame;
+ *   <li><b>the hover tooltip works natively</b> — {@code Vivotopia · 1 chunk · 21 members · power
+ *       210} appears from JourneyMap's own polygon title, so no drawn tooltip is needed. That is a
+ *       real divergence from CityWorld, which had to draw its own after finding info slots belong
+ *       to the minimap;
+ *   <li>no error in {@code runBuddy/journeymap/journeymap.log}, which is where map-side errors go
+ *       rather than {@code logs/latest.log}.
  * </ul>
+ *
+ * <h2>⚠ Still unverified, and one is a whole feature</h2>
+ *
+ * <ul>
+ *   <li><b>The two toolbar buttons were not found on screen.</b> The layer toggle and claim mode
+ *       register without error and the client plugin logs that it added them, but hovering the
+ *       fullscreen toolbar found only JourneyMap's own buttons. They may sit on a page of the
+ *       toolbar that was not reached, or need a theme that shows addon buttons. <b>Until they are
+ *       seen, claim mode is unreachable</b> — the click handler is gated on a mode nothing can turn
+ *       on.
+ *   <li>Click-to-claim and right-click-to-unclaim, therefore, have never run. The commands behind
+ *       them are self-tested; the path from a click to them is not.
+ *   <li>Standard waypoints — no standard was planted during the run.
+ *   <li>The fill colour reads washed out over unexplored ground, but that ground was
+ *       <em>magenta</em>: see below.
+ * </ul>
+ *
+ * <p>⚠ <b>The magenta squares on the test machine are not ours.</b>
+ * {@code [RegionTexture] Can't bind texture: java.lang.IllegalArgumentException}, repeatedly, in
+ * JourneyMap's own log — llvmpipe software rendering failing to bind region textures. Judging any
+ * fill or opacity against that background proves nothing, and chasing it as an overlay bug would
+ * waste an evening.
+ *
  */
 package com.sablednah.factions.integration.journeymap;
