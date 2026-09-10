@@ -72,7 +72,12 @@ public final class BuildInfo {
             // would then report a plausible-looking commit with the rest missing — worse than no
             // stamp at all, because it looks like an answer. So `p` is only read AFTER load has
             // returned, and a throw discards every field including the ones that parsed.
-            // MobHealth's observation; three of us had this right by where the assignments sat.
+            //
+            // ⚠ This is not a risk, it is what the parser does. CityWorld printed
+            // stringPropertyNames() from inside the catch and found [commit, branch, version]
+            // already populated: Properties.load BUILDS a fully-formed half-stamp and only the
+            // throw stops you using it. MobHealth raised it, CityWorld measured it, and three of
+            // us had it right by where the assignments happened to sit rather than by deciding.
             Properties p = new Properties();
             p.load(in);
             return new Stamp(
