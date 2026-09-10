@@ -40,3 +40,19 @@ type = "required"
 versionRange = "${minecraft_version_range}"
 ordering = "NONE"
 side = "BOTH"
+
+# JourneyMap, for the claims layer — see integration/journeymap.
+#
+# A TRUE soft dependency: the API is compileOnly and no journeymap class is referenced outside that
+# package, so with JourneyMap absent nothing there is ever loaded. This entry only pins the API
+# generation and asks the loader to start JourneyMap first.
+#
+# ⚠ The range is a gradle property because JourneyMap's version strings lead with the Minecraft
+# version, so each branch needs its own floor — and an optional dependency whose range is UNMET
+# still refuses to load, so a wrong floor stops the mod rather than dropping the layer.
+[[dependencies.${mod_id}]]
+modId = "journeymap"
+type = "optional"
+versionRange = "${journeymap_version_range}"
+ordering = "AFTER"
+side = "BOTH"
