@@ -325,9 +325,18 @@ public final class FactionPanel implements InventoryPanel {
         return true;
     }
 
+    /**
+     * End of a scrollbar drag.
+     *
+     * <p>Returns true only while a drag was actually in flight. The pane has no drop target, so it
+     * has no reason to claim a release it was not using — and claiming one would be the "button
+     * somewhere else left stuck down" the host's javadoc warns about.</p>
+     */
     @Override
-    public void mouseReleased(double mouseX, double mouseY, int button) {
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        boolean was = dragging;
         dragging = false;
+        return was;
     }
 
     /** Only the members tab has anything to scroll, so only it claims the wheel. */
