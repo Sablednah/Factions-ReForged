@@ -66,6 +66,13 @@ public final class BuildInfo {
             return new Stamp(UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN);
         }
         try {
+            // ⚠ ALL OR NOTHING, and this is by design rather than by luck. Properties.load parses
+            // line by line and can throw PART-WAY: a valid `commit=` followed by a bad escape
+            // leaves `p` holding a real commit and nothing else. Reading fields as they arrive
+            // would then report a plausible-looking commit with the rest missing — worse than no
+            // stamp at all, because it looks like an answer. So `p` is only read AFTER load has
+            // returned, and a throw discards every field including the ones that parsed.
+            // MobHealth's observation; three of us had this right by where the assignments sat.
             Properties p = new Properties();
             p.load(in);
             return new Stamp(
