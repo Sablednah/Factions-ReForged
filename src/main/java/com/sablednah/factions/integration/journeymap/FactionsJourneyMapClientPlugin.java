@@ -128,7 +128,15 @@ public class FactionsJourneyMapClientPlugin implements IClientPlugin {
         }
     }
 
+    /** Logged once, because "the callback never fired" and "the button drew nowhere" look identical. */
+    private boolean announcedButtons;
+
     private void onAddonButtons(FullscreenDisplayEvent.AddonButtonDisplayEvent event) {
+        if (!announcedButtons) {
+            announcedButtons = true;
+            Factions.LOGGER.info("Factions: JourneyMap asked for addon buttons; adding {}",
+                    mayClaim() ? "claims layer + claim mode" : "claims layer only (claim withheld)");
+        }
         event.getThemeButtonDisplay().addThemeToggleButton("Faction claims on", "Faction claims off",
                 LAYER_ICON, claimsOn(), button -> setClaimsOn(!claimsOn()));
 
