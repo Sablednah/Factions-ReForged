@@ -67,9 +67,24 @@ public final class FactionCommands {
                 .then(Commands.literal("demote")
                         .then(Commands.argument("player", StringArgumentType.word())
                                 .executes(ctx -> rank(ctx, false))))
-                .then(Commands.literal("claim").executes(FactionCommands::claim))
+                .then(Commands.literal("claim")
+                        .executes(FactionCommands::claim)
+                        // The map's click sends this. See claimAtCoords for why it is a command.
+                        .then(Commands.argument("x",
+                                        com.mojang.brigadier.arguments.IntegerArgumentType.integer())
+                                .then(Commands.argument("z",
+                                                com.mojang.brigadier.arguments.IntegerArgumentType
+                                                        .integer())
+                                        .executes(FactionCommands::claimAtCoords))))
                 .then(Commands.literal("autoclaim").executes(FactionCommands::autoclaim))
-                .then(Commands.literal("unclaim").executes(FactionCommands::unclaim))
+                .then(Commands.literal("unclaim")
+                        .executes(FactionCommands::unclaim)
+                        .then(Commands.argument("x",
+                                        com.mojang.brigadier.arguments.IntegerArgumentType.integer())
+                                .then(Commands.argument("z",
+                                                com.mojang.brigadier.arguments.IntegerArgumentType
+                                                        .integer())
+                                        .executes(FactionCommands::unclaimAtCoords))))
                 .then(Commands.literal("unclaimall").executes(FactionCommands::unclaimAll))
                 .then(Commands.literal("sethome").executes(FactionCommands::setHome))
                 .then(Commands.literal("home").executes(FactionCommands::home))
@@ -592,7 +607,40 @@ public final class FactionCommands {
 
     // --- land ---
 
+    /** {@code /f claim} — the chunk you are standing in. */
     private static int claim(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        return claimAt(ctx, new ChunkPos(player.blockPosition()));
+    }
+
+    /**
+     * {@code /f claim <x> <z>} — a chunk named rather than stood in.
+     *
+     * <p>Added for the map's click-to-claim, and added as a COMMAND rather than a packet so that a
+     * vanilla client gains exactly the same reach. That is the rule the whole client half runs on:
+     * a map may present what the server would have given anybody who typed, never something extra.
+     *
+     * <p>⚠ It is not a shortcut past the rules, because the rules are not about where you stand.
+     * A claim must still connect to land the faction already holds, still costs, still fits the
+     * limit, and still needs a raid to take somebody else's. So the furthest a click can reach is
+     * one chunk beyond a border the faction already walked to.</p>
+     */
+    private static int claimAtCoords(CommandContext<CommandSourceStack> ctx)
+            throws CommandSyntaxException {
+        return claimAt(ctx, new ChunkPos(
+                com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "x"),
+                com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "z")));
+    }
+
+    /**
+     * Every claim, wherever the chunk came from.
+     *
+     * <p>One body for both forms deliberately: the decision is {@code FactionClaims.attempt} and
+     * every refusal message hangs off it, so a second copy would be a second set of rules that
+     * agreed until somebody edited one.</p>
+     */
+    private static int claimAt(CommandContext<CommandSourceStack> ctx, ChunkPos chunk)
+            throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         Optional<FactionStore.Faction> f = atLeast(ctx, player, FactionStore.Rank.OFFICER);
         if (f.isEmpty()) {
@@ -600,7 +648,6 @@ public final class FactionCommands {
         }
         ServerLevel level = player.level();
         String dim = FactionBridge.dimensionOf(level);
-        ChunkPos chunk = ChunkPos.containing(player.blockPosition());
         FactionStore store = store(ctx);
 
         int limit = FactionClaims.limitFor(f.get());
@@ -710,14 +757,29 @@ public final class FactionCommands {
         return 1;
     }
 
-    private static int unclaim(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
+    /** {@code /f unclaim} — the chunk you are standing in. */
+    private static int unclaim(CommandContext<CommandSourceStack> ctx)
+            throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        return unclaimAt(ctx, new ChunkPos(player.blockPosition()));
+    }
+
+    /** {@code /f unclaim <x> <z>} — the map's right-click. Same rules; see {@link #claimAtCoords}. */
+    private static int unclaimAtCoords(CommandContext<CommandSourceStack> ctx)
+            throws CommandSyntaxException {
+        return unclaimAt(ctx, new ChunkPos(
+                com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "x"),
+                com.mojang.brigadier.arguments.IntegerArgumentType.getInteger(ctx, "z")));
+    }
+
+    private static int unclaimAt(CommandContext<CommandSourceStack> ctx, ChunkPos chunk)
+            throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         Optional<FactionStore.Faction> f = atLeast(ctx, player, FactionStore.Rank.OFFICER);
         if (f.isEmpty()) {
             return 0;
         }
         String dim = FactionBridge.dimensionOf(player.level());
-        ChunkPos chunk = ChunkPos.containing(player.blockPosition());
         Optional<String> owner = store(ctx).ownerOf(dim, chunk.x(), chunk.z());
         if (owner.isEmpty() || !owner.get().equals(f.get().id())) {
             Feedback.chat(player, Lang.get("msg.factions.not_yours"));

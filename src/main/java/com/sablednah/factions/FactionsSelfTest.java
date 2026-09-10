@@ -81,6 +81,17 @@ public final class FactionsSelfTest {
         // /f panel earned a check the hard way: a whole afternoon went into deciding whether it
         // was reaching FactionCommands::panel at all, and nothing here could have answered that.
         check("/f panel parses to something executable", executable(d, src, "f panel"));
+        // The map's click-to-claim sends these. A button that sends a command nobody can parse is
+        // the word() trap again, and the map cannot tell — it never sees the parse.
+        check("/f claim <x> <z> parses, for the map's click",
+                executable(d, src, "f claim 12 -34"));
+        check("/f unclaim <x> <z> parses, for the map's right-click",
+                executable(d, src, "f unclaim 12 -34"));
+        check("...and negative coordinates survive the argument type",
+                executable(d, src, "f claim -1200 -3400"));
+        // Negative: the bare forms must still work, or standing-in-the-chunk claiming is gone.
+        check("bare /f claim still executes", executable(d, src, "f claim"));
+        check("bare /f unclaim still executes", executable(d, src, "f unclaim"));
         // The pane's no-faction state offers these two, pre-filled into the chat box. A button
         // that pre-fills a command nobody can complete is worse than no button, and the pane
         // cannot tell — it never sees the parse.

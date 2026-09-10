@@ -4,6 +4,16 @@ plugins {
     id 'net.neoforged.moddev'
 }
 
+repositories {
+    // BlameJared is TeamJM's maven; the JourneyMap API artifact lives there. Compile-only — see
+    // the dependencies block.
+    maven {
+        name = 'BlameJared'
+        url = 'https://maven.blamejared.com'
+        content { includeGroup 'info.journeymap' }
+    }
+}
+
 // A Windows-side dev client must not build into the same directory the running WSL dev server
 // has its jars open from. Standards' root build does this for itself; the subproject needs it
 // too, or :factions:jar fails with "Unable to delete file ... factions-<version>.jar" and it
@@ -58,6 +68,16 @@ dependencies {
     // If Factions needs a SEAM to grow, the seam is wrong and should grow. If it needs a utility
     // made public, that is ordinary library work.
     implementation rootProject
+
+    // JourneyMap's API — COMPILE ONLY, never shipped in our jar.
+    //
+    // Every journeymap.* reference lives in integration/journeymap and nothing outside that package
+    // may reference it. JourneyMap finds the plugin classes itself by scanning for
+    // @JourneyMapPlugin, so with JourneyMap absent they are never loaded and the missing API is
+    // never missed. That is what makes this a true soft dependency rather than a declared one.
+    //
+    // Verify it stayed out: `unzip -l <jar> | grep journeymap/api` must come back empty.
+    compileOnly "info.journeymap:journeymap-api-neoforge:${journeymap_api_version}"
 }
 
 // The build stamp — same four values and the same field names as Standards and LegendQuest, so one
@@ -114,6 +134,7 @@ var generateModMetadata = tasks.register("generateFactionsModMetadata", ProcessR
             mod_description        : factions_mod_description,
             standards_mod_id       : mod_id,
             standards_version_range: "[${mod_version},)",
+            journeymap_version_range: journeymap_version_range,
             build_commit           : buildCommit,
             build_branch           : buildBranch,
             build_time             : buildTime,

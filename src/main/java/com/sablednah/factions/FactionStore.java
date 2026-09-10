@@ -686,6 +686,7 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
                 colour, patterns, capturedFrom));
         standards.put(factionId, List.copyOf(flags));
         setDirty();
+        FactionsMapEvents.standardsChanged();
     }
 
     /** Take down one particular flag, wherever it stands. */
@@ -702,6 +703,7 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
                     standards.put(e.getKey(), left);
                 }
                 setDirty();
+                FactionsMapEvents.standardsChanged();
                 return;
             }
         }
@@ -861,13 +863,18 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
     public void claim(String dimension, int x, int z, String factionId) {
         claims.put(key(dimension, x, z), factionId);
         setDirty();
+        FactionsMapEvents.claimsChanged(factionId, dimension);
     }
 
     public boolean unclaim(String dimension, int x, int z) {
-        if (claims.remove(key(dimension, x, z)) == null) {
+        String was = claims.remove(key(dimension, x, z));
+        if (was == null) {
             return false;
         }
         setDirty();
+        // Named with the faction that LOST it: a map redraws the owner's shape, and after the
+        // removal there is no owner to ask.
+        FactionsMapEvents.claimsChanged(was, dimension);
         return true;
     }
 
@@ -877,6 +884,9 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
         int removed = before - claims.size();
         if (removed > 0) {
             setDirty();
+            // Dimension unknown and deliberately so — unclaimAll crosses every dimension a faction
+            // held land in, and a listener that redraws one of them would leave the others stale.
+            FactionsMapEvents.claimsChanged(factionId, null);
         }
         return removed;
     }
