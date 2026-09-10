@@ -32,58 +32,78 @@ import java.util.Properties;
  *
  * <p>Format agreed with LegendQuest, which built it first and proposed it. Deliberately copied
  * rather than shared — including from Standards, which Factions could perfectly well have imported
- * this from: five copies of sixty lines is less coupling than another artifact every mod depends on
- * for a diagnostic, and this one above all must not be able to break a build. Keep the four field
- * names identical so one reader works across every mod.</p>
+ * this from: less coupling than another artifact every mod depends on for a diagnostic, and this
+ * one above all must not be able to break a build. Keep the four field names identical so one
+ * reader works across every mod.</p>
  */
 public final class BuildInfo {
 
     private static final String RESOURCE = "/factions/build.properties";
 
-    private static final String COMMIT;
-    private static final String BRANCH;
-    private static final String TIME;
-    private static final String VERSION;
+    private static final String UNKNOWN = "unknown";
 
-    static {
-        String commit = "unknown";
-        String branch = "unknown";
-        String time = "unknown";
-        String version = "unknown";
-        try (InputStream in = BuildInfo.class.getResourceAsStream(RESOURCE)) {
-            if (in != null) {
-                Properties p = new Properties();
-                p.load(in);
-                commit = p.getProperty("commit", commit);
-                branch = p.getProperty("branch", branch);
-                time = p.getProperty("time", time);
-                version = p.getProperty("version", version);
-            }
-        } catch (Exception ignored) {
-            // Deliberately swallowed. See the class note: never the reason a mod fails to load.
+    /** The four values, so the reading can be exercised without a classpath to stage. */
+    public record Stamp(String commit, String branch, String time, String version) {}
+
+    private static final Stamp STAMP = read(BuildInfo.class.getResourceAsStream(RESOURCE));
+
+    /**
+     * Turn the stamp resource into four values, or four {@code unknown}s.
+     *
+     * <p><b>Public so {@code SelfTest} can drive this method rather than a copy of it</b>, and for
+     * no other reason — the accessors above are the intended surface. Widening it was the cheaper
+     * of two bad options: the alternative is a fallback nobody has ever executed, and this repo has
+     * a whole section on what those cost.</p>
+     *
+     * ⚠ The degrade path was asserted in this class's own javadoc for an hour before anything ran
+     * it — "degrades to unknown and never throws" was a claim, not a result, which is precisely the
+     * shape of bug this repo keeps a section about. MobHealth pointed it out.</p>
+     *
+     * @param in the resource, or {@code null} when there is none — a source build, a stripped jar
+     */
+    public static Stamp read(InputStream in) {
+        if (in == null) {
+            return new Stamp(UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN);
         }
-        COMMIT = commit;
-        BRANCH = branch;
-        TIME = time;
-        VERSION = version;
+        try {
+            Properties p = new Properties();
+            p.load(in);
+            return new Stamp(
+                    p.getProperty("commit", UNKNOWN),
+                    p.getProperty("branch", UNKNOWN),
+                    p.getProperty("time", UNKNOWN),
+                    p.getProperty("version", UNKNOWN));
+        } catch (Exception ignored) {
+            // Deliberately swallowed, and deliberately catching Exception rather than IOException:
+            // Properties.load throws IllegalArgumentException on a malformed unicode escape, which
+            // is a corrupt-resource case rather than an I/O one. See the class note — this is
+            // never the reason a mod fails to load.
+            return new Stamp(UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN);
+        } finally {
+            try {
+                in.close();
+            } catch (Exception ignored) {
+                // Nothing useful to do, and nothing that should propagate from a diagnostic.
+            }
+        }
     }
 
     /** Short SHA, with a {@code -dirty} suffix when built from uncommitted changes. */
     public static String commit() {
-        return COMMIT;
+        return STAMP.commit();
     }
 
     public static String branch() {
-        return BRANCH;
+        return STAMP.branch();
     }
 
     /** UTC, ISO-8601. */
     public static String time() {
-        return TIME;
+        return STAMP.time();
     }
 
     public static String version() {
-        return VERSION;
+        return STAMP.version();
     }
 
     /**
@@ -94,7 +114,8 @@ public final class BuildInfo {
      * before you spend an hour reproducing against a tag that is not what they ran.</p>
      */
     public static String describe() {
-        return VERSION + " (build " + COMMIT + " on " + BRANCH + ", " + TIME + ")";
+        return STAMP.version() + " (build " + STAMP.commit() + " on " + STAMP.branch()
+                + ", " + STAMP.time() + ")";
     }
 
     private BuildInfo() {}
