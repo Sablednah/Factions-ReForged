@@ -2,7 +2,7 @@ package com.sablednah.factions.integration.journeymap;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.client.event.ClientChatReceivedEvent;
@@ -61,7 +61,8 @@ final class MapNotices {
      */
     static void expect() {
         armedUntil = System.currentTimeMillis() + WINDOW_MS;
-        armedOn = Minecraft.getInstance().screen;
+        // 26.2: Minecraft.screen moved to gui.screen().
+        armedOn = Minecraft.getInstance().gui.screen();
     }
 
     @SubscribeEvent
@@ -89,7 +90,7 @@ final class MapNotices {
         draw(event.getGuiGraphics(), Minecraft.getInstance().font);
     }
 
-    private static void draw(GuiGraphics graphics, Font font) {
+    private static void draw(GuiGraphicsExtractor graphics, Font font) {
         String text = message;
         if (text == null || text.isEmpty()) {
             return;
@@ -109,6 +110,6 @@ final class MapNotices {
         int edge = (alpha << 24) | 0x8A6ACB;
         graphics.fill(x - 6, y - 5, x + width + 6, y - 4, edge);
         graphics.fill(x - 6, y + 12, x + width + 6, y + 13, edge);
-        graphics.drawString(font, text, x, y, (alpha << 24) | 0xFFFFFF);
+        graphics.text(font, text, x, y, (alpha << 24) | 0xFFFFFF);
     }
 }
