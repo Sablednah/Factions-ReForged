@@ -157,11 +157,27 @@ public class FactionsJourneyMapPlugin implements IServerPlugin {
      * map must not become a targeting aid that the game does not otherwise give — you find somebody
      * else's flag by going and looking. This is the action-bar rule in a different costume: a nicer
      * surface for what you could already learn, never a new capability.</p>
+     *
+     * <p>⚠ <b>It takes its own pins down first, and that is not tidiness.</b> Every call to
+     * {@code createWaypoint} mints a fresh random guid, and the server keys its store by guid — so
+     * re-pinning the same flag adds a <em>second</em> pin rather than replacing the first. Measured
+     * rather than reasoned: one banner, one walk to the nether and back, and the waypoint manager
+     * read <b>2</b>. Logging in, changing dimension and any standard moving anywhere all call this,
+     * so the pins would have grown all session.</p>
+     *
+     * <p>The same delete is what takes a pin <em>down</em>. A standard that is captured, broken or
+     * loses its sky fires a refresh in which it is simply absent — with no delete, the flag would
+     * stay pinned where it no longer stands, which is worse than not pinning it at all. Same rule
+     * as {@link ClaimsOverlay}: push the whole set, never a delta.</p>
      */
     private void standardsFor(ServerPlayer player) {
+        clearOurPins(player.getUUID());
+
         FactionStore store = FactionStore.get(player.level().getServer());
         String mine = store.of(player.getUUID()).map(FactionStore.Faction::id).orElse(null);
         if (mine == null) {
+            // Note the pins came down first: somebody who just left their faction should stop
+            // seeing its flags, and returning before the delete is how they would keep them.
             return;
         }
         for (FactionStore.Faction faction : store.all()) {
@@ -191,6 +207,15 @@ public class FactionsJourneyMapPlugin implements IServerPlugin {
         }
     }
 
+    /** Remove every pin this mod put on that player, leaving everybody else's alone. */
+    private void clearOurPins(UUID player) {
+        for (Waypoint existing : api.getWaypoints(player)) {
+            if (Factions.MODID.equals(existing.getModId())) {
+                safely(() -> api.deletePlayerWaypoint(player, existing.getGuid()));
+            }
+        }
+    }
+
     /**
      * Turn Factions' dimension string back into Minecraft's key.
      *
@@ -210,9 +235,37 @@ public class FactionsJourneyMapPlugin implements IServerPlugin {
      * <p>Reused rather than recreated because a group is persistent per-player state: making a
      * second one called the same thing gives the player two identical folders and splits their pins
      * between them.</p>
+     *
+     * <h2>⚠ {@code WaypointGroup.addWaypoint} is a client method, and it fails quietly</h2>
+     *
+     * <p>It is on the common API and it looks like the obvious call. On a dedicated server it casts
+     * the waypoint to {@code ClientWaypointImpl} — ours is the server flavour — and throws
+     * {@code ClassCastException} straight into whatever caught it. It also returns {@code false}
+     * unconditionally, so even the return value cannot tell you. The visible result was a
+     * <b>"Faction Standards" folder holding nothing</b>, with the pin in Default: a folder that
+     * lies, which is the same defect as the layer button that flipped its own label. One DEBUG line
+     * was the only trace.</p>
+     *
+     * <p>What the server actually persists is the {@code groupId} on the waypoint itself, so that
+     * is what is set. It is not on the {@code Waypoint} interface, hence reflection — taken off the
+     * <b>instance</b> rather than by naming {@code journeymap.common.waypoint.WaypointImpl}, so a
+     * renamed or relocated implementation is a missing method rather than a missing class.</p>
+     *
+     * <p>And the folder is only created once that setter is known to be there. A group nothing can
+     * be put into is worse than no group — it is the empty folder again, this time with the excuse
+     * that we tried.</p>
      */
     private void group(UUID player, Waypoint waypoint) {
+        if (Boolean.FALSE.equals(groupable)) {
+            return;
+        }
         try {
+            java.lang.reflect.Method setter =
+                    waypoint.getClass().getMethod("setGroupId", String.class);
+            if (groupable == null) {
+                groupable = true;
+                Factions.LOGGER.debug("Factions: JourneyMap waypoints can be grouped");
+            }
             WaypointGroup group = groups.computeIfAbsent(player.toString(), key -> {
                 for (WaypointGroup existing : api.getAllGroups(player)) {
                     if (Factions.MODID.equals(existing.getModId())
@@ -226,13 +279,23 @@ public class FactionsJourneyMapPlugin implements IServerPlugin {
                 return made;
             });
             if (group != null) {
-                group.addWaypoint(waypoint);
+                setter.invoke(waypoint, group.getGuid());
             }
-        } catch (Throwable t) {
-            // A pin without a folder is still a pin. Grouping is presentation, not the feature.
-            Factions.LOGGER.debug("Factions: JourneyMap waypoint group unavailable", t);
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
+            // A pin without a folder is still a pin. Grouping is presentation, not the feature —
+            // but say so once and at INFO, because the previous version said it at DEBUG and the
+            // empty folder went unnoticed until somebody opened the waypoint manager.
+            if (groupable == null) {
+                Factions.LOGGER.info(
+                        "Factions: JourneyMap will not group waypoints ({}); standards will be "
+                                + "pinned without their own folder", e.toString());
+            }
+            groupable = false;
         }
     }
+
+    /** Whether this JourneyMap lets us set a waypoint's group. Probed once, off a real waypoint. */
+    private Boolean groupable;
 
     /**
      * ⚠ Every callback here runs inside JourneyMap's own event handling.
