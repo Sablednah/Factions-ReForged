@@ -152,6 +152,28 @@ outline stays one pixel wide at every level. `map.pixelsPerChunk` sets the defau
 The map is **locked**, the way a cartography table locks one, so vanilla does not slowly repaint it
 with terrain as you carry it.
 
+### `/f map layer on|off`
+
+**Faction territory on JourneyMap, if you happen to have it.** Every faction's claims are drawn as a
+filled region in its own banner colour, bordered by your *relation* to the owner — white your own,
+green an ally, red an enemy, grey everybody else. Hover a region and it names the faction, its land,
+its members and its power. Your own and your allies' standards get pinned, in their own **Faction
+Standards** folder.
+
+This turns that off and on again. It is a command rather than only a button because the map is drawn
+**by the server** — the button on JourneyMap's toolbar sends exactly this, so the two can never
+disagree, and you can type it if you would rather.
+
+Nothing here is a new capability: it shows what `/f map` would have told you anyway, on a nicer
+surface. An enemy's standard is not pinned, because you are supposed to find that by going and
+looking.
+
+With JourneyMap installed and permission to claim, a second toolbar button turns on **claim mode**:
+left-click a chunk to claim it, right-click to release it. Each click runs `/f claim <x> <z>`, so
+every cost, limit and refusal is the same one you would get standing there.
+
+None of this is required. Without JourneyMap, Factions never loads a line of it.
+
 ### `/f map item terrain [zoom]`
 
 The same claims, **washed over the real landscape** — rivers, forest, coastline — so you can see

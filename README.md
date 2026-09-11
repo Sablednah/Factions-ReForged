@@ -31,6 +31,7 @@ Requires **[SableCraft Standards](../SableCraft-Standards)**, and not optionally
 /f sethome | home             on your own land, with Standards' warmup and safe landing
 /f map [item [zoom]]          see below
 /f map item terrain [zoom]    the same, over real ground
+/f map layer on|off           faction territory on JourneyMap
 /f borders                    show the edges
 
   who you are, and to whom
