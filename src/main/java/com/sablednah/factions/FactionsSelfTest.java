@@ -92,6 +92,15 @@ public final class FactionsSelfTest {
         // Negative: the bare forms must still work, or standing-in-the-chunk claiming is gone.
         check("bare /f claim still executes", executable(d, src, "f claim"));
         check("bare /f unclaim still executes", executable(d, src, "f unclaim"));
+
+        // The map's layer switch. It is a command because the overlays are pushed by the server,
+        // so the button has to say something rather than only flip its own label — the first
+        // version did the latter and the territory stayed drawn.
+        check("/f map layer on parses, for the map's layer button",
+                executable(d, src, "f map layer on"));
+        check("...and off", executable(d, src, "f map layer off"));
+        check("...but not a third state", !executable(d, src, "f map layer sometimes"));
+        check("a bare /f map still executes", executable(d, src, "f map"));
         // The pane's no-faction state offers these two, pre-filled into the chat box. A button
         // that pre-fills a command nobody can complete is worse than no button, and the pane
         // cannot tell — it never sees the parse.

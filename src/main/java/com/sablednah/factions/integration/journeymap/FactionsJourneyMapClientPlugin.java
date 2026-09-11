@@ -118,20 +118,82 @@ public class FactionsJourneyMapClientPlugin implements IClientPlugin {
 
     private void setClaimsOn(boolean on) {
         lastKnown = on;
-        if (showClaims == null) {
+        if (showClaims != null) {
+            try {
+                showClaims.set(on);
+            } catch (RuntimeException notBoundYet) {
+                // Nothing to do: the value is remembered above and written when binding catches up.
+            }
+        }
+        tellServer(on);
+    }
+
+    /** What the server was last told, so a reconnect or a stored preference is re-stated. */
+    private Boolean told;
+
+    /**
+     * ⚠ <b>Which</b> server was told — the connection object, held weakly, not a boolean.
+     *
+     * <p>A plain "have we sent it yet" flag survives leaving the world, so the second server you
+     * join in one session is never told anything: the value has not changed since the first, so
+     * there is nothing to send, and the preference silently applies to one server per launch.
+     * Comparing the connection makes "a different server" and "a changed value" the same test.</p>
+     *
+     * <p>Weak because this plugin outlives every connection JourneyMap sees, and a strong reference
+     * to a dead {@code ClientPacketListener} pins the whole network stack of a world you left.</p>
+     */
+    private java.lang.ref.WeakReference<Object> toldWho = new java.lang.ref.WeakReference<>(null);
+
+    /**
+     * ⚠ The half that makes the switch do anything.
+     *
+     * <p>The overlays are pushed by the <b>server</b>, so writing the option and stopping there
+     * flips a tooltip and leaves the territory drawn — which is exactly what the first version did,
+     * and it looked like a rendering bug rather than a missing message. It goes as a command, like
+     * every other button in this pair, so a vanilla client can say the same thing by typing it.</p>
+     *
+     * <p>Sent only on a change, because it is chat traffic; {@link #syncServer()} covers the case
+     * where there has been no change but the server has never heard.</p>
+     */
+    private void tellServer(boolean on) {
+        Minecraft mc = Minecraft.getInstance();
+        net.minecraft.client.multiplayer.ClientPacketListener connection = mc.getConnection();
+        if (connection == null) {
             return;
         }
-        try {
-            showClaims.set(on);
-        } catch (RuntimeException notBoundYet) {
-            // Nothing to do: the value is remembered above and written when binding catches up.
+        if (told != null && told == on && toldWho.get() == connection) {
+            return;
         }
+        told = on;
+        toldWho = new java.lang.ref.WeakReference<>(connection);
+        connection.sendCommand(on ? "f map layer on" : "f map layer off");
+    }
+
+    /**
+     * Re-state the preference to a server that has not heard it.
+     *
+     * <p>⚠ <b>The stored-option case.</b> JourneyMap persists the option, so a player who turned
+     * the layer off last week joins with it off and never touches the button — nothing changes, so
+     * nothing is sent, and the server draws territory the client's own switch says is hidden. The
+     * server defaults to on and cannot know better. So the preference is re-stated whenever the map
+     * opens, which is the first moment it matters and the first moment there is certainly a
+     * connection.</p>
+     *
+     * <p>A different connection counts as never having heard it — see {@link #toldWho}.</p>
+     */
+    private void syncServer() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.getConnection() == null) {
+            return;
+        }
+        tellServer(claimsOn());
     }
 
     /** Logged once, because "the callback never fired" and "the button drew nowhere" look identical. */
     private boolean announcedButtons;
 
     private void onAddonButtons(FullscreenDisplayEvent.AddonButtonDisplayEvent event) {
+        syncServer();
         if (!announcedButtons) {
             announcedButtons = true;
             Factions.LOGGER.info("Factions: JourneyMap asked for addon buttons; adding {}",

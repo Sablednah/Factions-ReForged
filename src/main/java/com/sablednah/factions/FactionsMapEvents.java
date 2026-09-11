@@ -29,8 +29,12 @@ public final class FactionsMapEvents {
     /** What changed, so a listener can redraw only that. */
     public record ClaimsChanged(String factionId, String dimension) {}
 
+    /** One player turning the layer off, so the map can stop drawing it for them alone. */
+    public record LayerToggled(net.minecraft.server.level.ServerPlayer player, boolean on) {}
+
     private static final List<Consumer<ClaimsChanged>> CLAIM_LISTENERS = new CopyOnWriteArrayList<>();
     private static final List<Runnable> STANDARD_LISTENERS = new CopyOnWriteArrayList<>();
+    private static final List<Consumer<LayerToggled>> LAYER_LISTENERS = new CopyOnWriteArrayList<>();
 
     /** Told when any faction's claims change, with which faction and which dimension. */
     public static void onClaimsChanged(Consumer<ClaimsChanged> listener) {
@@ -51,6 +55,24 @@ public final class FactionsMapEvents {
     public static void claimsChanged(String factionId, String dimension) {
         ClaimsChanged event = new ClaimsChanged(factionId, dimension);
         for (Consumer<ClaimsChanged> listener : CLAIM_LISTENERS) {
+            safely(() -> listener.accept(event));
+        }
+    }
+
+    /**
+     * Told when a player asks for the territory layer on or off.
+     *
+     * <p>⚠ The preference has to reach the SERVER, because the overlays are pushed from there — a
+     * client-side switch alone flips a label and changes nothing, which is worse than no switch.
+     * It arrives as a command so a vanilla client can say the same thing.</p>
+     */
+    public static void onLayerToggled(Consumer<LayerToggled> listener) {
+        LAYER_LISTENERS.add(listener);
+    }
+
+    public static void layerToggled(net.minecraft.server.level.ServerPlayer player, boolean on) {
+        LayerToggled event = new LayerToggled(player, on);
+        for (Consumer<LayerToggled> listener : LAYER_LISTENERS) {
             safely(() -> listener.accept(event));
         }
     }
