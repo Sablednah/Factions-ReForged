@@ -9,9 +9,22 @@ displayName = "${mod_name}"
 authors = "${mod_authors}"
 description = '''${mod_description}'''
 displayURL = "https://github.com/Sablednah/Factions-ReForged"
-# 256x256 — what the mods list actually draws at. A larger source is jar weight for pixels
-# nobody sees.
-logoFile = "factions.png"
+# Three keys, because the mod list changed shape in 26.2:
+#   iconFile   — the small SQUARE beside the name in the list (26.2+). Without one, our row is
+#                the only one in the list with no icon at all.
+#   bannerFile — the wide image in the info panel (26.2+), drawn at its own aspect ratio.
+#   logoFile   — what 1.21.x and 26.1 show in the info panel, and what 26.2 falls back to when
+#                bannerFile is absent. Kept so older versions still show artwork.
+# Older loaders ignore the two keys they do not know, so all three ship on every branch.
+#
+# The icon is 256x256 — what the list actually draws at; a larger source is jar weight for pixels
+# nobody sees. Both are smoothed: they are scaled down rather than up, and the banner carries
+# soft-edged artwork that goes crunchy at nearest-neighbour.
+iconFile = "factions.png"
+bannerFile = "factions-banner.png"
+logoFile = "factions-banner.png"
+logoBlur = true
+iconBlur = true
 
 # Standards is a HARD dependency: the groups seam, the claims seam, Lang, SafeLoc and the
 # teleport warmups are all borrowed rather than reimplemented.
