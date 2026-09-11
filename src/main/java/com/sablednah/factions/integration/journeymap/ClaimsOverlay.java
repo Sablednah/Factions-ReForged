@@ -61,7 +61,17 @@ final class ClaimsOverlay {
     private static final float STROKE_OPACITY = 0.85f;
     private static final float STROKE_WIDTH = 2.0f;
 
-    /** Blocks the border line sits inside its own land, so a shared edge shows both colours. */
+    /**
+     * Blocks the border line sits inside its own land, so a shared edge shows both colours.
+     *
+     * <p>⚠ <b>A block is the finest offset there is</b> — {@code OverlayPoints} takes block
+     * coordinates — and it is 1/16 of a chunk, so it is a pixel or two zoomed out and much more
+     * zoomed right in. A fixed world-space offset cannot be a fixed screen-space one. If it ever
+     * reads as a gap rather than a border, the answer is not to tune this number to zero (that puts
+     * an ally's green line and an enemy's red line back on the same pixels) but to inset only the
+     * edges that actually abut another faction — which the store can answer, since it knows who
+     * owns the neighbouring chunk.</p>
+     */
     private static final int BORDER_INSET = 1;
 
     private static final int OWN = 0xFFFFFF;
@@ -136,6 +146,12 @@ final class ClaimsOverlay {
         // row of chunks and the ids carry their coordinates, so a shape that has changed does not
         // overwrite the one it replaces — it lands beside it, and yesterday's rows would be drawn
         // over land nobody holds. "Push the whole set" now has to mean clearing the old one too.
+        //
+        // ⚠ It clears only what THIS server process knows it sent. A client that stays connected
+        // across a server restart — which in practice means a dev jar swap — keeps overlays the new
+        // process has never heard of, so an old id scheme goes on being drawn beside the new one.
+        // It looks exactly like the new code drawing twice, and it is not: it heals on the next
+        // login, because that path clears before it shows. Worth knowing before debugging a ghost.
         api.getOverlayApi().clearAll(viewer, Factions.MODID);
         if (polygons.isEmpty()) {
             return;     // already cleared above, which is the whole of "draw nothing"
