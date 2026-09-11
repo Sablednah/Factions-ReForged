@@ -86,6 +86,8 @@ public class FactionsJourneyMapClientPlugin implements IClientPlugin {
                 event -> safely(() -> onAddonButtons(event)));
         FullscreenEventRegistry.FULLSCREEN_MAP_CLICK_EVENT.subscribe(Factions.MODID,
                 event -> safely(() -> onClick(event)));
+        // Refusals are chat, and chat is behind the fullscreen map. See MapNotices.
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(MapNotices.class);
         Factions.LOGGER.info("JourneyMap client API found — faction claims layer and claim mode added");
     }
 
@@ -253,6 +255,8 @@ public class FactionsJourneyMapClientPlugin implements IClientPlugin {
                 : "f claim " + chunkX + " " + chunkZ;
         Minecraft mc = Minecraft.getInstance();
         if (mc.getConnection() != null) {
+            // Armed BEFORE the send, or a fast local server answers before we are listening.
+            MapNotices.expect();
             mc.getConnection().sendCommand(command);
         }
         if (event.isCancellable()) {

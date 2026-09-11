@@ -44,7 +44,9 @@ public final class FactionClaims {
         /** Theirs, but one of you is peaceful. */
         PEACEFUL,
         /** Theirs and takeable, but not from here — you must start at the edge of their land. */
-        NOT_THEIR_BORDER
+        NOT_THEIR_BORDER,
+        /** Their standard stands here, and a standard pins the ground it stands on. */
+        STANDARD_PINS
     }
 
     /** How many chunks this faction may hold, or -1 for no limit. */
@@ -60,6 +62,12 @@ public final class FactionClaims {
         if (owner.isPresent()) {
             if (owner.get().equals(f.id())) {
                 return Result.ALREADY_YOURS;
+            }
+            // ⚠ Before every other takeover rule, because it is not a matter of degree: a chunk
+            // with their own standard on it is not takeable at any overreach, in any raid, at any
+            // power. The flag is the way in — steal it, and the ground stops being pinned.
+            if (store.ownStandardInChunk(owner.get(), dim, chunk.x, chunk.z)) {
+                return Result.STANDARD_PINS;
             }
             // Somebody else holds it. Which is not automatically a refusal any more: if they are
             // holding more land than their power covers, the difference is takeable.
