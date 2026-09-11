@@ -601,6 +601,66 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
                 .toList();
     }
 
+    /**
+     * Whether this faction's <b>own</b> flag stands in that chunk.
+     *
+     * <p>The rule it exists for: <b>a standard pins the ground it stands on.</b> Neither the owner
+     * nor an enemy can take that chunk while the flag is up — so planting one designates a core
+     * chunk that cannot be sold off by an officer or nibbled away by an over-extension raid. The
+     * way to take it is the way it was always meant to be: go and take the flag.</p>
+     *
+     * <p>Own flags only. A captured one is somebody else's identity being flown as a trophy, and a
+     * trophy must not confer ground — otherwise stealing a flag would hand you an unlosable chunk
+     * wherever you chose to plant it.</p>
+     */
+    public boolean ownStandardInChunk(String factionId, String dimension, int chunkX, int chunkZ) {
+        return ownFlag(factionId)
+                .filter(st -> st.dimension().equals(dimension)
+                        && (st.x() >> 4) == chunkX && (st.z() >> 4) == chunkZ)
+                .isPresent();
+    }
+
+    /**
+     * Take down any captured flag in this chunk that the chunk's owner no longer holds the ground
+     * for.
+     *
+     * <p>⚠ <b>Called from {@link #claim} and {@link #unclaim}, not from the commands</b>, so that
+     * every route land can change hands by inherits it — including ones written later. A trophy
+     * whose ground is gone would otherwise go on counting: the flag was still "placed", the map
+     * still pinned it, and the faction still wore its colours, standing in somebody else's
+     * territory or in wilderness.</p>
+     *
+     * <p>Found by unclaiming the chunk a standard stood in and watching it stay planted.</p>
+     */
+    private void clearOrphanedTrophies(String dimension, int chunkX, int chunkZ) {
+        String owner = claims.get(key(dimension, chunkX, chunkZ));
+        boolean any = false;
+        for (Map.Entry<String, List<Standard>> e : new LinkedHashMap<>(standards).entrySet()) {
+            if (e.getKey().equals(owner)) {
+                continue;   // still their ground; the trophy stands
+            }
+            List<Standard> left = e.getValue().stream()
+                    .filter(st -> st.capturedFrom().isEmpty()
+                            || !(st.dimension().equals(dimension)
+                                    && (st.x() >> 4) == chunkX && (st.z() >> 4) == chunkZ))
+                    .toList();
+            if (left.size() != e.getValue().size()) {
+                if (left.isEmpty()) {
+                    standards.remove(e.getKey());
+                } else {
+                    standards.put(e.getKey(), left);
+                }
+                setDirty();
+                any = true;
+            }
+        }
+        // Once, not once per faction: a standards change now repaints every viewer's territory as
+        // well as their pins, so firing it inside the loop would push the whole map N times.
+        if (any) {
+            FactionsMapEvents.standardsChanged();
+        }
+    }
+
     /** One planted flag, for callers that need to tell them apart. */
     public record Placed(String dimension, net.minecraft.core.BlockPos pos,
             Optional<String> capturedFrom) {}
@@ -863,6 +923,7 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
     public void claim(String dimension, int x, int z, String factionId) {
         claims.put(key(dimension, x, z), factionId);
         setDirty();
+        clearOrphanedTrophies(dimension, x, z);
         FactionsMapEvents.claimsChanged(factionId, dimension);
     }
 
@@ -872,6 +933,7 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
             return false;
         }
         setDirty();
+        clearOrphanedTrophies(dimension, x, z);
         // Named with the faction that LOST it: a map redraws the owner's shape, and after the
         // removal there is no owner to ask.
         FactionsMapEvents.claimsChanged(was, dimension);
@@ -880,7 +942,17 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
 
     public int unclaimAll(String factionId) {
         int before = claims.size();
-        claims.values().removeIf(factionId::equals);
+        // ⚠ Everything EXCEPT the chunk its own standard stands in. A rule enforced only on
+        // /f unclaim is a rule with a second door: one /f unclaimall would drop the pinned chunk
+        // and orphan the flag, which is exactly what the rule exists to prevent.
+        claims.entrySet().removeIf(e -> {
+            if (!factionId.equals(e.getValue())) {
+                return false;
+            }
+            String[] bits = e.getKey().split("\\|");
+            return !ownStandardInChunk(factionId, bits[0],
+                    Integer.parseInt(bits[1]), Integer.parseInt(bits[2]));
+        });
         int removed = before - claims.size();
         if (removed > 0) {
             setDirty();

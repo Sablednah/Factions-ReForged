@@ -1,7 +1,9 @@
 package com.sablednah.factions.integration.journeymap;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -20,6 +22,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 
+import com.sablednah.factions.ClaimOutline;
 import com.sablednah.factions.FactionBridge;
 import com.sablednah.factions.FactionStore;
 import com.sablednah.factions.Factions;
@@ -141,11 +144,7 @@ final class ClaimsOverlay {
         int fill = store.colourOf(faction.id()).getTextureDiffuseColor() & 0xFFFFFF;
         int stroke = strokeFor(store, faction.id(), mine);
 
-        List<OverlayPolygon> shapes = new ArrayList<>();
-        for (int[] run : runs(claims)) {
-            shapes.add(new OverlayPolygon(
-                    rect(run[0] * 16, run[1] * 16, (run[2] + 1) * 16, (run[1] + 1) * 16), null));
-        }
+        List<OverlayPolygon> shapes = outline(claims);
 
         OverlayShapeProps props = OverlayProps.everywhere(fill, FILL_OPACITY, stroke, STROKE_WIDTH,
                 STROKE_OPACITY, DISPLAY_ORDER, UIState.FULLSCREEN_ZOOM_MIN, UIState.ZOOM_IN_MAX,
@@ -203,45 +202,39 @@ final class ClaimsOverlay {
     }
 
     /**
-     * Merge each row of chunks into horizontal runs.
+     * Turn the traced outline into JourneyMap's shapes.
      *
-     * @return one {@code {x0, z, x1}} per run, inclusive at both ends
+     * <p>The tracing itself is {@link com.sablednah.factions.ClaimOutline}, which imports nothing
+     * but {@code java.util} so the self-test can drive it — this package is never loaded without
+     * JourneyMap, so a test living here could never run. All that happens here is the scale from
+     * chunk corners to block coordinates.</p>
      */
-    private static List<int[]> runs(List<ChunkPos> claims) {
-        Set<Long> held = new HashSet<>();
+    private static List<OverlayPolygon> outline(List<ChunkPos> claims) {
+        // The one place ChunkPos is read for the tracer — see ClaimOutline on why it takes int[].
+        List<int[]> coords = new ArrayList<>(claims.size());
         for (ChunkPos c : claims) {
-            held.add(pack(c.x(), c.z()));
+            coords.add(new int[] {c.x(), c.z()});
         }
-        List<int[]> out = new ArrayList<>();
-        Set<Long> done = new HashSet<>();
-        for (ChunkPos c : claims) {
-            long key = pack(c.x(), c.z());
-            if (!done.add(key)) {
-                continue;
+        List<OverlayPolygon> out = new ArrayList<>();
+        for (ClaimOutline.Shape shape : ClaimOutline.trace(coords)) {
+            List<OverlayPoints> holes = new ArrayList<>();
+            for (List<ClaimOutline.Corner> hole : shape.holes()) {
+                holes.add(points(hole));
             }
-            // Only start a run at its left end, or the same row is emitted once per chunk in it.
-            if (held.contains(pack(c.x() - 1, c.z()))) {
-                continue;
-            }
-            int x1 = c.x();
-            while (held.contains(pack(x1 + 1, c.z()))) {
-                x1++;
-                done.add(pack(x1, c.z()));
-            }
-            out.add(new int[] {c.x(), c.z(), x1});
+            out.add(new OverlayPolygon(points(shape.outer()), holes.isEmpty() ? null : holes));
         }
         return out;
     }
 
-    /**
-     * ⚠ Packed by hand rather than with {@code ChunkPos.asLong}.
-     *
-     * <p>26.1 turned {@code ChunkPos} into a record and the static helper went with it. Doing the
-     * arithmetic here means this file is identical on every branch — the same reason
-     * {@link OverlayProps} exists, applied to a method instead of an import.</p>
-     */
-    private static long pack(int x, int z) {
-        return ((long) x << 32) ^ (z & 0xFFFFFFFFL);
+    private static OverlayPoints points(List<ClaimOutline.Corner> ring) {
+        // y is only what the overlay is anchored at; JourneyMap draws it flat. Sea level reads
+        // sensibly on a surface map and costs nothing on any other.
+        final int y = 64;
+        List<Long> out = new ArrayList<>(ring.size());
+        for (ClaimOutline.Corner corner : ring) {
+            out.add(BlockPos.asLong(corner.x() * 16, y, corner.z() * 16));
+        }
+        return new OverlayPoints(out);
     }
 
     /** A rectangle in block coordinates, clockwise. {@code x1}/{@code z1} are exclusive edges. */

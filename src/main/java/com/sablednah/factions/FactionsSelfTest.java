@@ -1,5 +1,7 @@
 package com.sablednah.factions;
 
+import java.util.List;
+
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 
@@ -101,6 +103,8 @@ public final class FactionsSelfTest {
         check("...and off", executable(d, src, "f map layer off"));
         check("...but not a third state", !executable(d, src, "f map layer sometimes"));
         check("a bare /f map still executes", executable(d, src, "f map"));
+
+        outlineChecks();
         // The pane's no-faction state offers these two, pre-filled into the chat box. A button
         // that pre-fills a command nobody can complete is worse than no button, and the pane
         // cannot tell — it never sees the parse.
@@ -518,5 +522,74 @@ public final class FactionsSelfTest {
             failed++;
             Factions.LOGGER.error("  ✗ {}", what);
         }
+    }
+
+    /**
+     * The territory tracer, against shapes whose answers can be counted by hand.
+     *
+     * <p>⚠ <b>The 2×2 case is the regression.</b> The shipped version drew one rectangle per
+     * horizontal run and stroked each all the way round, so a block of land two rows deep had a
+     * border drawn <em>between</em> its own rows. It looked fine on every territory anybody had
+     * tested, because one row deep is one rectangle. Counting corners is what tells the two apart:
+     * a 2×2 block is four corners, and the broken version gives two rectangles.</p>
+     *
+     * <p>Corners are counted after collinear points are dropped, so a straight edge contributes
+     * nothing — which is the whole reason the count is a meaningful assertion rather than a
+     * restatement of the input.</p>
+     */
+    private void outlineChecks() {
+        check("one chunk traces one shape with four corners",
+                corners(ClaimOutline.trace(chunks(0, 0))) == 4);
+
+        // The bug. Two rows deep, one shape, four corners — NOT two rectangles.
+        List<ClaimOutline.Shape> square = ClaimOutline.trace(chunks(0, 0, 1, 0, 0, 1, 1, 1));
+        check("a 2x2 block is ONE shape", square.size() == 1);
+        check("...with four corners, not a seam between its rows", corners(square) == 4);
+
+        check("a 1x3 row is four corners",
+                corners(ClaimOutline.trace(chunks(0, 0, 1, 0, 2, 0))) == 4);
+        check("a 3x1 column is four corners",
+                corners(ClaimOutline.trace(chunks(0, 0, 0, 1, 0, 2))) == 4);
+
+        // An L: six corners, and it must not come back as two overlapping rectangles.
+        List<ClaimOutline.Shape> ell = ClaimOutline.trace(chunks(0, 0, 0, 1, 1, 1));
+        check("an L is one shape of six corners", ell.size() == 1 && corners(ell) == 6);
+
+        // Two chunks that do not touch are two shapes; nothing should join them.
+        check("two separate chunks are two shapes",
+                ClaimOutline.trace(chunks(0, 0, 5, 5)).size() == 2);
+
+        // A ring of eight around an empty middle: one outer, one hole. This is a faction that has
+        // surrounded somebody, and the hole is the thing a per-row tracer cannot express at all.
+        List<ClaimOutline.Shape> donut = ClaimOutline.trace(
+                chunks(0, 0, 1, 0, 2, 0, 0, 1, 2, 1, 0, 2, 1, 2, 2, 2));
+        check("a ring of eight is one shape", donut.size() == 1);
+        check("...with a hole in it", donut.get(0).holes().size() == 1);
+        check("...the hole being four corners", donut.get(0).holes().get(0).size() == 4);
+        check("...and the outer still four", donut.get(0).outer().size() == 4);
+
+        // Diagonal touch: the saddle case. Two lobes meeting at a point must stay two shapes
+        // rather than being stitched into a bow-tie.
+        check("two chunks touching only diagonally are two shapes",
+                ClaimOutline.trace(chunks(0, 0, 1, 1)).size() == 2);
+
+        check("no claims traces nothing", ClaimOutline.trace(List.of()).isEmpty());
+    }
+
+    /** Chunk coordinates as x,z pairs, so a shape reads as a shape at the call site. */
+    private static List<int[]> chunks(int... xz) {
+        List<int[]> out = new java.util.ArrayList<>();
+        for (int i = 0; i < xz.length; i += 2) {
+            out.add(new int[] {xz[i], xz[i + 1]});
+        }
+        return out;
+    }
+
+    private static int corners(List<ClaimOutline.Shape> shapes) {
+        int n = 0;
+        for (ClaimOutline.Shape shape : shapes) {
+            n += shape.outer().size();
+        }
+        return n;
     }
 }
