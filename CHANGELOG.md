@@ -4,6 +4,22 @@
 
 ### Added
 
+- **Faction territory on JourneyMap.** Every faction's claims as a filled region in its banner
+  colour, bordered by *relation* — white your own, green an ally, red an enemy, grey the rest — with
+  the faction's land, members and power on hover, and own-and-allied standards pinned in their own
+  waypoint folder. A toolbar button turns the layer off; with permission to claim, a second one
+  turns on **claim mode**, where left-click claims a chunk and right-click releases it.
+
+  Every click runs the ordinary command — `/f claim <x> <z>` — so the map can do nothing a player at
+  a keyboard could not, and an enemy's standard is never pinned. `/f map layer on|off` is the same
+  switch as the button, because the territory is drawn by the *server*. Factions still draws no map
+  of its own; this is JourneyMap's, decorated, and with JourneyMap absent none of it loads.
+
+  Three things only a real map could have caught, all of them silent: the layer button flipped its
+  own label while the server went on drawing; standard pins multiplied, because each push mints a
+  new id and nothing took the old one down; and the waypoint folder was created empty, because the
+  API's own `addWaypoint` is client-only and fails by exception on a dedicated server.
+
 - **`/f panel` — the faction at a glance**, and a real screen for it on a modded client: power,
   land against entitlement, bank, standard, raid record, relations, and the member list with
   promote/demote/kick.
