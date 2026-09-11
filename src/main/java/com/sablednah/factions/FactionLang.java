@@ -18,6 +18,18 @@ public final class FactionLang {
     public static void contribute() {
         // Vocabulary. A server calling them clans or houses changes these two.
         Lang.contribute("term.faction", "faction");
+        // ⚠ This is what stops every Factions message signing itself [Standards]. Standards
+        // resolves {term.prefix} to the prefix of whichever mod owns the key, and ours are all
+        // msg.factions.* — so defining this one term re-badges all eighty of them, including on a
+        // server whose messages.yml was written before this existed. See Lang.ownPrefix.
+        // Map furniture. No colour codes: JourneyMap renders these as plain labels, and a stray
+        // & would be shown rather than obeyed. "map_group" is kept SHORT because the waypoint
+        // manager's group column clips.
+        Lang.contribute("msg.factions.map_group", "Standards");
+        Lang.contribute("msg.factions.map_standard", "{name}'s standard");
+        Lang.contribute("msg.factions.map_standard_captured",
+                "{name}'s standard (captured by {holder})");
+        Lang.contribute("term.factions.prefix", "&7[&aFactions&7]&r");
         Lang.contribute("term.factions", "factions");
 
         Lang.contribute("msg.factions.none",
