@@ -306,6 +306,31 @@ something about it, and that is the engine of the feud.
 point it is a standard in *their* territory, subject to the same rules, and you can take it back.
 Losing your flag permanently ends a story; losing it temporarily starts one.
 
+### A standard pins the ground it stands on — added 2026-09-11
+
+**Nobody can take the chunk your own standard stands in.** Not an enemy at any overreach, in any
+raid, at any power; and not you either, by `/f unclaim` or `/f unclaimall`. The way in is the way
+this whole section describes: go and take the flag, and the ground stops being pinned the moment it
+comes down.
+
+It arrived as a bug report — unclaiming the chunk under your own flag left the flag standing and
+still counted — and invalidating the standard was the obvious repair. The owner picked the other
+one, and it is better: **a standard designates a core chunk**, which gives planting one a second
+reason and gives a faction something it cannot lose by accident. Including to its own officers, on
+a bad day.
+
+The consequence, accepted deliberately: **a faction holding exactly one chunk with its standard in
+it cannot lose land at all.** That is not a hole to close later — *"having your faction wiped out
+entirely is a feelsbad, I'm happy to make that more difficult"*. It costs nothing elsewhere: the
+flag is still stealable by hand, which is the humiliation this section is built around, and the
+take-the-ground win condition in §5 only ever applied to a faction flying **no** standard to steal.
+
+A **captured** flag pins nothing. It is somebody else's identity being flown as a trophy, and a
+trophy that conferred unlosable ground would mean stealing a flag handed you an immortal chunk
+wherever you chose to plant it. So a trophy falls with the land: unclaim or lose the chunk it
+stands in and it is taken down. Enforced in the store's `claim` and `unclaim` rather than in the
+commands, so every route land can change hands by inherits it — including ones written later.
+
 ### The teeth: a standard makes power come back faster
 
 The owner's answer, and it is better than the one above. A planted standard multiplies your power
