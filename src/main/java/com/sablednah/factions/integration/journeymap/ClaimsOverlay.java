@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import journeymap.api.v2.client.util.UIState;
 import journeymap.api.v2.server.IServerAPI;
@@ -63,8 +65,40 @@ final class ClaimsOverlay {
 
     private final IServerAPI api;
 
+    /**
+     * Who has turned the layer off.
+     *
+     * <p>⚠ <b>Held on the SERVER, because that is where the overlays are pushed from.</b> The
+     * client's switch was written first and was purely cosmetic: it flipped its own label, the
+     * server went on sending polygons, and the territory stayed exactly where it was. A button that
+     * lies is worse than no button — found by pressing it, which is the only way it could have been
+     * found, since both halves were individually correct.</p>
+     *
+     * <p>Not persisted here on purpose. The client owns the preference (JourneyMap stores its own
+     * option) and re-states it when the map opens, so this is a cache of what the viewer last said
+     * rather than a second copy of the truth — two stores of one preference is how they come to
+     * disagree.</p>
+     */
+    private final Set<UUID> hidden = ConcurrentHashMap.newKeySet();
+
     ClaimsOverlay(IServerAPI api) {
         this.api = api;
+    }
+
+    /** Turn the layer on or off for one viewer, taking down what they are already being shown. */
+    void setVisible(ServerPlayer viewer, boolean on) {
+        if (on) {
+            hidden.remove(viewer.getUUID());
+            showFor(viewer);
+        } else {
+            hidden.add(viewer.getUUID());
+            api.getOverlayApi().clearAll(viewer, Factions.MODID);
+        }
+    }
+
+    /** Forget a preference on the way out; a UUID kept here would outlive the session it came from. */
+    void forget(ServerPlayer viewer) {
+        hidden.remove(viewer.getUUID());
     }
 
     /**
@@ -76,6 +110,9 @@ final class ClaimsOverlay {
      * sent, which is state that can disagree with the map.</p>
      */
     void showFor(ServerPlayer viewer) {
+        if (hidden.contains(viewer.getUUID())) {
+            return;
+        }
         FactionStore store = FactionStore.get(viewer.level().getServer());
         String dimension = FactionBridge.dimensionOf(viewer.level());
         String mine = store.of(viewer.getUUID()).map(FactionStore.Faction::id).orElse(null);
@@ -90,6 +127,10 @@ final class ClaimsOverlay {
                     viewer.level().dimension(), mine));
         }
         if (polygons.isEmpty()) {
+            // ⚠ NOT a return. "Nothing to draw" and "draw nothing" are the same instruction here:
+            // show() replaces by id, so an empty push replaces nothing and the last faction to
+            // release its last chunk would keep its territory drawn until the viewer relogged.
+            api.getOverlayApi().clearAll(viewer, Factions.MODID);
             return;
         }
         api.getOverlayApi().show(viewer, Factions.MODID, polygons.toArray(new ServerPolygon[0]));

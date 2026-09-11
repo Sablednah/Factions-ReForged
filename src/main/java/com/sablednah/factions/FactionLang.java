@@ -362,6 +362,10 @@ public final class FactionLang {
         Lang.contribute("msg.factions.fixtures_standards",
                 "{term.prefix} &7Planted a flag for &f{count}&7 neighbour(s). {term.dim}(go and take one — they are real standards on real land)");
         Lang.contribute("msg.factions.fixtures_row", " {term.dim}-&r &7{row}");
+        Lang.contribute("msg.factions.map_layer_on",
+                "{term.prefix} &7Faction territory will be drawn on your map.");
+        Lang.contribute("msg.factions.map_layer_off",
+                "{term.prefix} &7Faction territory hidden on your map. {term.dim}(/f map layer on)");
         Lang.contribute("msg.factions.fixtures_members",
                 "{term.prefix} &7Recruited &f{count}&7 into your faction:");
         Lang.contribute("msg.factions.fixtures_members_cleared",
