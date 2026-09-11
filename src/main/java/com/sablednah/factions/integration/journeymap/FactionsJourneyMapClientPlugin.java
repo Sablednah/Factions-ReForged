@@ -186,7 +186,13 @@ public class FactionsJourneyMapClientPlugin implements IClientPlugin {
         if (mc.getConnection() == null) {
             return;
         }
-        tellServer(claimsOn());
+        // ⚠ Only when it is OFF. The server draws the layer by default, so re-stating "on" tells it
+        // something it already believes — and every one of those would print a line of chat the
+        // player did not ask for, on every join, for the majority who never touch the button. When
+        // it IS off, that one line is the explanation for why the map looks bare.
+        if (!claimsOn()) {
+            tellServer(false);
+        }
     }
 
     /** Logged once, because "the callback never fired" and "the button drew nowhere" look identical. */
