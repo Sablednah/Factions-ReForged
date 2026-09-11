@@ -105,6 +105,7 @@ public final class FactionsSelfTest {
         check("a bare /f map still executes", executable(d, src, "f map"));
 
         outlineChecks();
+        trophyChecks(server);
         // The pane's no-faction state offers these two, pre-filled into the chat box. A button
         // that pre-fills a command nobody can complete is worse than no button, and the pane
         // cannot tell — it never sees the parse.
@@ -591,5 +592,70 @@ public final class FactionsSelfTest {
             n += shape.outer().size();
         }
         return n;
+    }
+
+    /**
+     * A captured flag loses its footing when the ground under it changes hands.
+     *
+     * <h2>⚠ Why this touches the real store</h2>
+     *
+     * <p>Because the rule lives in {@link FactionStore#claim} and {@code unclaim}, deliberately —
+     * that is what makes every route land can move by inherit it, including ones written later.
+     * Testing it anywhere else would be testing a copy of the rule rather than the rule.</p>
+     *
+     * <p>The ids are obviously not real and the dimension does not exist, so nothing here can
+     * collide with a live faction; and the {@code finally} puts the world back whatever happens,
+     * because a self-test that leaves a claim behind has changed the thing it was measuring.</p>
+     *
+     * <p>The behaviour: an enemy's standard flown as a trophy is <em>not</em> ground you hold. Take
+     * the land away and the trophy goes with it. Its own flag is the opposite — see the pinning
+     * rule — and the two were easy to conflate until they were written down side by side.</p>
+     */
+    private void trophyChecks(net.minecraft.server.MinecraftServer server) {
+        final String dim = "selftest:nowhere";
+        final String flyer = "selftest-flyer";
+        final String victim = "selftest-victim";
+        final String other = "selftest-other";
+        final int cx = 30_000;
+        final int cz = 30_000;
+        FactionStore store = FactionStore.get(server);
+        net.minecraft.core.BlockPos at = new net.minecraft.core.BlockPos(cx * 16 + 8, 64, cz * 16 + 8);
+        try {
+            store.claim(dim, cx, cz, flyer);
+            store.setStandard(flyer, dim, at, net.minecraft.world.item.DyeColor.RED,
+                    net.minecraft.world.level.block.entity.BannerPatternLayers.EMPTY,
+                    java.util.Optional.of(victim));
+            check("a captured flag stands while its flyer holds the ground",
+                    store.standardsOf(flyer).size() == 1);
+
+            // Somebody else takes the chunk: the trophy has lost its footing.
+            store.claim(dim, cx, cz, other);
+            check("...and falls when the chunk changes hands",
+                    store.standardsOf(flyer).isEmpty());
+
+            // And again by release rather than conquest.
+            store.claim(dim, cx, cz, flyer);
+            store.setStandard(flyer, dim, at, net.minecraft.world.item.DyeColor.RED,
+                    net.minecraft.world.level.block.entity.BannerPatternLayers.EMPTY,
+                    java.util.Optional.of(victim));
+            store.unclaim(dim, cx, cz);
+            check("...and when the chunk is simply given up",
+                    store.standardsOf(flyer).isEmpty());
+
+            // The other half of the pair: an OWN flag pins its chunk rather than falling with it.
+            store.claim(dim, cx, cz, flyer);
+            store.setStandard(flyer, dim, at, net.minecraft.world.item.DyeColor.RED,
+                    net.minecraft.world.level.block.entity.BannerPatternLayers.EMPTY,
+                    java.util.Optional.empty());
+            check("an own flag pins the chunk it stands in",
+                    store.ownStandardInChunk(flyer, dim, cx, cz));
+            check("...and unclaimall leaves that chunk alone",
+                    store.unclaimAll(flyer) == 0 && store.claimCount(flyer) == 1);
+            check("...while a trophy pins nothing",
+                    !store.ownStandardInChunk(other, dim, cx, cz));
+        } finally {
+            store.clearStandardAt(dim, at);
+            store.unclaim(dim, cx, cz);
+        }
     }
 }
