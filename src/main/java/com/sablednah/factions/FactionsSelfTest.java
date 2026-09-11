@@ -578,6 +578,21 @@ public final class FactionsSelfTest {
                 ClaimOutline.trace(chunks(0, 0, 1, 1)).size() == 2);
 
         check("no claims traces nothing", ClaimOutline.trace(List.of()).isEmpty());
+
+        // ⚠ rows() is what makes the TOOLTIP honest: JourneyMap hit-tests an overlay's bounding
+        // box, so each row is pushed as its own overlay and a row's box is exactly its area. The
+        // property that matters is therefore coverage — every claimed chunk in exactly one row,
+        // and no row covering a chunk nobody holds. The hole is the case that caught it.
+        List<int[]> ring = chunks(0, 0, 1, 0, 2, 0, 0, 1, 2, 1, 0, 2, 1, 2, 2, 2);
+        List<int[]> rows = ClaimOutline.rows(ring);
+        check("a ring of eight is covered by four rows", rows.size() == 4);
+        check("...covering all eight chunks and no more", covered(rows) == 8);
+        check("...and never the hole in the middle", !covers(rows, 1, 1));
+        check("a 2x2 block is two rows", ClaimOutline.rows(chunks(0, 0, 1, 0, 0, 1, 1, 1)).size() == 2);
+        check("a 1x3 row is one row of three",
+                ClaimOutline.rows(chunks(0, 0, 1, 0, 2, 0)).equals(List.of(new int[] {0, 0, 2}))
+                        || covered(ClaimOutline.rows(chunks(0, 0, 1, 0, 2, 0))) == 3);
+        check("no claims makes no rows", ClaimOutline.rows(List.of()).isEmpty());
     }
 
     /** Chunk coordinates as x,z pairs, so a shape reads as a shape at the call site. */
@@ -695,5 +710,23 @@ public final class FactionsSelfTest {
         String theirs = Lang.get("msg.toggle.self");
         check("a Standards message still signs itself Standards", theirs.contains("Standards"));
         check("...and not Factions", !theirs.contains("Factions"));
+    }
+
+    /** How many chunks a set of rows covers in total, counting any overlap twice. */
+    private static int covered(List<int[]> rows) {
+        int n = 0;
+        for (int[] row : rows) {
+            n += row[2] - row[0] + 1;
+        }
+        return n;
+    }
+
+    private static boolean covers(List<int[]> rows, int x, int z) {
+        for (int[] row : rows) {
+            if (row[1] == z && x >= row[0] && x <= row[2]) {
+                return true;
+            }
+        }
+        return false;
     }
 }

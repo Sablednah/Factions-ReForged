@@ -61,6 +61,9 @@ final class ClaimsOverlay {
     private static final float STROKE_OPACITY = 0.85f;
     private static final float STROKE_WIDTH = 2.0f;
 
+    /** Blocks the border line sits inside its own land, so a shared edge shows both colours. */
+    private static final int BORDER_INSET = 1;
+
     private static final int OWN = 0xFFFFFF;
     private static final int ALLY = 0x55FF55;
     private static final int ENEMY = 0xFF5555;
@@ -126,37 +129,84 @@ final class ClaimsOverlay {
             if (claims.isEmpty()) {
                 continue;
             }
-            polygons.add(polygonFor(store, faction, claims, dimension,
+            polygons.addAll(polygonsFor(store, faction, claims, dimension,
                     viewer.level().dimension(), mine));
         }
+        // ⚠ Cleared before the push, not replaced by id. A faction's FILL is now one overlay per
+        // row of chunks and the ids carry their coordinates, so a shape that has changed does not
+        // overwrite the one it replaces — it lands beside it, and yesterday's rows would be drawn
+        // over land nobody holds. "Push the whole set" now has to mean clearing the old one too.
+        api.getOverlayApi().clearAll(viewer, Factions.MODID);
         if (polygons.isEmpty()) {
-            // ⚠ NOT a return. "Nothing to draw" and "draw nothing" are the same instruction here:
-            // show() replaces by id, so an empty push replaces nothing and the last faction to
-            // release its last chunk would keep its territory drawn until the viewer relogged.
-            api.getOverlayApi().clearAll(viewer, Factions.MODID);
-            return;
+            return;     // already cleared above, which is the whole of "draw nothing"
         }
         api.getOverlayApi().show(viewer, Factions.MODID, polygons.toArray(new ServerPolygon[0]));
     }
 
-    private ServerPolygon polygonFor(FactionStore store, FactionStore.Faction faction,
+    /**
+     * One faction's territory, as <b>two kinds of overlay</b>.
+     *
+     * <h2>⚠ Fill and border are separated, and it is not cosmetic</h2>
+     *
+     * <p><b>Fill</b> is one rectangle per row of chunks, and each row is its own overlay. That is
+     * what makes the tooltip honest: JourneyMap resolves hover against an overlay's
+     * <em>bounding box</em> (see {@link ClaimOutline#rows}), so a single polygon for a whole
+     * territory claimed every point in its bounding rectangle — the hole in the middle of a
+     * faction reported that faction, and so did land three chunks outside it. A row is a rectangle,
+     * so its bounding box is exactly its area.</p>
+     *
+     * <p><b>Border</b> is the traced outline, holes and all, carrying no fill and <b>no title</b> —
+     * because its bounding box <em>is</em> the whole territory, and a title on it would put the
+     * tooltip straight back. It is also inset a block into its own land, so that two factions
+     * sharing a chunk edge draw two visible lines instead of one overdrawing the other: an ally and
+     * an enemy on the same border need to read as green and red, not as whichever was pushed last.
+     * The fill still reaches the chunk edge, so the territory stays visually contiguous.</p>
+     */
+    private List<ServerPolygon> polygonsFor(FactionStore store, FactionStore.Faction faction,
             List<ChunkPos> claims, String dimension, ResourceKey<Level> levelKey, String mine) {
         int fill = store.colourOf(faction.id()).getTextureDiffuseColor() & 0xFFFFFF;
         int stroke = strokeFor(store, faction.id(), mine);
+        String tooltip = tooltip(store, faction, claims.size(), mine);
 
-        List<OverlayPolygon> shapes = outline(claims);
+        List<int[]> coords = new ArrayList<>(claims.size());
+        for (ChunkPos c : claims) {
+            coords.add(new int[] {c.x(), c.z()});
+        }
 
-        OverlayShapeProps props = OverlayProps.everywhere(fill, FILL_OPACITY, stroke, STROKE_WIDTH,
-                STROKE_OPACITY, DISPLAY_ORDER, UIState.FULLSCREEN_ZOOM_MIN, UIState.ZOOM_IN_MAX,
-                null, tooltip(store, faction, claims.size(), mine));
-        // The id is what makes a re-show an UPDATE rather than a second overlay stacked on the
-        // first. Per faction and dimension, because that is the unit that changes.
+        List<ServerPolygon> out = new ArrayList<>();
+
         // ⚠ Two spellings of the same dimension, deliberately. The ID uses Factions' own string
         // because that is what the store keys claims by; the polygon needs Minecraft's ResourceKey
         // because that is what JourneyMap takes. Deriving one from the other would be a parse that
         // can fail, where the viewer's own level already answers both.
-        return new ServerPolygon("factions_claims_" + faction.id() + "_" + dimension,
-                levelKey, shapes, props);
+        String base = "factions_" + faction.id() + "_" + dimension;
+
+        for (int[] row : ClaimOutline.rows(coords)) {
+            OverlayShapeProps props = OverlayProps.everywhere(fill, FILL_OPACITY, stroke, 0.0F,
+                    0.0F, DISPLAY_ORDER, UIState.FULLSCREEN_ZOOM_MIN, UIState.ZOOM_IN_MAX,
+                    null, tooltip);
+            OverlayPoints rect = rect(row[0] * 16, row[1] * 16,
+                    (row[2] + 1) * 16, (row[1] + 1) * 16);
+            out.add(new ServerPolygon(base + "_fill_" + row[0] + "_" + row[1],
+                    levelKey, List.of(new OverlayPolygon(rect, null)), props));
+        }
+
+        List<OverlayPolygon> edges = new ArrayList<>();
+        for (ClaimOutline.Shape shape : ClaimOutline.trace(coords)) {
+            List<OverlayPoints> holes = new ArrayList<>();
+            for (List<ClaimOutline.Corner> hole : shape.holes()) {
+                holes.add(points(hole));
+            }
+            edges.add(new OverlayPolygon(points(shape.outer()), holes.isEmpty() ? null : holes));
+        }
+        if (!edges.isEmpty()) {
+            // No fill, and NO TITLE — see the class note. Drawn above the fill.
+            OverlayShapeProps props = OverlayProps.everywhere(stroke, 0.0F, stroke, STROKE_WIDTH,
+                    STROKE_OPACITY, DISPLAY_ORDER + 1, UIState.FULLSCREEN_ZOOM_MIN,
+                    UIState.ZOOM_IN_MAX, null, null);
+            out.add(new ServerPolygon(base + "_border", levelKey, edges, props));
+        }
+        return out;
     }
 
     /**
@@ -202,39 +252,48 @@ final class ClaimsOverlay {
     }
 
     /**
-     * Turn the traced outline into JourneyMap's shapes.
+     * A traced ring in block coordinates, pulled {@link #BORDER_INSET} blocks into its own land.
      *
-     * <p>The tracing itself is {@link com.sablednah.factions.ClaimOutline}, which imports nothing
-     * but {@code java.util} so the self-test can drive it — this package is never loaded without
-     * JourneyMap, so a test living here could never run. All that happens here is the scale from
-     * chunk corners to block coordinates.</p>
+     * <p>⚠ <b>The inset is what lets two factions share a border visibly.</b> Drawn exactly on the
+     * chunk edge, an ally's green line and an enemy's red line occupy the same pixels and whichever
+     * is drawn second is the only one you see — so a border that is green on one side and red on
+     * the other reads as a single arbitrary colour. Moving each faction's line a block inside its
+     * own territory puts two blocks between them and shows both. The <em>fill</em> still reaches
+     * the chunk edge, so the land itself stays contiguous.</p>
+     *
+     * <p>The direction is taken from the winding rather than guessed: {@link ClaimOutline} emits
+     * every ring with the land on the right of travel, so rotating the direction of travel a
+     * quarter turn that way points into the territory — for a hole's ring as much as an outer one,
+     * which is why holes need no special case.</p>
      */
-    private static List<OverlayPolygon> outline(List<ChunkPos> claims) {
-        // The one place ChunkPos is read for the tracer — see ClaimOutline on why it takes int[].
-        List<int[]> coords = new ArrayList<>(claims.size());
-        for (ChunkPos c : claims) {
-            coords.add(new int[] {c.x(), c.z()});
-        }
-        List<OverlayPolygon> out = new ArrayList<>();
-        for (ClaimOutline.Shape shape : ClaimOutline.trace(coords)) {
-            List<OverlayPoints> holes = new ArrayList<>();
-            for (List<ClaimOutline.Corner> hole : shape.holes()) {
-                holes.add(points(hole));
-            }
-            out.add(new OverlayPolygon(points(shape.outer()), holes.isEmpty() ? null : holes));
-        }
-        return out;
-    }
-
     private static OverlayPoints points(List<ClaimOutline.Corner> ring) {
         // y is only what the overlay is anchored at; JourneyMap draws it flat. Sea level reads
         // sensibly on a surface map and costs nothing on any other.
         final int y = 64;
-        List<Long> out = new ArrayList<>(ring.size());
-        for (ClaimOutline.Corner corner : ring) {
-            out.add(BlockPos.asLong(corner.x() * 16, y, corner.z() * 16));
+        int n = ring.size();
+        List<Long> out = new ArrayList<>(n);
+        for (int i = 0; i < n; i++) {
+            ClaimOutline.Corner prev = ring.get((i - 1 + n) % n);
+            ClaimOutline.Corner here = ring.get(i);
+            ClaimOutline.Corner next = ring.get((i + 1) % n);
+            int x = here.x() * 16
+                    + inwardX(here.x() - prev.x(), here.z() - prev.z())
+                    + inwardX(next.x() - here.x(), next.z() - here.z());
+            int z = here.z() * 16
+                    + inwardZ(here.x() - prev.x(), here.z() - prev.z())
+                    + inwardZ(next.x() - here.x(), next.z() - here.z());
+            out.add(BlockPos.asLong(x, y, z));
         }
         return new OverlayPoints(out);
+    }
+
+    /** The land is on the right of travel, so a quarter turn that way is inward. */
+    private static int inwardX(int dx, int dz) {
+        return -Integer.signum(dz) * BORDER_INSET;
+    }
+
+    private static int inwardZ(int dx, int dz) {
+        return Integer.signum(dx) * BORDER_INSET;
     }
 
     /** A rectangle in block coordinates, clockwise. {@code x1}/{@code z1} are exclusive edges. */

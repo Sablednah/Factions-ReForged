@@ -47,6 +47,51 @@ public final class ClaimOutline {
 
     private ClaimOutline() {}
 
+    /**
+     * The same land as plain rectangles: one per horizontal run of chunks.
+     *
+     * <h2>⚠ Why the fill is rectangles when the border is an outline</h2>
+     *
+     * <p>Because JourneyMap resolves a tooltip against an overlay's <b>bounding box</b>, not its
+     * shape — {@code BaseOverlayDrawStep.screenBounds} is a {@code Rectangle2D}. One polygon for a
+     * whole territory therefore claims every point in its bounding rectangle: hovering the hole in
+     * the middle of a faction reported that faction, and so did ground three chunks outside it that
+     * merely fell inside the box. Reported from a real map, twice in one sitting.</p>
+     *
+     * <p>A run is a rectangle, so its bounding box <em>is</em> its area, exactly. Emitting one
+     * overlay per run makes the tooltip truthful with no hit-testing of our own — and it is why
+     * they are separate overlays rather than several shapes in one, since the bounds belong to the
+     * overlay rather than to each shape.</p>
+     *
+     * @return one {@code {x0, z, x1}} per run, inclusive at both ends, in chunk units
+     */
+    public static List<int[]> rows(List<int[]> claims) {
+        Set<Long> held = new HashSet<>();
+        for (int[] c : claims) {
+            held.add(pack(c[0], c[1]));
+        }
+        List<int[]> out = new ArrayList<>();
+        Set<Long> done = new HashSet<>();
+        for (int[] c : claims) {
+            int x = c[0];
+            int z = c[1];
+            if (!done.add(pack(x, z))) {
+                continue;
+            }
+            // Start only at a run's left end, or the same row is emitted once per chunk in it.
+            if (held.contains(pack(x - 1, z))) {
+                continue;
+            }
+            int x1 = x;
+            while (held.contains(pack(x1 + 1, z))) {
+                x1++;
+                done.add(pack(x1, z));
+            }
+            out.add(new int[] {x, z, x1});
+        }
+        return out;
+    }
+
     public static List<Shape> trace(List<int[]> claims) {
         Set<Long> held = new HashSet<>();
         for (int[] c : claims) {
