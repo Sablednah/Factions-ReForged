@@ -749,6 +749,10 @@ public final class FactionCommands {
                 Feedback.chat(player, Lang.get("msg.factions.claim_not_border"));
                 return 0;
             }
+            case STANDARD_PINS -> {
+                Feedback.chat(player, Lang.get("msg.factions.claim_standard_pins"));
+                return 0;
+            }
             case TAKEN -> {
                 Feedback.chat(player, Lang.fmt("msg.factions.claim_taken",
                         "x", chunk.x, "z", chunk.z, "name", victimName));
@@ -812,6 +816,13 @@ public final class FactionCommands {
             Feedback.chat(player, Lang.get("msg.factions.not_yours"));
             return 0;
         }
+        // ⚠ Your own standard pins your own ground too, and that is the point rather than a
+        // side effect: a core chunk nobody can give away, including an officer having a bad day.
+        // Take the flag down and the chunk is ordinary again.
+        if (store(ctx).ownStandardInChunk(f.get().id(), dim, chunk.x, chunk.z)) {
+            Feedback.chat(player, Lang.get("msg.factions.unclaim_standard_pins"));
+            return 0;
+        }
         double back = FactionClaims.release(store(ctx), dim, chunk, f.get());
         Feedback.chat(player, Lang.fmt("msg.factions.unclaimed", "x", chunk.x, "z", chunk.z));
         if (back > 0.0D) {
@@ -830,6 +841,11 @@ public final class FactionCommands {
         }
         int removed = store(ctx).unclaimAll(f.get().id());
         Feedback.chat(player, Lang.fmt("msg.factions.unclaimed_all", "count", removed));
+        // Said only when something was actually held back, so it reads as an explanation rather
+        // than as boilerplate nobody finishes.
+        if (store(ctx).claimCount(f.get().id()) > 0) {
+            Feedback.chat(player, Lang.get("msg.factions.unclaimed_all_kept"));
+        }
         announce(ctx, f.get(), Lang.fmt("msg.factions.unclaimed_all_others",
                 "player", player.getName().getString(), "count", removed), player.getUUID());
         return removed;

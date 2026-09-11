@@ -73,7 +73,15 @@ public class FactionsJourneyMapPlugin implements IServerPlugin {
         this.claims = new ClaimsOverlay(serverApi);
 
         FactionsMapEvents.onClaimsChanged(change -> safely(() -> refreshClaims()));
-        FactionsMapEvents.onStandardsChanged(() -> safely(this::refreshStandards));
+        // ⚠ Standards changing means the TERRITORY has to be redrawn too, not just the pins.
+        // A faction's fill colour is its own standard's banner colour (colourOf reads ownFlag and
+        // falls back to white), so planting the first flag repaints every chunk it holds. Pinning
+        // alone left freshly-seeded factions drawn white until something else forced a rebuild —
+        // toggling the layer off and on, which is how it was found.
+        FactionsMapEvents.onStandardsChanged(() -> safely(() -> {
+            refreshStandards();
+            refreshClaims();
+        }));
         // The layer switch. It arrives here as a command the player ran — the map's button sends
         // one — because the overlays are pushed from this side, and a client-side switch alone
         // changes a label and nothing else.
