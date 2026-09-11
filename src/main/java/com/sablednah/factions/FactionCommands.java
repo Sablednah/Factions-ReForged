@@ -637,7 +637,7 @@ public final class FactionCommands {
     /** {@code /f claim} — the chunk you are standing in. */
     private static int claim(CommandContext<CommandSourceStack> ctx) throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
-        return claimAt(ctx, new ChunkPos(player.blockPosition()));
+        return claimAt(ctx, ChunkPos.containing(player.blockPosition()));
     }
 
     /**
@@ -788,7 +788,7 @@ public final class FactionCommands {
     private static int unclaim(CommandContext<CommandSourceStack> ctx)
             throws CommandSyntaxException {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
-        return unclaimAt(ctx, new ChunkPos(player.blockPosition()));
+        return unclaimAt(ctx, ChunkPos.containing(player.blockPosition()));
     }
 
     /** {@code /f unclaim <x> <z>} — the map's right-click. Same rules; see {@link #claimAtCoords}. */
