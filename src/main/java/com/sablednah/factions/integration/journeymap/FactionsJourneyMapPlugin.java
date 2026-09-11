@@ -74,6 +74,11 @@ public class FactionsJourneyMapPlugin implements IServerPlugin {
 
         FactionsMapEvents.onClaimsChanged(change -> safely(() -> refreshClaims()));
         FactionsMapEvents.onStandardsChanged(() -> safely(this::refreshStandards));
+        // The layer switch. It arrives here as a command the player ran — the map's button sends
+        // one — because the overlays are pushed from this side, and a client-side switch alone
+        // changes a label and nothing else.
+        FactionsMapEvents.onLayerToggled(
+                toggle -> safely(() -> claims.setVisible(toggle.player(), toggle.on())));
 
         // ⚠ A player who has just arrived has no overlays and no pins at all — JourneyMap does not
         // replay what was pushed before they connected. Registered here rather than in Factions'
@@ -82,6 +87,12 @@ public class FactionsJourneyMapPlugin implements IServerPlugin {
                 (net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent event) -> {
                     if (event.getEntity() instanceof ServerPlayer player) {
                         showEverythingTo(player);
+                    }
+                });
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent event) -> {
+                    if (event.getEntity() instanceof ServerPlayer player) {
+                        safely(() -> claims.forget(player));
                     }
                 });
         // Changing dimension is the same problem wearing a different hat: overlays are per

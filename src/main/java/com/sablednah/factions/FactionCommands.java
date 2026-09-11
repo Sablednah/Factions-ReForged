@@ -117,6 +117,15 @@ public final class FactionCommands {
                                         StringArgumentType.getString(ctx, "faction")))))
                 .then(Commands.literal("map")
                         .executes(ctx -> map(ctx, false, 0, false))
+                        // The territory layer on a mapping mod, switched from the server because
+                        // that is where the overlays are pushed from. The map's own button sends
+                        // this; typing it works identically, which is the point of it being a
+                        // command.
+                        .then(Commands.literal("layer")
+                                .then(Commands.literal("on")
+                                        .executes(ctx -> mapLayer(ctx, true)))
+                                .then(Commands.literal("off")
+                                        .executes(ctx -> mapLayer(ctx, false))))
                         .then(Commands.literal("item")
                                 .executes(ctx -> map(ctx, true, 0, false))
                                 // The terrain map is its own literal rather than a flag on zoom,
@@ -283,6 +292,24 @@ public final class FactionCommands {
             Feedback.chat(player, Lang.fmt("msg.factions.fixtures_row", "row", row));
         }
         return report.size();
+    }
+
+    /**
+     * {@code /f map layer on|off} — the territory layer on a mapping mod.
+     *
+     * <p>⚠ It has to be a server-side switch. The overlays are pushed by the server, so a purely
+     * client-side toggle flips a label and leaves the polygons exactly where they were — a button
+     * that lies, which is worse than no button. Found by pressing it.</p>
+     *
+     * <p>Harmless with no mapping mod installed: nothing is listening, and the player is told the
+     * preference was noted rather than that something happened.</p>
+     */
+    private static int mapLayer(CommandContext<CommandSourceStack> ctx, boolean on)
+            throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        FactionsMapEvents.layerToggled(player, on);
+        Feedback.chat(player, Lang.get(on ? "msg.factions.map_layer_on" : "msg.factions.map_layer_off"));
+        return 1;
     }
 
     private static int clearFixtures(CommandContext<CommandSourceStack> ctx)
