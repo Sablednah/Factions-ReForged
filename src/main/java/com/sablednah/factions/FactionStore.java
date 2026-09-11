@@ -612,6 +612,13 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
      * <p>Own flags only. A captured one is somebody else's identity being flown as a trophy, and a
      * trophy must not confer ground — otherwise stealing a flag would hand you an unlosable chunk
      * wherever you chose to plant it.</p>
+     *
+     * <p>⚠ <b>A faction holding exactly one chunk, with its standard in it, therefore cannot lose
+     * land at all. That is deliberate and was decided by the owner</b>, not an edge case waiting to
+     * be closed: <em>"having your faction wiped out entirely is a feelsbad, I'm happy to make that
+     * more difficult."</em> It costs nothing elsewhere — the flag is still stealable by hand, and
+     * the take-the-ground raid win only ever applied to a faction flying no standard to steal. See
+     * {@code POWER.md} §4.</p>
      */
     public boolean ownStandardInChunk(String factionId, String dimension, int chunkX, int chunkZ) {
         return ownFlag(factionId)

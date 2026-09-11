@@ -20,6 +20,8 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
+import com.sablednah.standards.neoforge.Lang;
+
 import com.sablednah.factions.FactionStore;
 import com.sablednah.factions.Factions;
 import com.sablednah.factions.FactionsMapEvents;
@@ -54,7 +56,16 @@ import com.sablednah.factions.FactionsMapEvents;
 @JourneyMapPlugin(apiVersion = "2.0.0", dependencies = { Factions.MODID })
 public class FactionsJourneyMapPlugin implements IServerPlugin {
 
-    private static final String STANDARD_GROUP = "Faction Standards";
+    /**
+     * ⚠ Short, because JourneyMap's group column clips without an ellipsis.
+     *
+     * <p>"Faction Standards" rendered as <em>"Faction Standar"</em> — not truncated-looking, just
+     * wrong-looking, which is worse. A Lang key rather than a literal for the usual reason: it is a
+     * string a player reads, and this repo treats a hardcoded one as a bug.</p>
+     */
+    private static String standardGroup() {
+        return com.sablednah.standards.neoforge.Lang.get("msg.factions.map_group");
+    }
 
     private IServerAPI api;
     private ClaimsOverlay claims;
@@ -200,8 +211,15 @@ public class FactionsJourneyMapPlugin implements IServerPlugin {
                 if (where == null) {
                     continue;
                 }
-                String label = faction.name() + " standard"
-                        + placed.capturedFrom().map(from -> " (from " + from + ")").orElse("");
+                // ⚠ capturedFrom is a faction ID, not a name — it rendered as "(from 7199656e)".
+                // And the flag belongs to whoever it was TAKEN from, so leading with the flyer's
+                // name made a captured flag read as one of your own. Whose it is comes first;
+                // who holds it is the parenthetical.
+                String label = placed.capturedFrom()
+                        .map(from -> Lang.fmt("msg.factions.map_standard_captured",
+                                "name", store.byId(from).map(FactionStore.Faction::name).orElse(from),
+                                "holder", faction.name()))
+                        .orElseGet(() -> Lang.fmt("msg.factions.map_standard", "name", faction.name()));
                 // A waypoint per recipient: the factory stamps identity into the instance, so
                 // handing one instance to several players is not safe to assume.
                 Waypoint waypoint = WaypointFactory.createWaypoint(Factions.MODID, placed.pos(),
@@ -275,14 +293,21 @@ public class FactionsJourneyMapPlugin implements IServerPlugin {
                 Factions.LOGGER.debug("Factions: JourneyMap waypoints can be grouped");
             }
             WaypointGroup group = groups.computeIfAbsent(player.toString(), key -> {
+                // ⚠ Matched on OUR MOD ID, not on the name. We only ever make one group, and
+                // matching the name instead means renaming it — which this has now done once —
+                // orphans the old one: it sits in the player's manager forever, empty, beside its
+                // replacement. Found by changing the name and thinking about what a player who had
+                // already run the previous version would be looking at.
                 for (WaypointGroup existing : api.getAllGroups(player)) {
-                    if (Factions.MODID.equals(existing.getModId())
-                            && STANDARD_GROUP.equals(existing.getName())) {
+                    if (Factions.MODID.equals(existing.getModId())) {
+                        if (!standardGroup().equals(existing.getName())) {
+                            existing.setName(standardGroup());
+                        }
                         return existing;
                     }
                 }
                 WaypointGroup made =
-                        WaypointFactory.createWaypointGroup(Factions.MODID, STANDARD_GROUP);
+                        WaypointFactory.createWaypointGroup(Factions.MODID, standardGroup());
                 api.addPlayerGroup(player, made);
                 return made;
             });

@@ -2,6 +2,8 @@ package com.sablednah.factions;
 
 import java.util.List;
 
+import com.sablednah.standards.neoforge.Lang;
+
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.server.ServerStartedEvent;
 
@@ -104,6 +106,7 @@ public final class FactionsSelfTest {
         check("...but not a third state", !executable(d, src, "f map layer sometimes"));
         check("a bare /f map still executes", executable(d, src, "f map"));
 
+        prefixChecks();
         outlineChecks();
         trophyChecks(server);
         // The pane's no-faction state offers these two, pre-filled into the chat box. A button
@@ -657,5 +660,40 @@ public final class FactionsSelfTest {
             store.clearStandardAt(dim, at);
             store.unclaim(dim, cx, cz);
         }
+    }
+
+    /**
+     * Factions' messages sign themselves as Factions.
+     *
+     * <p>They did not: every one opens with {@code {term.prefix}}, which resolved to Standards'
+     * prefix, so <em>"Claimed 2, 0"</em> announced itself as <b>[Standards]</b> — as did every
+     * other command in the mod. Factions is a separate mod and a separate release; it was signing
+     * its work with somebody else's name, and it took the owner reading his own chat log.</p>
+     *
+     * <p>Standards now resolves that token to the prefix of whichever mod owns the key. This checks
+     * the outcome rather than the mechanism, and checks both halves — that ours changed, and that
+     * Standards' own did not, because a fix that re-badged everything would be the same bug wearing
+     * the other hat.</p>
+     */
+    private void prefixChecks() {
+        String ours = Lang.get("msg.factions.none_yet");
+        check("a Factions message signs itself Factions", ours.contains("Factions"));
+        check("...and not Standards", !ours.contains("Standards"));
+
+        // The map's labels: cheap, and it catches a mistyped placeholder, which renders as the
+        // literal {holder} on a waypoint nobody would think to check.
+        String own = Lang.fmt("msg.factions.map_standard", "name", "Sabletopia");
+        check("a standard's map label names its faction", own.equals("Sabletopia's standard"));
+        String taken = Lang.fmt("msg.factions.map_standard_captured",
+                "name", "Ashfell", "holder", "Sabletopia");
+        check("a captured one leads with whose flag it is, not who holds it",
+                taken.equals("Ashfell's standard (captured by Sabletopia)"));
+        check("...and leaves no placeholder behind", !taken.contains("{"));
+        check("the waypoint group name is short enough not to clip",
+                Lang.get("msg.factions.map_group").length() <= 14);
+
+        String theirs = Lang.get("msg.toggle.self");
+        check("a Standards message still signs itself Standards", theirs.contains("Standards"));
+        check("...and not Factions", !theirs.contains("Factions"));
     }
 }
