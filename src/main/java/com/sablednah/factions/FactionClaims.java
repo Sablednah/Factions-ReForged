@@ -66,7 +66,7 @@ public final class FactionClaims {
             // ⚠ Before every other takeover rule, because it is not a matter of degree: a chunk
             // with their own standard on it is not takeable at any overreach, in any raid, at any
             // power. The flag is the way in — steal it, and the ground stops being pinned.
-            if (store.ownStandardInChunk(owner.get(), dim, chunk.x, chunk.z)) {
+            if (store.ownStandardInChunk(owner.get(), dim, chunk.x(), chunk.z())) {
                 return Result.STANDARD_PINS;
             }
             // Somebody else holds it. Which is not automatically a refusal any more: if they are

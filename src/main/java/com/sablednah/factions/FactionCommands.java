@@ -819,7 +819,7 @@ public final class FactionCommands {
         // ⚠ Your own standard pins your own ground too, and that is the point rather than a
         // side effect: a core chunk nobody can give away, including an officer having a bad day.
         // Take the flag down and the chunk is ordinary again.
-        if (store(ctx).ownStandardInChunk(f.get().id(), dim, chunk.x, chunk.z)) {
+        if (store(ctx).ownStandardInChunk(f.get().id(), dim, chunk.x(), chunk.z())) {
             Feedback.chat(player, Lang.get("msg.factions.unclaim_standard_pins"));
             return 0;
         }
