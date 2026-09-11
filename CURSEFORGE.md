@@ -29,6 +29,16 @@ territory you can read the shape of.
 the outline stays one pixel wide at every level. `/f map` on its own gives the classic chat grid,
 for when you have no hands free.
 
+**And on JourneyMap, if you brought one.** Every faction's land drawn as a filled region in its own
+banner colour, bordered by your relation to the owner — white yours, green allied, red hostile —
+with the faction's land, members and power on hover. Your own and your allies' standards get pinned.
+A toolbar button turns the layer off; another, if you may claim, turns on **claim mode**, where
+left-click takes a chunk and right-click releases it.
+
+Every one of those clicks runs the ordinary command, so nothing on the map can do what a player at a
+keyboard could not, and an enemy's standard is never pinned — you find that by going and looking.
+Factions still draws no map of its own and never will; this is somebody else's map, decorated.
+
 **Or the same claims washed over the real landscape.** `/f map item terrain` draws the rivers,
 forest and coastline underneath, so you can see where a border actually falls rather than which
 abstract square it is in.
