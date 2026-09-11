@@ -210,25 +210,25 @@ final class ClaimsOverlay {
     private static List<int[]> runs(List<ChunkPos> claims) {
         Set<Long> held = new HashSet<>();
         for (ChunkPos c : claims) {
-            held.add(pack(c.x, c.z));
+            held.add(pack(c.x(), c.z()));
         }
         List<int[]> out = new ArrayList<>();
         Set<Long> done = new HashSet<>();
         for (ChunkPos c : claims) {
-            long key = pack(c.x, c.z);
+            long key = pack(c.x(), c.z());
             if (!done.add(key)) {
                 continue;
             }
             // Only start a run at its left end, or the same row is emitted once per chunk in it.
-            if (held.contains(pack(c.x - 1, c.z))) {
+            if (held.contains(pack(c.x() - 1, c.z()))) {
                 continue;
             }
-            int x1 = c.x;
-            while (held.contains(pack(x1 + 1, c.z))) {
+            int x1 = c.x();
+            while (held.contains(pack(x1 + 1, c.z()))) {
                 x1++;
-                done.add(pack(x1, c.z));
+                done.add(pack(x1, c.z()));
             }
-            out.add(new int[] {c.x, c.z, x1});
+            out.add(new int[] {c.x(), c.z(), x1});
         }
         return out;
     }
