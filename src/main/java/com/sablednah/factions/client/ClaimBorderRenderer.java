@@ -44,8 +44,11 @@ import net.minecraft.world.phys.Vec3;
  */
 public final class ClaimBorderRenderer implements DebugRenderer.SimpleDebugRenderer {
 
-    /** How far up the wall stands. A full-height curtain is unmissable and unreadable. */
-    private static final double WALL_HEIGHT = 6.0D;
+    /** How far up the wall stands from the ground. A full-height curtain is unreadable. */
+    private static final double WALL_HEIGHT = 5.0D;
+
+    /** And a little below, so it does not float over a dip in the terrain. */
+    private static final double WALL_SINK = 1.5D;
 
     /**
      * Alphas, and they are the whole difference between "solid visible area" and "did that draw?".
@@ -80,8 +83,7 @@ public final class ClaimBorderRenderer implements DebugRenderer.SimpleDebugRende
         if (held.isEmpty()) {
             return;
         }
-        double base = minecraft.player == null ? camY : minecraft.player.getY();
-        walls(claims, held, base);
+        walls(claims, held, minecraft.level);
         floor(claims, minecraft.level);
     }
 
@@ -97,43 +99,55 @@ public final class ClaimBorderRenderer implements DebugRenderer.SimpleDebugRende
      * rather than per edge — two factions sharing a border draw two panels, one each, and neither
      * has to know about the other.</p>
      */
-    private void walls(ClaimsNearbyPayload claims, List<int[]> held, double baseY) {
-        double top = baseY + WALL_HEIGHT;
-        double bottom = baseY - 2.0D;
+    private void walls(ClaimsNearbyPayload claims, List<int[]> held, ClientLevel level) {
         for (ClaimOutline.Shape shape : ClaimOutline.trace(held)) {
-            ring(claims, shape.outer(), bottom, top);
+            ring(claims, shape.outer(), level);
             for (List<ClaimOutline.Corner> hole : shape.holes()) {
-                ring(claims, hole, bottom, top);
+                ring(claims, hole, level);
             }
         }
     }
 
     private void ring(ClaimsNearbyPayload claims, List<ClaimOutline.Corner> ring,
-            double bottom, double top) {
+            ClientLevel level) {
         int n = ring.size();
         for (int i = 0; i < n; i++) {
             ClaimOutline.Corner a = ring.get(i);
             ClaimOutline.Corner b = ring.get((i + 1) % n);
-            // The land is on the right of travel — ClaimOutline guarantees it — so the chunk that
-            // owns this edge is the one just to the right of its midpoint.
             int colour = colourOf(claims, ClaimOutline.landSideOf(a, b));
+            int line = argb(colour, WALL_LINE_ALPHA);
+
             double ax = a.x() * 16.0D;
             double az = a.z() * 16.0D;
             double bx = b.x() * 16.0D;
             double bz = b.z() * 16.0D;
-            int line = argb(colour, WALL_LINE_ALPHA);
-            // A translucent PANEL, not just an outline: the ask was a solid visible area rather
-            // than a line of particles, and an outline at this scale reads as scaffolding. The
-            // four corners are given explicitly — the cuboid-face overload cannot express a
-            // vertical quad on an arbitrary bearing, only one of the six axis-aligned faces.
-            Gizmos.rect(new Vec3(ax, bottom, az), new Vec3(ax, top, az),
-                    new Vec3(bx, top, bz), new Vec3(bx, bottom, bz),
+
+            // ⚠ Anchored to the GROUND at each end, not to the player. It used to follow the
+            // player's own Y, which is invisible while you walk — and then you fly up and the
+            // walls come with you, standing in the clouds over a claim they no longer touch.
+            // Found by going up and looking down, which is the only view that shows it.
+            // Two samples make the panel follow the slope of the land between them; the border is
+            // 16 blocks long at most, so a straight line between its ends is close enough and
+            // costs two lookups instead of sixteen.
+            double ay = groundAt(level, ax, az);
+            double by = groundAt(level, bx, bz);
+
+            Gizmos.rect(new Vec3(ax, ay - WALL_SINK, az), new Vec3(ax, ay + WALL_HEIGHT, az),
+                    new Vec3(bx, by + WALL_HEIGHT, bz), new Vec3(bx, by - WALL_SINK, bz),
                     GizmoStyle.fill(argb(colour, WALL_FILL_ALPHA)));
-            // ...and keep the edges crisp, or the panel has no silhouette against the sky.
-            Gizmos.line(new Vec3(ax, bottom, az), new Vec3(bx, bottom, bz), line, WALL_WIDTH);
-            Gizmos.line(new Vec3(ax, top, az), new Vec3(bx, top, bz), line, WALL_WIDTH);
-            Gizmos.line(new Vec3(ax, bottom, az), new Vec3(ax, top, az), line, WALL_WIDTH);
+            Gizmos.line(new Vec3(ax, ay - WALL_SINK, az), new Vec3(bx, by - WALL_SINK, bz),
+                    line, WALL_WIDTH);
+            Gizmos.line(new Vec3(ax, ay + WALL_HEIGHT, az), new Vec3(bx, by + WALL_HEIGHT, bz),
+                    line, WALL_WIDTH);
+            Gizmos.line(new Vec3(ax, ay - WALL_SINK, az), new Vec3(ax, ay + WALL_HEIGHT, az),
+                    line, WALL_WIDTH);
         }
+    }
+
+    /** The surface at a corner, so the wall stands on the land rather than on the player. */
+    private static double groundAt(ClientLevel level, double x, double z) {
+        return level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (int) Math.floor(x), (int) Math.floor(z));
     }
 
     /**
