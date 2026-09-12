@@ -593,6 +593,32 @@ public final class FactionsSelfTest {
                 ClaimOutline.rows(chunks(0, 0, 1, 0, 2, 0)).equals(List.of(new int[] {0, 0, 2}))
                         || covered(ClaimOutline.rows(chunks(0, 0, 1, 0, 2, 0))) == 3);
         check("no claims makes no rows", ClaimOutline.rows(List.of()).isEmpty());
+
+        // ⚠ landSideOf decides which faction's colour a shared border is drawn in. Off by one on
+        // either axis and two factions swap colours along the edge they share — which looks like a
+        // relation bug, in a renderer, on a client. Checked against a single chunk whose four
+        // edges must ALL name that same chunk.
+        List<ClaimOutline.Shape> lone = ClaimOutline.trace(chunks(3, 5));
+        List<ClaimOutline.Corner> loneRing = lone.get(0).outer();
+        boolean allMine = true;
+        for (int i = 0; i < loneRing.size(); i++) {
+            int[] owner = ClaimOutline.landSideOf(loneRing.get(i),
+                    loneRing.get((i + 1) % loneRing.size()));
+            allMine &= owner[0] == 3 && owner[1] == 5;
+        }
+        check("every edge of a lone chunk names that chunk as its land", allMine);
+
+        // And a hole: its ring winds the other way, so the land is the ring of chunks AROUND it.
+        // The middle must never be named, or the pocket would be drawn in its owner's colour.
+        List<ClaimOutline.Shape> ringed = ClaimOutline.trace(
+                chunks(0, 0, 1, 0, 2, 0, 0, 1, 2, 1, 0, 2, 1, 2, 2, 2));
+        List<ClaimOutline.Corner> hole = ringed.get(0).holes().get(0);
+        boolean neverTheHole = true;
+        for (int i = 0; i < hole.size(); i++) {
+            int[] owner = ClaimOutline.landSideOf(hole.get(i), hole.get((i + 1) % hole.size()));
+            neverTheHole &= !(owner[0] == 1 && owner[1] == 1);
+        }
+        check("a hole's edges name the land around it, never the hole", neverTheHole);
     }
 
     /** Chunk coordinates as x,z pairs, so a shape reads as a shape at the call site. */
