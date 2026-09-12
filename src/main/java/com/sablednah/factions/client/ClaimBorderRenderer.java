@@ -47,9 +47,16 @@ public final class ClaimBorderRenderer implements DebugRenderer.SimpleDebugRende
     /** How far up the wall stands. A full-height curtain is unmissable and unreadable. */
     private static final double WALL_HEIGHT = 6.0D;
 
-    /** Alpha for the wall lines and for the floor wash. The floor is fainter on purpose. */
-    private static final int WALL_ALPHA = 200;
-    private static final int FLOOR_ALPHA = 60;
+    /**
+     * Alphas, and they are the whole difference between "solid visible area" and "did that draw?".
+     *
+     * <p>⚠ The floor started at 60 and was invisible — a 24% green wash over grass is nothing, and
+     * it read as the quad not rendering at all rather than as a faint one. Found by looking, which
+     * is the only way this kind of thing is ever found.</p>
+     */
+    private static final int WALL_LINE_ALPHA = 220;
+    private static final int WALL_FILL_ALPHA = 70;
+    private static final int FLOOR_ALPHA = 110;
 
     private static final float WALL_WIDTH = 3.0F;
 
@@ -114,10 +121,18 @@ public final class ClaimBorderRenderer implements DebugRenderer.SimpleDebugRende
             double az = a.z() * 16.0D;
             double bx = b.x() * 16.0D;
             double bz = b.z() * 16.0D;
-            int argb = ARGB.color(WALL_ALPHA, (colour >> 16) & 0xFF, (colour >> 8) & 0xFF, colour & 0xFF);
-            Gizmos.line(new Vec3(ax, bottom, az), new Vec3(bx, bottom, bz), argb, WALL_WIDTH);
-            Gizmos.line(new Vec3(ax, top, az), new Vec3(bx, top, bz), argb, WALL_WIDTH);
-            Gizmos.line(new Vec3(ax, bottom, az), new Vec3(ax, top, az), argb, WALL_WIDTH);
+            int line = argb(colour, WALL_LINE_ALPHA);
+            // A translucent PANEL, not just an outline: the ask was a solid visible area rather
+            // than a line of particles, and an outline at this scale reads as scaffolding. The
+            // four corners are given explicitly — the cuboid-face overload cannot express a
+            // vertical quad on an arbitrary bearing, only one of the six axis-aligned faces.
+            Gizmos.rect(new Vec3(ax, bottom, az), new Vec3(ax, top, az),
+                    new Vec3(bx, top, bz), new Vec3(bx, bottom, bz),
+                    GizmoStyle.fill(argb(colour, WALL_FILL_ALPHA)));
+            // ...and keep the edges crisp, or the panel has no silhouette against the sky.
+            Gizmos.line(new Vec3(ax, bottom, az), new Vec3(bx, bottom, bz), line, WALL_WIDTH);
+            Gizmos.line(new Vec3(ax, top, az), new Vec3(bx, top, bz), line, WALL_WIDTH);
+            Gizmos.line(new Vec3(ax, bottom, az), new Vec3(ax, top, az), line, WALL_WIDTH);
         }
     }
 
@@ -146,9 +161,7 @@ public final class ClaimBorderRenderer implements DebugRenderer.SimpleDebugRende
                     continue;
                 }
                 int colour = colourOfRelation(rel);
-                int argb = ARGB.color(FLOOR_ALPHA,
-                        (colour >> 16) & 0xFF, (colour >> 8) & 0xFF, colour & 0xFF);
-                GizmoStyle style = GizmoStyle.fill(argb);
+                GizmoStyle style = GizmoStyle.fill(argb(colour, FLOOR_ALPHA));
                 for (int x = cx * 16; x < cx * 16 + 16; x++) {
                     for (int z = cz * 16; z < cz * 16 + 16; z++) {
                         int y = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, x, z);
@@ -160,6 +173,10 @@ public final class ClaimBorderRenderer implements DebugRenderer.SimpleDebugRende
                 }
             }
         }
+    }
+
+    private static int argb(int rgb, int alpha) {
+        return ARGB.color(alpha, (rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF);
     }
 
     private static int colourOf(ClaimsNearbyPayload claims, int[] chunk) {
