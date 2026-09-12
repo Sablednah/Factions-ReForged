@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
@@ -204,7 +205,25 @@ public final class FactionCommands {
                 .then(Commands.literal("status").executes(FactionCommands::status))
                 .then(Commands.literal("panel").executes(FactionCommands::panel))
                 .then(fixtures())
-                .then(Commands.literal("borders").executes(FactionCommands::borders));
+                .then(borders("borders"))
+                // ⚠ And the singular, because the client's keybind sends one of these and a
+                // brigadier literal is not a prefix match. `/f border` failed silently — the key
+                // is unbound by default, so nothing ever typed it until a keybind did.
+                .then(borders("border"));
+    }
+
+    /**
+     * {@code /f borders} — the display, and how far it reaches.
+     *
+     * <p>Built twice under two names rather than redirected: a redirect node ignores children
+     * merged into it, which is the same trap {@code /msg} cost Standards a whole afternoon.</p>
+     */
+    private static LiteralArgumentBuilder<CommandSourceStack> borders(String name) {
+        return Commands.literal(name)
+                .executes(FactionCommands::borders)
+                .then(Commands.literal("radius")
+                        .then(Commands.argument("chunks", IntegerArgumentType.integer(0, 8))
+                                .executes(FactionCommands::bordersRadius)));
     }
 
     /**
@@ -1806,6 +1825,26 @@ public final class FactionCommands {
         Feedback.chat(player, Lang.get(on
                 ? "msg.factions.borders_on" : "msg.factions.borders_off"));
         return 1;
+    }
+
+    /**
+     * How far the border display reaches, for this player.
+     *
+     * <p>⚠ <b>The action bar, not chat.</b> A modded client re-states its configured radius the
+     * first time the server sends it a grid, so this runs once per session without anybody typing
+     * it — and a chat line nobody asked for, on every login, is exactly the quiet-sync noise this
+     * pair has already paid for once.</p>
+     */
+    private static int bordersRadius(CommandContext<CommandSourceStack> ctx)
+            throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        int asked = IntegerArgumentType.getInteger(ctx, "chunks");
+        int got = FactionBorders.setRadius(player, asked);
+        Feedback.actionBar(player, Lang.get(got == asked
+                        ? "msg.factions.borders_radius" : "msg.factions.borders_radius_capped")
+                .replace("{chunks}", String.valueOf(got))
+                .replace("{asked}", String.valueOf(asked)));
+        return got;
     }
 
     // --- helpers ---

@@ -367,6 +367,10 @@ public final class FactionLang {
         Lang.contribute("msg.factions.borders_on",
                 "{term.prefix} &7Borders shown. {term.dim}(or just hold the tool)");
         Lang.contribute("msg.factions.borders_off", "{term.prefix} &7Borders hidden.");
+        Lang.contribute("msg.factions.borders_radius",
+                "&7Borders reach &f{chunks}&7 chunk(s).");
+        Lang.contribute("msg.factions.borders_radius_capped",
+                "&7Borders reach &f{chunks}&7 chunk(s) &8— {asked} is past this server's limit.");
 
         // Test fixtures.
         Lang.contribute("msg.factions.fixtures_seeded",
