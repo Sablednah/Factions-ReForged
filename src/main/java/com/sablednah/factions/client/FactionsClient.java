@@ -71,17 +71,24 @@ public class FactionsClient {
     }
 
     /**
-     * Unbound by default, and the key runs the COMMAND.
+     * Bound to {@code '} by default, and the key runs the COMMAND.
      *
-     * <p>Both halves are Standards' rules rather than preferences. A mod claiming a key on install
-     * is how conflicts start; and a key that toggled the grid locally would be a second source of
-     * truth about whether borders are on, which is exactly how a button and a command come to
-     * disagree. This sends {@code f borders}, so the server decides and a vanilla client typing it
-     * gets the same answer in particles.</p>
+     * <p>⚠ <b>The default binding is the owner's call, made after using it.</b> The standing rule
+     * is that a mod claiming a key on install is how conflicts start, and this shipped unbound
+     * because of it — which meant the feature had a keybind nobody had ever pressed, and a broken
+     * one at that. Apostrophe is not a vanilla binding, it is next to the hand already on the
+     * movement keys, and a border display is checked often enough that "go and bind it first" is
+     * the wrong toll. Anybody it does collide with re-binds it in one screen; nobody re-binds a
+     * key they never learned existed.</p>
+     *
+     * <p>The other half is not a preference: a key that toggled the grid locally would be a second
+     * source of truth about whether borders are on, which is exactly how a button and a command
+     * come to disagree. This sends {@code f borders}, so the server decides and a vanilla client
+     * typing it gets the same answer in particles.</p>
      *
      * <p>⚠ And it is {@code borders}, plural, because <b>a brigadier literal is not a prefix
      * match</b>. This sent {@code f border} for its whole life and could not have worked; the key
-     * is unbound by default, so nothing had ever pressed it. The command now answers to both.</p>
+     * was unbound then, so nothing had ever pressed it. The command now answers to both.</p>
      */
     private static void onRegisterKeys(RegisterKeyMappingsEvent event) {
         event.register(BORDER_KEY);
@@ -89,7 +96,7 @@ public class FactionsClient {
 
     private static final net.minecraft.client.KeyMapping BORDER_KEY =
             new net.minecraft.client.KeyMapping("key.factions.border",
-                    com.mojang.blaze3d.platform.InputConstants.UNKNOWN.getValue(),
+                    com.mojang.blaze3d.platform.InputConstants.KEY_APOSTROPHE,
                     new net.minecraft.client.KeyMapping.Category(
                             net.minecraft.resources.Identifier.fromNamespaceAndPath(
                                     Factions.MODID, "main")));
