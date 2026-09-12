@@ -204,9 +204,9 @@ ground**, not at your feet.
 `borders.maxRadiusChunks`. It is not saved — a display, not a setting.
 
 **With Factions installed client-side, the particles are replaced by solid panels** and the ground
-under you is tinted in the same colour. It says exactly what the particles say; there is a keybind
-(unbound by default) and a client config with its own radius for the walls and a smaller one for the
-tinted ground. A modded client states its preferred radius the first time it is sent a border, which
+under you is tinted in the same colour. It says exactly what the particles say; it is on the **`'`
+key** by default, and the client config carries its own radius for the walls and a smaller one for
+the tinted ground. A modded client states its preferred radius the first time it is sent a border, which
 is why you may never need to type the command at all.
 
 ### `/f status`

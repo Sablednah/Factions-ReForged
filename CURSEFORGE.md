@@ -77,9 +77,9 @@ Walk across a border and the **action bar names whose land you have entered**, o
 **On a modded client the same border is solid.** Install Factions client-side and the particles are
 replaced by upright panels standing on the ground in your relation's colour, with the ground itself
 tinted under your feet — the same answer the particles give, in a form you can read at a glance from
-a hilltop. There is a keybind for it (unbound by default, because a mod claiming a key on install is
-how conflicts start), and two settings in the client config: how many chunks of wall to draw, and
-how many chunks of tinted ground. **Nothing here is a fact a vanilla client is missing** — that is
+a hilltop. It is on the **`'` key** by default — re-bind it like any other — and there are two
+settings in the client config: how many chunks of wall to draw, and how many chunks of tinted
+ground. **Nothing here is a fact a vanilla client is missing** — that is
 the rule the whole client half runs on, and `/f borders radius <chunks>` widens the particles by
 exactly as much for anybody who types it.
 

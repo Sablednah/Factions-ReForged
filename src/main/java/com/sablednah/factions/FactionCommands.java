@@ -208,7 +208,7 @@ public final class FactionCommands {
                 .then(borders("borders"))
                 // ⚠ And the singular, because the client's keybind sends one of these and a
                 // brigadier literal is not a prefix match. `/f border` failed silently — the key
-                // is unbound by default, so nothing ever typed it until a keybind did.
+                // was unbound by default then, so nothing had ever typed it.
                 .then(borders("border"));
     }
 
