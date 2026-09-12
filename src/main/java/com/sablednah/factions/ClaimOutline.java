@@ -156,12 +156,28 @@ public final class ClaimOutline {
     public static int[] landSideOf(Corner a, Corner b) {
         int dx = Integer.signum(b.x() - a.x());
         int dz = Integer.signum(b.z() - a.z());
-        int inx = -dz;      // a quarter turn towards the land
-        int inz = dx;
+        int[] in = inwardOf(a, b);
         // Corners name grid lines; a chunk is named by its lower corner, so step back on any axis
         // we are travelling or leaning negatively along.
-        return new int[] {a.x() + Math.min(0, dx) + Math.min(0, inx),
-                          a.z() + Math.min(0, dz) + Math.min(0, inz)};
+        return new int[] {a.x() + Math.min(0, dx) + Math.min(0, in[0]),
+                          a.z() + Math.min(0, dz) + Math.min(0, in[1])};
+    }
+
+    /**
+     * Which way is inland from this edge — a unit step, a quarter turn right of travel.
+     *
+     * <p>Shares its one line of arithmetic with {@link #landSideOf} on purpose. The renderer needs
+     * a <b>direction</b> (to nudge a wall off the boundary, so two factions meeting there draw two
+     * visible lines rather than one z-fighting pair) and the map needs a <b>chunk</b>; deriving
+     * both from the same turn means the two cannot disagree about which side the land is on, which
+     * is precisely the bug this winding has already produced once.</p>
+     *
+     * @return {@code {stepX, stepZ}}, each of -1, 0 or 1
+     */
+    public static int[] inwardOf(Corner a, Corner b) {
+        int dx = Integer.signum(b.x() - a.x());
+        int dz = Integer.signum(b.z() - a.z());
+        return new int[] {-dz, dx};
     }
 
     private static void edge(Map<Corner, List<Corner>> edges, int x0, int z0, int x1, int z1) {

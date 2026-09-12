@@ -20,6 +20,7 @@ public final class FactionsConfig {
     public static final ModConfigSpec.BooleanValue PVP_BETWEEN_ALLIES;
     public static final ModConfigSpec.IntValue BORDER_PARTICLE_TICKS;
     public static final ModConfigSpec.IntValue BORDER_RADIUS_CHUNKS;
+    public static final ModConfigSpec.IntValue BORDER_MAX_RADIUS_CHUNKS;
     public static final ModConfigSpec.ConfigValue<String> BORDER_ITEM;
     public static final ModConfigSpec.BooleanValue BORDER_FOLLOW_GROUND;
     public static final ModConfigSpec.IntValue MAP_PIXELS_PER_CHUNK;
@@ -149,6 +150,12 @@ public final class FactionsConfig {
                 .comment("How many chunks around you to outline. Larger is prettier and costs",
                         "more packets; 1 means the chunk you are stood in and its neighbours.")
                 .defineInRange("radiusChunks", 1, 0, 8);
+        BORDER_MAX_RADIUS_CHUNKS = b
+                .comment("The furthest any one player may push their own border display with",
+                        "/f borders radius. The default above is what everybody starts at; this",
+                        "is the ceiling, because the cost is the server's to pay in packets and",
+                        "the benefit is the viewer's. 8 is the hard limit of the wire format.")
+                .defineInRange("maxRadiusChunks", 8, 0, 8);
         BORDER_ITEM = b
                 .comment("Hold this item and borders appear without toggling anything.",
                         "A block id, or blank for none. The point is that you pick up the tool,",

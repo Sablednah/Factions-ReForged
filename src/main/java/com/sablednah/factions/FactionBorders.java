@@ -56,6 +56,40 @@ public final class FactionBorders {
     /** Players who have asked to see borders. Not persisted: a display, not a setting. */
     private static final Set<UUID> SHOWING = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
+    /**
+     * How far each player has asked to see, when they have asked at all.
+     *
+     * <p>⚠ <b>The viewer chooses, the server sets the ceiling.</b> A modded client draws geometry
+     * and can happily hold eight chunks of it; a vanilla client draws the same facts in particles
+     * and a wide radius there is a dust storm. So the radius is a per-player preference rather
+     * than one number for everybody, and it is bounded by {@code maxRadiusChunks} because the
+     * packets are the server's to pay for.</p>
+     *
+     * <p>Not persisted, for the same reason the toggle is not: it is a display. It also means the
+     * modded client re-states it on the first grid of each session, which is what keeps the
+     * preference in the client's config file where the person who has to live with it can see
+     * it — rather than in a server-side profile they cannot.</p>
+     */
+    private static final Map<UUID, Integer> RADIUS = new HashMap<>();
+
+    /**
+     * Who is holding a grid we sent them, so it can be taken back down.
+     *
+     * <h2>⚠ The particles stop by themselves and the grid does not</h2>
+     *
+     * <p>Turning the display off simply stopped drawing, which is the whole of it for particles —
+     * they are transient, and the next pulse that never comes is the display ending. The grid is
+     * <b>state on the client</b>: the last payload sits there and is redrawn every frame forever.
+     * So {@code /f borders} said "Borders hidden" and hid nothing, and it read as the toggle being
+     * one-way, or the keybind being broken, or the command not running at all — everything except
+     * a display nobody had ever been told to stop.</p>
+     *
+     * <p>Same family as every other bug in this pair worth a comment: the server was right and the
+     * client was never told. Anything the client <i>keeps</i> needs an off switch sent to it, not
+     * merely an absence of on.</p>
+     */
+    private static final Set<UUID> GRIDDED = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
     /** Where each player last stood, so entering territory can be announced once rather than every tick. */
     private static final Map<UUID, String> LAST_CHUNK = new HashMap<>();
 
@@ -69,6 +103,12 @@ public final class FactionBorders {
     public static boolean toggle(ServerPlayer player) {
         UUID id = player.getUUID();
         if (SHOWING.remove(id)) {
+            // Taken down here as well as on the next tick, so the command answers immediately
+            // rather than at the next particle pulse. wants() decides, because putting the tool
+            // down is the other way off and the player may still be holding it.
+            if (!wants(player)) {
+                clearGrid(player);
+            }
             return false;
         }
         SHOWING.add(id);
@@ -82,6 +122,51 @@ public final class FactionBorders {
     public static void forget(UUID player) {
         SHOWING.remove(player);
         LAST_CHUNK.remove(player);
+        RADIUS.remove(player);
+        // No packet on the way out — the client drops its own grid on logout, and the player is
+        // already gone. This is only so a returning player is not thought to be holding one.
+        GRIDDED.remove(player);
+    }
+
+    /**
+     * Take the grid off a client that is holding one.
+     *
+     * <p>A radius of zero is one byte of wilderness: nothing claimed, nothing traced, nothing
+     * drawn. It is the same message a player walking out of all territory already gets, which is
+     * why there is no second payload type for "stop" — there is only ever the current answer, and
+     * sometimes the current answer is nothing.</p>
+     */
+    private static void clearGrid(ServerPlayer player) {
+        if (!GRIDDED.remove(player.getUUID())) {
+            return;
+        }
+        ChunkPos centre = new ChunkPos(player.blockPosition());
+        com.sablednah.standards.neoforge.Net.sendIfAble(player,
+                new ClaimsNearbyPayload(centre.x, centre.z, 0, new byte[1]));
+    }
+
+    /**
+     * Ask for a wider or narrower display, clamped to the server's ceiling.
+     *
+     * @return what they actually got, which is not always what they asked for
+     */
+    public static int setRadius(ServerPlayer player, int chunks) {
+        int max = FactionsConfig.BORDER_MAX_RADIUS_CHUNKS.get();
+        int got = Math.max(0, Math.min(max, chunks));
+        RADIUS.put(player.getUUID(), got);
+        return got;
+    }
+
+    /** What this player sees: their own choice if they made one, otherwise the server's default. */
+    public static int radiusFor(ServerPlayer player) {
+        Integer chosen = RADIUS.get(player.getUUID());
+        int fallback = FactionsConfig.BORDER_RADIUS_CHUNKS.get();
+        if (chosen == null) {
+            return fallback;
+        }
+        // Re-clamped on the way out rather than only on the way in: the ceiling is a config value
+        // and a reload can lower it under a player who asked while it was higher.
+        return Math.min(chosen, FactionsConfig.BORDER_MAX_RADIUS_CHUNKS.get());
     }
 
     /** Whether this player should see borders right now — toggled on, or holding the tool. */
@@ -126,6 +211,9 @@ public final class FactionBorders {
         for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             if (wants(player)) {
                 draw(player);
+            } else {
+                // The other way off: the tool went back in the chest and nobody typed anything.
+                clearGrid(player);
             }
         }
     }
@@ -219,8 +307,12 @@ public final class FactionBorders {
         }
         // Sent even when nothing is claimed: "there is nothing here" is the message that clears a
         // grid the player has walked out of. Withholding it leaves the last one drawn.
-        return com.sablednah.standards.neoforge.Net.sendIfAble(player,
-                new ClaimsNearbyPayload(centre.x, centre.z, radius, rel)) || !any;
+        boolean sent = com.sablednah.standards.neoforge.Net.sendIfAble(player,
+                new ClaimsNearbyPayload(centre.x, centre.z, radius, rel));
+        if (sent) {
+            GRIDDED.add(player.getUUID());
+        }
+        return sent || !any;
     }
 
     private static byte relationByte(FactionStore store,
@@ -245,7 +337,7 @@ public final class FactionBorders {
         FactionStore store = FactionStore.get(level.getServer());
         String dim = FactionBridge.dimensionOf(level);
         Optional<FactionStore.Faction> mine = store.of(player.getUUID());
-        int radius = FactionsConfig.BORDER_RADIUS_CHUNKS.get();
+        int radius = radiusFor(player);
         ChunkPos centre = new ChunkPos(player.blockPosition());
         double y = player.getY() + 0.1D;
 

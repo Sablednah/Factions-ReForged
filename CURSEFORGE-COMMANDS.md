@@ -200,6 +200,15 @@ Only sides where ownership actually changes are drawn, so interior lines vanish 
 the shape of the territory rather than a grid telling you where chunks are. The wall **stands on the
 ground**, not at your feet.
 
+`/f borders radius <chunks>` sets how far it reaches, for you alone, up to the server's
+`borders.maxRadiusChunks`. It is not saved — a display, not a setting.
+
+**With Factions installed client-side, the particles are replaced by solid panels** and the ground
+under you is tinted in the same colour. It says exactly what the particles say; there is a keybind
+(unbound by default) and a client config with its own radius for the walls and a smaller one for the
+tinted ground. A modded client states its preferred radius the first time it is sent a border, which
+is why you may never need to type the command at all.
+
 ### `/f status`
 
 Where you stand with everybody, in one place, **split by direction**:

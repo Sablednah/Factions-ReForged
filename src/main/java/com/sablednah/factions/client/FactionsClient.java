@@ -5,6 +5,7 @@ import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.client.event.RegisterDebugRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
@@ -49,6 +50,8 @@ public class FactionsClient {
         // draws only what comes back — so the two paths are the same command, differing only in
         // whether anybody was listening for the answer.
 
+        container.registerConfig(ModConfig.Type.CLIENT, FactionsClientConfig.SPEC);
+
         modEventBus.addListener(FactionsClient::onRegisterDebugRenderers);
         modEventBus.addListener(FactionsClient::onRegisterKeys);
         NeoForge.EVENT_BUS.register(ClaimGrid.class);
@@ -73,8 +76,12 @@ public class FactionsClient {
      * <p>Both halves are Standards' rules rather than preferences. A mod claiming a key on install
      * is how conflicts start; and a key that toggled the grid locally would be a second source of
      * truth about whether borders are on, which is exactly how a button and a command come to
-     * disagree. This sends {@code f border}, so the server decides and a vanilla client typing it
+     * disagree. This sends {@code f borders}, so the server decides and a vanilla client typing it
      * gets the same answer in particles.</p>
+     *
+     * <p>⚠ And it is {@code borders}, plural, because <b>a brigadier literal is not a prefix
+     * match</b>. This sent {@code f border} for its whole life and could not have worked; the key
+     * is unbound by default, so nothing had ever pressed it. The command now answers to both.</p>
      */
     private static void onRegisterKeys(RegisterKeyMappingsEvent event) {
         event.register(BORDER_KEY);
@@ -91,7 +98,7 @@ public class FactionsClient {
         while (BORDER_KEY.consumeClick()) {
             net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
             if (mc.getConnection() != null) {
-                mc.getConnection().sendCommand("f border");
+                mc.getConnection().sendCommand("f borders");
             }
         }
     }
