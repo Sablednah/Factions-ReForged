@@ -2,8 +2,13 @@ package com.sablednah.factions.client;
 
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.client.event.RegisterDebugRenderersEvent;
+import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.common.NeoForge;
 
 import com.sablednah.factions.Factions;
 import com.sablednah.standards.api.actions.Actions;
@@ -43,5 +48,51 @@ public class FactionsClient {
         // The handler still asks the server with the same "f panel" a vanilla client sends, and
         // draws only what comes back — so the two paths are the same command, differing only in
         // whether anybody was listening for the answer.
+
+        modEventBus.addListener(FactionsClient::onRegisterDebugRenderers);
+        modEventBus.addListener(FactionsClient::onRegisterKeys);
+        NeoForge.EVENT_BUS.register(ClaimGrid.class);
+        NeoForge.EVENT_BUS.addListener(FactionsClient::onClientTick);
+    }
+
+    /**
+     * ⚠ Registered as a DEBUG renderer, which is not what it sounds like.
+     *
+     * <p>It is the only way into a {@code GizmoCollector} — vanilla's line and rect primitives
+     * throw without one — and a mod-registered renderer is added unconditionally and ticked every
+     * frame with no F3 gate. See {@link ClaimBorderRenderer} for why borrowing vanilla's own
+     * primitives matters on the one surface in this mod that draws in the world.</p>
+     */
+    private static void onRegisterDebugRenderers(RegisterDebugRenderersEvent event) {
+        event.register(ClaimBorderRenderer::new);
+    }
+
+    /**
+     * Unbound by default, and the key runs the COMMAND.
+     *
+     * <p>Both halves are Standards' rules rather than preferences. A mod claiming a key on install
+     * is how conflicts start; and a key that toggled the grid locally would be a second source of
+     * truth about whether borders are on, which is exactly how a button and a command come to
+     * disagree. This sends {@code f border}, so the server decides and a vanilla client typing it
+     * gets the same answer in particles.</p>
+     */
+    private static void onRegisterKeys(RegisterKeyMappingsEvent event) {
+        event.register(BORDER_KEY);
+    }
+
+    private static final net.minecraft.client.KeyMapping BORDER_KEY =
+            new net.minecraft.client.KeyMapping("key.factions.border",
+                    com.mojang.blaze3d.platform.InputConstants.UNKNOWN.getValue(),
+                    new net.minecraft.client.KeyMapping.Category(
+                            net.minecraft.resources.Identifier.fromNamespaceAndPath(
+                                    Factions.MODID, "main")));
+
+    private static void onClientTick(ClientTickEvent.Post event) {
+        while (BORDER_KEY.consumeClick()) {
+            net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+            if (mc.getConnection() != null) {
+                mc.getConnection().sendCommand("f border");
+            }
+        }
     }
 }

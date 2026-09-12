@@ -142,6 +142,28 @@ public final class ClaimOutline {
         return out;
     }
 
+    /**
+     * The chunk whose land this edge belongs to.
+     *
+     * <p>Every ring is emitted with the land on the <b>right</b> of travel, so the owning chunk is
+     * the one a quarter turn that way from the direction a→b. Lives here rather than in the
+     * renderer because it is a fact about the winding this class chose, and because a client class
+     * cannot be reached by the self-test — the arithmetic is exactly the sort that is silently
+     * wrong by one and looks fine until two factions swap colours along a shared border.</p>
+     *
+     * @return {@code {chunkX, chunkZ}}
+     */
+    public static int[] landSideOf(Corner a, Corner b) {
+        int dx = Integer.signum(b.x() - a.x());
+        int dz = Integer.signum(b.z() - a.z());
+        int inx = -dz;      // a quarter turn towards the land
+        int inz = dx;
+        // Corners name grid lines; a chunk is named by its lower corner, so step back on any axis
+        // we are travelling or leaning negatively along.
+        return new int[] {a.x() + Math.min(0, dx) + Math.min(0, inx),
+                          a.z() + Math.min(0, dz) + Math.min(0, inz)};
+    }
+
     private static void edge(Map<Corner, List<Corner>> edges, int x0, int z0, int x1, int z1) {
         edges.computeIfAbsent(new Corner(x0, z0), k -> new ArrayList<>()).add(new Corner(x1, z1));
     }
