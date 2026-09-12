@@ -619,6 +619,47 @@ public final class FactionsSelfTest {
             neverTheHole &= !(owner[0] == 1 && owner[1] == 1);
         }
         check("a hole's edges name the land around it, never the hole", neverTheHole);
+
+        // ⚠ The union hides the border that matters most. Two factions whose land touches were
+        // traced as ONE shape, so the line between them was interior and never drawn: the whole
+        // settled area got an outline and the frontier inside it got nothing. Reported from a real
+        // world. The renderer now traces once per relation, so the check is that two touching
+        // groups each own the shared line — and lean opposite ways across it, which is what lets
+        // the two be nudged apart into two visible lines instead of one z-fighting pair.
+        List<ClaimOutline.Corner> west = ClaimOutline.trace(chunks(0, 0)).get(0).outer();
+        List<ClaimOutline.Corner> east = ClaimOutline.trace(chunks(1, 0)).get(0).outer();
+        int[] fromWest = alongSharedLine(west);
+        int[] fromEast = alongSharedLine(east);
+        check("each side of a shared border owns an edge on it",
+                fromWest != null && fromEast != null);
+        check("...and the two lean opposite ways across it",
+                fromWest != null && fromEast != null
+                        && fromWest[0] == -fromEast[0] && fromWest[1] == -fromEast[1]);
+
+        // Traced together, that same line is interior and nobody draws it — which is exactly the
+        // bug, asserted rather than remembered.
+        boolean anyOnTheLine = false;
+        for (ClaimOutline.Shape shape : ClaimOutline.trace(chunks(0, 0, 1, 0))) {
+            anyOnTheLine |= alongSharedLine(shape.outer()) != null;
+        }
+        check("traced as one union, the shared line is drawn by nobody", !anyOnTheLine);
+    }
+
+    /**
+     * The inward step of this ring's edge that lies on the x=1 grid line, or null if it has none.
+     *
+     * <p>That line is the boundary between chunk 0,0 and chunk 1,0 — the one a player standing
+     * between two factions is looking at.</p>
+     */
+    private static int[] alongSharedLine(List<ClaimOutline.Corner> ring) {
+        for (int i = 0; i < ring.size(); i++) {
+            ClaimOutline.Corner a = ring.get(i);
+            ClaimOutline.Corner b = ring.get((i + 1) % ring.size());
+            if (a.x() == 1 && b.x() == 1) {
+                return ClaimOutline.inwardOf(a, b);
+            }
+        }
+        return null;
     }
 
     /** Chunk coordinates as x,z pairs, so a shape reads as a shape at the call site. */
