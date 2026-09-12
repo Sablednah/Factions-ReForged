@@ -58,7 +58,18 @@ public final class ClaimBorderRenderer implements DebugRenderer.SimpleDebugRende
      * is the only way this kind of thing is ever found.</p>
      */
     private static final int WALL_LINE_ALPHA = 220;
-    private static final int WALL_FILL_ALPHA = 70;
+    private static final int WALL_FILL_ALPHA = 55;
+
+    /**
+     * Inside this many blocks a panel is drawn as edges only.
+     *
+     * <p>⚠ Translucent panels COMPOUND. One at a distance is a hint; standing in your own claim you
+     * are inside a box of them and looking through two or three at once, and the view goes green.
+     * It looks fine from outside and oppressive from within, which is why it survived until
+     * somebody stood in it. Close up the outline says everything the fill would, so the fill is
+     * simply dropped — no fading, nothing to tune.</p>
+     */
+    private static final double FILL_CULL = 6.0D;
     private static final int FLOOR_ALPHA = 110;
 
     private static final float WALL_WIDTH = 3.0F;
@@ -132,9 +143,11 @@ public final class ClaimBorderRenderer implements DebugRenderer.SimpleDebugRende
             double ay = groundAt(level, ax, az);
             double by = groundAt(level, bx, bz);
 
-            Gizmos.rect(new Vec3(ax, ay - WALL_SINK, az), new Vec3(ax, ay + WALL_HEIGHT, az),
-                    new Vec3(bx, by + WALL_HEIGHT, bz), new Vec3(bx, by - WALL_SINK, bz),
-                    GizmoStyle.fill(argb(colour, WALL_FILL_ALPHA)));
+            if (!nearCamera(ax, az, bx, bz)) {
+                Gizmos.rect(new Vec3(ax, ay - WALL_SINK, az), new Vec3(ax, ay + WALL_HEIGHT, az),
+                        new Vec3(bx, by + WALL_HEIGHT, bz), new Vec3(bx, by - WALL_SINK, bz),
+                        GizmoStyle.fill(argb(colour, WALL_FILL_ALPHA)));
+            }
             Gizmos.line(new Vec3(ax, ay - WALL_SINK, az), new Vec3(bx, by - WALL_SINK, bz),
                     line, WALL_WIDTH);
             Gizmos.line(new Vec3(ax, ay + WALL_HEIGHT, az), new Vec3(bx, by + WALL_HEIGHT, bz),
@@ -142,6 +155,18 @@ public final class ClaimBorderRenderer implements DebugRenderer.SimpleDebugRende
             Gizmos.line(new Vec3(ax, ay - WALL_SINK, az), new Vec3(ax, ay + WALL_HEIGHT, az),
                     line, WALL_WIDTH);
         }
+    }
+
+    /** Whether either end of this edge is close enough that a filled panel would swamp the view. */
+    private boolean nearCamera(double ax, double az, double bx, double bz) {
+        if (minecraft.player == null) {
+            return false;
+        }
+        double px = minecraft.player.getX();
+        double pz = minecraft.player.getZ();
+        double da = Math.min(Math.abs(px - ax), Math.abs(pz - az));
+        double db = Math.min(Math.abs(px - bx), Math.abs(pz - bz));
+        return Math.min(da, db) < FILL_CULL;
     }
 
     /** The surface at a corner, so the wall stands on the land rather than on the player. */
