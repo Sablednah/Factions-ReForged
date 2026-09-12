@@ -5,7 +5,7 @@ import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 /**
  * Factions' optional client channel.
  *
- * <p>One clientbound payload, and the same two guards Standards learned the hard way:</p>
+ * <p>Two clientbound payloads, and the same two guards Standards learned the hard way:</p>
  *
  * <ul>
  * <li>⚠ the registration is a <b>single chained expression</b>, because {@code optional()} returns
@@ -24,7 +24,12 @@ public final class FactionsNetwork {
         event.registrar(VERSION).optional()
                 .playToClient(FactionPanelPayload.TYPE, FactionPanelPayload.CODEC,
                         (payload, context) ->
-                                com.sablednah.factions.client.FactionPanelData.accept(payload));
+                                com.sablednah.factions.client.FactionPanelData.accept(payload))
+                // The claims around the player, for a client that can draw them as geometry. The
+                // particles stay for everybody else — see FactionBorders.sendGrid.
+                .playToClient(ClaimsNearbyPayload.TYPE, ClaimsNearbyPayload.CODEC,
+                        (payload, context) ->
+                                com.sablednah.factions.client.ClaimGrid.accept(payload));
     }
 
     private FactionsNetwork() {}

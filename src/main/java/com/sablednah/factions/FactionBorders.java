@@ -188,6 +188,56 @@ public final class FactionBorders {
     }
 
     /** Draw the boundary lines around this player, for this player only. */
+    /**
+     * Send the claims around a player, for a client that can draw them as geometry.
+     *
+     * <p>⚠ <b>Same facts, better surface.</b> This is the rule the whole client half runs on and it
+     * is worth restating where the two paths fork: the particles and the grid show the identical
+     * thing — which chunks are claimed, and what each owner is to you. A vanilla client is not
+     * missing information, it is looking at a dotted line instead of a wall. The moment one of
+     * these can say something the other cannot, decision 2 is broken.</p>
+     *
+     * @return true if the client took it, so the particles can be skipped
+     */
+    private static boolean sendGrid(ServerPlayer player, ServerLevel level, FactionStore store,
+            String dim, Optional<FactionStore.Faction> mine, int radius, ChunkPos centre) {
+        int side = radius * 2 + 1;
+        byte[] rel = new byte[side * side];
+        boolean any = false;
+        for (int dz = 0; dz < side; dz++) {
+            for (int dx = 0; dx < side; dx++) {
+                int cx = centre.x + dx - radius;
+                int cz = centre.z + dz - radius;
+                Optional<String> owner = store.ownerOf(dim, cx, cz);
+                byte v = ClaimsNearbyPayload.WILDERNESS;
+                if (owner.isPresent()) {
+                    any = true;
+                    v = relationByte(store, mine, owner.get());
+                }
+                rel[dz * side + dx] = v;
+            }
+        }
+        // Sent even when nothing is claimed: "there is nothing here" is the message that clears a
+        // grid the player has walked out of. Withholding it leaves the last one drawn.
+        return com.sablednah.standards.neoforge.Net.sendIfAble(player,
+                new ClaimsNearbyPayload(centre.x, centre.z, radius, rel)) || !any;
+    }
+
+    private static byte relationByte(FactionStore store,
+            Optional<FactionStore.Faction> mine, String ownerId) {
+        if (mine.isEmpty()) {
+            return ClaimsNearbyPayload.OTHER;
+        }
+        if (mine.get().id().equals(ownerId)) {
+            return ClaimsNearbyPayload.OWN;
+        }
+        return switch (store.relation(mine.get().id(), ownerId)) {
+            case ALLY -> ClaimsNearbyPayload.ALLY;
+            case ENEMY -> ClaimsNearbyPayload.ENEMY;
+            case NEUTRAL -> ClaimsNearbyPayload.OTHER;
+        };
+    }
+
     private static void draw(ServerPlayer player) {
         if (!(player.level() instanceof ServerLevel level)) {
             return;
@@ -198,6 +248,14 @@ public final class FactionBorders {
         int radius = FactionsConfig.BORDER_RADIUS_CHUNKS.get();
         ChunkPos centre = new ChunkPos(player.blockPosition());
         double y = player.getY() + 0.1D;
+
+        // ⚠ A client that can draw the grid gets the grid INSTEAD, not as well. Two
+        // representations of one border is noise, and the particles exist precisely because a
+        // vanilla client has nothing else. sendIfAble answers false for a client that never
+        // negotiated the channel, which is exactly the client that needs the particles.
+        if (sendGrid(player, level, store, dim, mine, radius, centre)) {
+            return;
+        }
 
         for (int dx = -radius; dx <= radius; dx++) {
             for (int dz = -radius; dz <= radius; dz++) {
