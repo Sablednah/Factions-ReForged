@@ -1,6 +1,6 @@
 # Permissions and access
 
-**Status: accurate as of 1.4.0, and hand-written — unlike Standards' `NODES.md`, which is
+**Status: accurate as of 1.6.0, and hand-written — unlike Standards' `NODES.md`, which is
 generated.** The difference is the point of this document.
 
 ## Factions declares exactly one permission node
@@ -33,17 +33,18 @@ facts is the shape of every stale document this project has caught itself shippi
 
 | Command | Who |
 |---|---|
-| `/f create` `/f join` `/f request` `/f list` `/f who` `/f map` `/f item` `/f power` `/f pay` | anybody |
+| `/f create` `/f join` `/f request` `/f list` `/f who` `/f power` `/f panel` | anybody |
+| `/f map` `/f map item` `/f map layer` `/f borders` `/f borders radius` `/f raids` | anybody |
 | `/f requests` `/f accept` `/f decline` | whoever the invite or request is addressed to |
-| `/f home` `/f money` `/f deposit` `/f leave` `/f status` `/f borders` `/f c` `/f ca` | any member |
+| `/f home` `/f money` `/f money deposit` `/f leave` `/f status` `/f c` `/f ca` | any member |
 | `/f chat faction` `/f chat ally` | any member — `/f chat public` needs no faction |
-| `/f invite` `/f kick` `/f claim` `/f autoclaim` `/f unclaim` `/f sethome` `/f standard` | **officer** or above |
+| `/f invite` `/f kick` `/f claim` `/f autoclaim` `/f unclaim` `/f sethome` `/f standard` `/f raid <faction>` | **officer** or above |
 | `/f ally <faction>` `/f enemy <faction>` `/f neutral <faction>` | **officer** or above |
 | `/f disband` `/f promote` `/f demote` `/f unclaimall` `/f tag` `/f rename` `/f peaceful` | **leader** |
-| `/f withdraw` | **leader**, or **officer** when `officersMayWithdraw = true` |
+| `/f money withdraw` `/f money pay` | **officer** or above by default; **leader** only when `officersMayWithdraw = false` |
 | `/f bypass` | **operator**, or anyone granted `factions.bypass` |
 | `/f chatspy` | **operator** |
-| `/f fixture seed` `/f fixture clear` | **operator**, and only when fixtures are enabled in config |
+| `/f fixture seed` `/f fixture standards` `/f fixture members` `/f fixture clear` | **operator**, and only when fixtures are enabled in config |
 
 **Depositing is ungated and withdrawing is not**, on purpose: money going in cannot grief anybody
 and money coming out can.

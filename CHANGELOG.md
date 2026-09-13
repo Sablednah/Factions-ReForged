@@ -45,6 +45,48 @@
   that seam works for somebody who did not write it. Guarded against a Standards too old to have it,
   so losing four buttons cannot cost anyone the mod.
 
+- **Solid borders on a modded client.** With Factions installed client-side, the particle border
+  is replaced by translucent walls standing on the ground in your relation's colour, and the ground
+  under you tinted to match — readable at a glance from a hilltop, where particles are a dotted
+  line. **It shows exactly what the particles show**: which chunks are claimed and what each owner
+  is to you. A vanilla client is not missing a fact, only a nicer surface for the same one.
+
+  On the **`'` key** by default. `factions-client.toml` holds two dials — walls (`radiusChunks`,
+  default 8) and tinted ground (`floorRadiusChunks`, default 2) — because only the machine drawing
+  them knows what it can afford: measured from 100fps on a desktop GPU, 8 and 2 cost under ten
+  frames and 4 of ground drops it to 70. The client asks, and the server caps it at
+  `borders.maxRadiusChunks`.
+
+  `/f borders radius <chunks>` is the same request as a command, so a typist widens their particles
+  by exactly as much. `/f border` is accepted as well as `/f borders`.
+
+- **Your own standard pins the chunk it stands in.** Nobody can take it — not an enemy at any
+  overreach, in any raid — and `/f unclaim` and `/f unclaimall` leave it alone. Take the flag down
+  and the ground is ordinary again. A standard now designates a **core chunk**: a second reason to
+  plant one, and something a faction cannot lose by accident, including to its own officers.
+
+  A **captured** flag pins nothing, or stealing a flag would hand the thief an unlosable chunk
+  wherever they planted it. A trophy falls with the land: unclaim or lose the chunk it stands in and
+  it is taken down. Enforced where land changes hands, so every route inherits it. Found as a bug —
+  unclaiming the chunk under your own flag left it standing and still counted — and the owner chose
+  the better repair. See `POWER.md`.
+
+- **The map says why a click was refused.** In claim mode a refused chunk did the right thing and
+  looked like a broken button: the reason went to chat, behind the fullscreen map. The server's own
+  reply is now shown on the map for a few seconds — the same sentence, word for word, that a typist
+  gets in chat, and no new packet to carry it.
+
+### Changed
+
+- **Requires Standards 1.8.0 or newer**, on every Minecraft line.
+- There was no 1.5.0 release. That number was spent while the panel seam waited on Standards, so
+  this release carries everything since 1.4.0.
+
+### Fixed
+
+- **26.2's mod list shows a row icon.** 26.2 draws a small icon beside the name and a separate
+  banner above the description; the mod shipped one image for both.
+
 ## 1.4.0 — 2026-09-06
 
 ### Added
