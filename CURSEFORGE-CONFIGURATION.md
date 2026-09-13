@@ -191,3 +191,28 @@ raids stop being events and become weather.
 brand-new one-person faction, and also exactly who can least afford to stand a banner in the open.
 Do not set it so low that somebody's first evening is spent unable to claim anything. If you want a
 standard to feel essential, raise `regenWithStandard` above 1.0 instead of dropping the floor.
+
+## Borders on a modded client
+
+Two files, because two different people make the decision.
+
+**The server's ceiling**, in `factions-common.toml`:
+
+```toml
+[borders]
+radiusChunks = 1       # where everybody starts, and what a vanilla client's particles use
+maxRadiusChunks = 8    # the furthest anybody may ask for; 8 is the wire format's limit
+```
+
+**The player's own machine**, in `factions-client.toml` — only the person drawing it knows what
+their hardware can afford:
+
+```toml
+[borders]
+radiusChunks = 8        # walls
+floorRadiusChunks = 2   # tinted ground, one quad per block, so kept closer in
+```
+
+The client asks for its radius the first time it is sent a border and the server caps it, so
+raising the client past the server's ceiling costs nothing and does nothing. Measured from 100fps on
+a desktop GPU: 8 walls with 2 of ground costs under ten frames; 4 of ground drops it to 70.

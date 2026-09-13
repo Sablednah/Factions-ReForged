@@ -276,7 +276,6 @@ public final class FactionBorders {
         };
     }
 
-    /** Draw the boundary lines around this player, for this player only. */
     /**
      * Send the claims around a player, for a client that can draw them as geometry.
      *
@@ -331,6 +330,7 @@ public final class FactionBorders {
         };
     }
 
+    /** Draw the boundary lines around this player, for this player only. */
     private static void draw(ServerPlayer player) {
         if (!(player.level() instanceof ServerLevel level)) {
             return;

@@ -33,6 +33,7 @@ Requires **[SableCraft Standards](../SableCraft-Standards)**, and not optionally
 /f map item terrain [zoom]    the same, over real ground
 /f map layer on|off           faction territory on JourneyMap
 /f borders                    show the edges
+/f borders radius <chunks>    how far, for you alone
 
   who you are, and to whom
 /f tag SBL | -                the short label chat uses
@@ -40,6 +41,7 @@ Requires **[SableCraft Standards](../SableCraft-Standards)**, and not optionally
 /f ally | enemy | neutral     declare towards another faction
 /f peaceful                   opt out of fighting entirely
 /f status                     where you stand with everybody
+/f panel                      your faction at a glance
 /f who <name> | list
 
   talking
@@ -47,6 +49,13 @@ Requires **[SableCraft Standards](../SableCraft-Standards)**, and not optionally
 /f c <message>                one line to your faction, without switching
 /f ca <message>               one line to your allies
 /f chatspy                    staff, watching every channel
+
+  power and the standard
+/f power [player]             power against its maximum
+/f standard                   make a banner your flag, or find it
+/f raid <faction>             declare an attack, officer+
+/f raids [top]                what is running, and who has won most
+/f bypass [on|off]            staff, editing claimed land on purpose
 
   money
 /f money                      the bank, and what the next chunk costs
@@ -57,6 +66,7 @@ Requires **[SableCraft Standards](../SableCraft-Standards)**, and not optionally
   testing
 /f fixture seed [chunks]      invent neighbours to have relations with
 /f fixture clear              take them away
+/f fixture standards          give them flags worth stealing
 ```
 
 ## Three things worth the read
@@ -120,6 +130,11 @@ block is a dashed line rather than a border; the upper row only has to say "wall
 Two ways to see them: `/f borders` for surveying, or just **hold the tool** — a compass by default.
 Pick it up, see what you are doing, put it down. The same shape as vanilla's debug stick, and
 nobody leaves it on and forgets why their screen is full of dust.
+
+**On a modded client the same border is solid**: walls standing on the ground in the relation's
+colour, and the ground under you tinted to match, on the `'` key. It says exactly what the
+particles say, which is the rule the whole client half runs on. How far it reaches is the player's
+to ask for — `factions-client.toml`, or `/f borders radius` for anybody — and the server's to cap.
 
 ### Protection is about right-clicks, not just pickaxes
 
@@ -380,15 +395,15 @@ cd ../SableCraft-Standards
 - [`CHANGELOG.md`](CHANGELOG.md) — what is in this release, and what is knowingly missing from it.
 - [`CURSEFORGE.md`](CURSEFORGE.md) — the project description, versioned alongside the mod.
 - [`CURSEFORGE-COMMANDS.md`](CURSEFORGE-COMMANDS.md) — every `/f` subcommand, with the rank it needs.
-- [`NODES.md`](NODES.md) — permissions at a glance: **Factions declares no permission nodes**,
-  what gates each command instead, and the two places that arguably wants revisiting.
+- [`NODES.md`](NODES.md) — permissions at a glance: **Factions declares one permission node**
+  (`factions.bypass`), what gates each command instead, and the gap still open.
 - [`CURSEFORGE-CONFIGURATION.md`](CURSEFORGE-CONFIGURATION.md) — three worked profiles: peaceful, cosy PvE, and war.
 - [`POWER.md`](POWER.md) — **power, the faction bank's other half, and the standard**: built and
-  shipped in 1.1.0, bar `/f raid`. Four land-control modes, why `fixed` is the ceiling and power the
+  shipped in 1.1.0, with raids completed in 1.3.0. Four land-control modes, why `fixed` is the ceiling and power the
   erosion, and what the 2012 numbers actually were rather than what everyone remembers them as.
 - [SableCraft Standards](https://github.com/Sablednah/SableCraft-Standards) — the mod underneath.
   Its `GROUPS-API.md`, `CHAT-API.md` and `ECONOMY-API.md` describe the seams this one is built on,
-  and `COMBAT-API.md` is where the combat tag will live when it arrives.
+  and `COMBAT-API.md` is the combat tag power modes use to decide who killed whom.
 
 ## Licence
 
