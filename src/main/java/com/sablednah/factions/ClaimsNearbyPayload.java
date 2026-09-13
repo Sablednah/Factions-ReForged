@@ -27,9 +27,12 @@ import net.minecraft.resources.Identifier;
  *
  * <h2>Bounded by construction</h2>
  *
- * <p>The radius is the server's, from config, and the chunk coordinates are sent relative to the
- * centre — so the whole thing is two bytes per chunk and cannot grow with the size of the world or
- * the number of factions. A radius of 4 is 81 chunks; the packet is smaller than this comment.</p>
+ * <p>The radius is the <b>viewer's</b> to ask for — a modded client states its configured reach with
+ * {@code /f borders radius}, and a typist can do the same — and the server's to cap, at
+ * {@code borders.maxRadiusChunks}. It is capped a third time on decode, at {@link #MAX_RADIUS}.
+ * Chunk coordinates are relative to the centre, so the whole thing is one byte per chunk and cannot
+ * grow with the size of the world or the number of factions: the largest radius, 8, is 289 chunks
+ * and under 300 bytes.</p>
  */
 public record ClaimsNearbyPayload(int centreX, int centreZ, int radius, byte[] relations)
         implements CustomPacketPayload {

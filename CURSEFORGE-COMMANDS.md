@@ -70,6 +70,10 @@ rather than just saying no.
 
 Claims must touch land you already hold (`mustBeConnected`, on by default). The first is exempt.
 
+**The chunk your own standard stands in cannot be unclaimed**, by you or taken by anybody else — it
+is your faction's core, and taking the flag down is the way to free it. A captured flag you are
+flying pins nothing, and comes down if you unclaim the ground under it.
+
 ### `/f autoclaim` — officer
 
 Take every chunk you walk into. **The feature is knowing when to stop**: running out of land
@@ -77,7 +81,9 @@ switches it off rather than reporting the same refusal every sixteen blocks, wal
 somebody else's territory says nothing at all because that is a journey and not a failed claim, and
 a standing reason is given once rather than per chunk. Off when you log back in.
 
-### `/f unclaimall` — officer
+### `/f unclaimall` — leader
+
+Release every chunk at once — except the one your own standard stands in.
 
 ### `/f sethome` — officer · `/f home`
 
@@ -108,6 +114,9 @@ Planting a captured flag on your own land flies it as a trophy; no command neede
 is the declaration. You may fly **one of your own and any number of captured ones** — but the power
 bonus is the same however many you hold. What a wall of them buys is that an enemy has to come and
 take *every one* before it stops paying, and each of them is standing somewhere they can reach.
+
+**Your own standard pins its chunk**: nobody can take it, and `/f unclaim` and `/f unclaimall` leave
+it alone. A trophy pins nothing, and comes down with the land under it.
 
 ## Seeing
 
@@ -170,7 +179,9 @@ looking.
 
 With JourneyMap installed and permission to claim, a second toolbar button turns on **claim mode**:
 left-click a chunk to claim it, right-click to release it. Each click runs `/f claim <x> <z>`, so
-every cost, limit and refusal is the same one you would get standing there.
+every cost, limit and refusal is the same one you would get standing there. When the server refuses
+a click, its answer is shown on the map for a few seconds — the same line a typist gets in chat,
+which would otherwise be hidden behind the map.
 
 None of this is required. Without JourneyMap, Factions never loads a line of it.
 

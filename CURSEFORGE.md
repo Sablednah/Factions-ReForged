@@ -39,6 +39,10 @@ Every one of those clicks runs the ordinary command, so nothing on the map can d
 keyboard could not, and an enemy's standard is never pinned — you find that by going and looking.
 Factions still draws no map of its own and never will; this is somebody else's map, decorated.
 
+**And when a click is refused, the map says why** — the server's own answer, shown over the map for a
+few seconds. Without it the reason lands in chat, behind a fullscreen map, and a correct refusal
+looks exactly like a broken button.
+
 **Or the same claims washed over the real landscape.** `/f map item terrain` draws the rivers,
 forest and coastline underneath, so you can see where a border actually falls rather than which
 abstract square it is in.
@@ -154,6 +158,11 @@ something it made rather than a setting it typed.
 your doors, so the only way anyone reaches your flag is a path you left; without the rule everybody
 entombs theirs in a sealed box and the feature is dead on arrival. It is re-checked continuously —
 roof it over and it stops earning, uncover it and it resumes.
+
+**It also pins the ground it stands on.** Nobody can take the chunk your own standard stands in —
+not an enemy at any overreach, not in a raid — and unclaiming leaves it alone too. It is your
+faction's core: take the flag down and the ground is ordinary again. A **captured** flag pins
+nothing; a trophy comes down with the land under it.
 
 **Flying one is the difference between recovering at full speed and recovering slowly.** A reason to
 have one and a reason to take somebody else's, which is the same number seen from two sides.
@@ -300,9 +309,9 @@ so `factions-1.2.0+mc26.1.2.jar` is the 26.1 one, and take the matching Standard
 
 | Minecraft | NeoForge | Java | Depends on |
 |---|---|---|---|
-| 1.21.11 | 21.11+ | **21** | [SableCraft Standards](https://www.curseforge.com/minecraft/mc-mods/sablecraft-standards) 1.4.0+ |
-| 26.1.x | 26.1+ | **25** | Standards 1.4.0+ |
-| 26.2.x | 26.2+ | **25** | Standards 1.4.0+ |
+| 1.21.11 | 21.11+ | **21** | [SableCraft Standards](https://www.curseforge.com/minecraft/mc-mods/sablecraft-standards) 1.8.0+ |
+| 26.1.x | 26.1+ | **25** | Standards 1.8.0+ |
+| 26.2.x | 26.2+ | **25** | Standards 1.8.0+ |
 
 ⚠ **26.x needs Java 25, not 21.** That is Minecraft's requirement rather than ours, and it is the
 one thing here that will stop a server booting — with an error that does not obviously say so.
