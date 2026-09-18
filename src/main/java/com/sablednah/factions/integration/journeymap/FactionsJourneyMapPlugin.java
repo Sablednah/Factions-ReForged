@@ -98,6 +98,9 @@ public class FactionsJourneyMapPlugin implements IServerPlugin {
         // changes a label and nothing else.
         FactionsMapEvents.onLayerToggled(
                 toggle -> safely(() -> claims.setVisible(toggle.player(), toggle.on())));
+        // A map saying it is ready. The login push below happens before a cold-started client has
+        // begun mapping, so it was being dropped; this is the same picture, sent when it can land.
+        FactionsMapEvents.onRefreshRequested(player -> safely(() -> showEverythingTo(player)));
 
         // ⚠ A player who has just arrived has no overlays and no pins at all — JourneyMap does not
         // replay what was pushed before they connected. Registered here rather than in Factions'

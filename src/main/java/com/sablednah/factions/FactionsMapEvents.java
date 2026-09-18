@@ -35,6 +35,8 @@ public final class FactionsMapEvents {
     private static final List<Consumer<ClaimsChanged>> CLAIM_LISTENERS = new CopyOnWriteArrayList<>();
     private static final List<Runnable> STANDARD_LISTENERS = new CopyOnWriteArrayList<>();
     private static final List<Consumer<LayerToggled>> LAYER_LISTENERS = new CopyOnWriteArrayList<>();
+    private static final List<Consumer<net.minecraft.server.level.ServerPlayer>> REFRESH_LISTENERS =
+            new CopyOnWriteArrayList<>();
 
     /** Told when any faction's claims change, with which faction and which dimension. */
     public static void onClaimsChanged(Consumer<ClaimsChanged> listener) {
@@ -74,6 +76,29 @@ public final class FactionsMapEvents {
         LayerToggled event = new LayerToggled(player, on);
         for (Consumer<LayerToggled> listener : LAYER_LISTENERS) {
             safely(() -> listener.accept(event));
+        }
+    }
+
+    /**
+     * Told when one player's map asks to be sent the current picture again.
+     *
+     * <p>⚠ <b>Because a push can arrive before anything is listening.</b> The server pushes
+     * overlays on {@code PlayerLoggedInEvent}, and on a cold client start that is before
+     * JourneyMap has begun mapping — so the territory was sent, dropped, and only appeared after
+     * the player toggled the layer off and on, which re-pushes. The client now says when it is
+     * actually ready, and this is how that reaches whatever draws.</p>
+     *
+     * <p>A request rather than a preference: it changes nothing and is safe to repeat. Whether the
+     * player wants the layer at all is still the layer switch's business, and the overlay code
+     * already declines for anybody who turned it off.</p>
+     */
+    public static void onRefreshRequested(Consumer<net.minecraft.server.level.ServerPlayer> listener) {
+        REFRESH_LISTENERS.add(listener);
+    }
+
+    public static void refreshRequested(net.minecraft.server.level.ServerPlayer player) {
+        for (Consumer<net.minecraft.server.level.ServerPlayer> listener : REFRESH_LISTENERS) {
+            safely(() -> listener.accept(player));
         }
     }
 
