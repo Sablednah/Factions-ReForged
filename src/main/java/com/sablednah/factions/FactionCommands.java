@@ -1384,7 +1384,7 @@ public final class FactionCommands {
             return 0;
         }
         if (!player.getInventory().add(atlas.get())) {
-            player.drop(atlas.get(), false);
+            player.drop(atlas.get(), false, net.minecraft.util.Prediction.SERVER_ONLY);
         }
         // Says what it is showing, because two atlases in a chest look identical and the whole
         // point of asking for a zoom is that you wanted a different one.
