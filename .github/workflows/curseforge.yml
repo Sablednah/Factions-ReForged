@@ -32,6 +32,14 @@ on:
         default: release
         type: choice
         options: [release, beta, alpha]
+      only_mc:
+        description: >-
+          Upload only the jar for this Minecraft version (e.g. 1.21.11). Leave blank for all of
+          them. For retrying ONE line after a partial failure - CurseForge returns a 500 often
+          enough that it has already happened once, and re-running the whole tag would duplicate
+          the lines that succeeded.
+        required: false
+        default: ''
       debug:
         description: Print the upload metadata (contains no credentials)
         required: false
@@ -80,6 +88,7 @@ jobs:
           CURSEFORGE_PROJECT_ID: ${{ vars.CURSEFORGE_PROJECT_ID }}
           CURSEFORGE_REQUIRED_DEPENDENCY: ${{ vars.CURSEFORGE_REQUIRED_DEPENDENCY }}
           RELEASE_TYPE: ${{ inputs.release_type || 'release' }}
+          ONLY_MC: ${{ inputs.only_mc || '' }}
           CURSEFORGE_DEBUG: ${{ inputs.debug && '1' || '' }}
         run: |
           shopt -s nullglob
@@ -94,6 +103,10 @@ jobs:
             mc="$(basename "$jar" .jar | sed -n 's/.*+mc\(.*\)$/\1/p')"
             if [ -z "$mc" ]; then
               echo "::warning::Cannot read a Minecraft version from $(basename "$jar") — skipping it."
+              continue
+            fi
+            if [ -n "$ONLY_MC" ] && [ "$mc" != "$ONLY_MC" ]; then
+              echo "Skipping $(basename "$jar") — only_mc is $ONLY_MC."
               continue
             fi
             echo "::group::$(basename "$jar") -> Minecraft $mc"
