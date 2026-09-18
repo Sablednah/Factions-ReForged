@@ -88,6 +88,9 @@ public class FactionsJourneyMapClientPlugin implements IClientPlugin {
                 event -> safely(() -> onAddonButtons(event)));
         FullscreenEventRegistry.FULLSCREEN_MAP_CLICK_EVENT.subscribe(Factions.MODID,
                 event -> safely(() -> onClick(event)));
+        // ⚠ The one moment JourneyMap is provably ready to be drawn on. See onMapping.
+        ClientEventRegistry.MAPPING_EVENT.subscribe(Factions.MODID,
+                event -> safely(() -> onMapping(event)));
         // Refusals are chat, and chat is behind the fullscreen map. See MapNotices.
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(MapNotices.class);
         Factions.LOGGER.info("JourneyMap client API found — faction claims layer and claim mode added");
@@ -171,6 +174,37 @@ public class FactionsJourneyMapClientPlugin implements IClientPlugin {
         told = on;
         toldWho = new java.lang.ref.WeakReference<>(connection);
         connection.sendCommand(on ? "f map layer on" : "f map layer off");
+    }
+
+    /**
+     * JourneyMap has started mapping: ask for the picture, because the one already sent was lost.
+     *
+     * <p>⚠ <b>The bug this exists for.</b> The server pushes territory on
+     * {@code PlayerLoggedInEvent}, which on a cold client start lands before JourneyMap begins
+     * mapping — so the overlays were sent and silently dropped, and the map stayed empty until the
+     * player toggled the layer off and on, which re-pushes. Reported from a real map, 2026-09-18.
+     * MAPPING_STARTED is the first moment the answer can be received rather than a delay guessed at
+     * from how long a client usually takes.</p>
+     *
+     * <p>Asymmetric on purpose. With the layer ON this asks silently, because it happens on every
+     * world load and a line of chat each time is what {@link #syncServer()} already refuses to
+     * send. With it OFF the preference is stated instead — and that one line is the explanation for
+     * why the map is bare, which is worth saying.</p>
+     */
+    private void onMapping(journeymap.api.v2.client.event.MappingEvent event) {
+        if (event.getStage() != journeymap.api.v2.client.event.MappingEvent.Stage.MAPPING_STARTED) {
+            return;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        net.minecraft.client.multiplayer.ClientPacketListener connection = mc.getConnection();
+        if (connection == null) {
+            return;
+        }
+        if (claimsOn()) {
+            connection.sendCommand("f map refresh");
+        } else {
+            tellServer(false);
+        }
     }
 
     /**
