@@ -7,6 +7,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
 
 import com.sablednah.factions.FactionPanelPayload;
 import com.sablednah.standards.client.ClientCapabilities;
@@ -287,6 +288,11 @@ public final class FactionPanel implements InventoryPanel {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // ⚠ 0 is CORRECT here, and do not "fix" it to InputConstants.MOUSE_BUTTON_LEFT. This
+        // button has already been NORMALISED by Standards' PanelHost, whose InventoryPanel contract
+        // is 0 left, 1 right, 2 middle whatever the Minecraft line numbers them as. Comparing a RAW
+        // platform button against a literal is the latent version break that 26.3's GLFW-to-SDL
+        // swap turned into five real ones — but this value is not raw, and a sweep will land on it.
         if (button != 0) {
             return false;
         }
@@ -361,12 +367,19 @@ public final class FactionPanel implements InventoryPanel {
         int line = y + PAD;
         graphics.drawString(font, "No faction", x + PAD, line, VALUE);
         line += ROW + 4;
-        // What it is for, before what to press. Two short lines rather than a paragraph: this is a
-        // pane, and anybody who wanted the manual would have typed /f help.
-        for (String pitch : new String[] {
-                "Claim land nobody can build in,",
-                "pool money, and hold a standard",
-                "that pays you back in power." }) {
+        // What it is for, before what to press. A pane, not the manual — anybody who wanted that
+        // would have typed /f help.
+        //
+        // ⚠ Wrapped by the font against the pane's own inner width, never split by hand. The three
+        // hand-split lines this replaces were never measured against it at all: the middle one,
+        // "pool money, and hold a standard", overran the 156px budget (WANT_WIDTH - PAD * 2) and
+        // printed past the right border. font.width is in GUI pixels, so no GUI scale hid it and
+        // none would have shown it either — only a screenshot ever would, and did. A hand-split
+        // line cannot know the width it has to fit, and a resource-pack font or a translated
+        // string moves it again.
+        for (FormattedCharSequence pitch : font.split(Component.literal(
+                "Claim land nobody can build in, pool money, and hold a standard that pays you"
+                        + " back in power."), width - PAD * 2)) {
             graphics.drawString(font, pitch, x + PAD, line, DIM);
             line += ROW;
         }
