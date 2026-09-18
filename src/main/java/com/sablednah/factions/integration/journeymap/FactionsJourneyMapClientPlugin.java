@@ -10,6 +10,8 @@ import journeymap.api.v2.common.event.FullscreenEventRegistry;
 import journeymap.api.v2.common.option.BooleanOption;
 import journeymap.api.v2.common.option.OptionCategory;
 
+import com.mojang.blaze3d.platform.InputConstants;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
@@ -250,7 +252,13 @@ public class FactionsJourneyMapClientPlugin implements IClientPlugin {
         }
         int chunkX = at.getX() >> 4;
         int chunkZ = at.getZ() >> 4;
-        String command = event.getButton() == 1
+        // ⚠ The named constant, never a literal 1. JourneyMap hands over the RAW platform
+        // button — its ClickEvent is a bare int field with no translation — and 26.3 replaced GLFW
+        // with SDL, which numbers left=1 and right=3 where GLFW said 0 and 1. So `== 1` matched a
+        // LEFT click on 26.3 and the map claimed on right and unclaimed on left: exactly reversed,
+        // reported from a real map, 2026-09-18. InputConstants tracks its own backend (1 on GLFW
+        // lines, 3 on SDL), so this one expression is right on every branch.
+        String command = event.getButton() == InputConstants.MOUSE_BUTTON_RIGHT
                 ? "f unclaim " + chunkX + " " + chunkZ
                 : "f claim " + chunkX + " " + chunkZ;
         Minecraft mc = Minecraft.getInstance();
