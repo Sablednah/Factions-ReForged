@@ -208,14 +208,32 @@ public final class FactionStandards {
         String owner = capturedFrom.flatMap(store::byId)
                 .map(FactionStore.Faction::name).orElse(faction.name());
         if (level.getBlockEntity(pos) instanceof BannerBlockEntity banner) {
-            // Through the component map: BlockEntity has no setCustomName, and CUSTOM_NAME is
-            // exactly the component a broken banner carries into its dropped item.
-            banner.setComponents(net.minecraft.core.component.DataComponentMap.builder()
-                    .addAll(banner.components())
-                    .set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
-                            Feedback.colored(
-                                    Lang.fmt("msg.factions.standard_item", "name", owner)))
-                    .build());
+            // ⚠ applyComponents, NOT setComponents — the exact trap detag() documents further
+            // down, which this path had all along. A banner's name lives in a field of its own,
+            // BannerBlockEntity.name, and ONLY applyImplicitComponents assigns it (verified in
+            // 26.3's sources: `this.name = components.get(DataComponents.CUSTOM_NAME)`).
+            // setComponents swaps the component map and leaves that field null.
+            //
+            // So designation LOOKED applied and was half-applied: the store knew, the flag flew,
+            // and getCustomName() still answered null. Jade read "Black Banner", and
+            // whoseStandardBlock — which IS the block-level identity, and the fallback this file
+            // insists on ("a flag is a flag because of what it is") — saw no standard at all. The
+            // name appeared only after the block was broken and replanted, because the dropped
+            // trophy carries CUSTOM_NAME on the ITEM and placing an item runs
+            // applyImplicitComponents. Spotted in a Jade tooltip, 2026-09-17; the timing is what
+            // gave it away.
+            //
+            // The patch carries the patterns as well as the name: applyImplicitComponents reads
+            // both from what it is handed, so omitting the patterns would erase the design.
+            banner.applyComponents(net.minecraft.core.component.DataComponentMap.EMPTY,
+                    net.minecraft.core.component.DataComponentPatch.builder()
+                            .set(net.minecraft.core.component.DataComponents.BANNER_PATTERNS,
+                                    banner.getPatterns())
+                            .set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
+                                    Feedback.colored(
+                                            Lang.fmt("msg.factions.standard_item",
+                                                    "name", owner)))
+                            .build());
             banner.setChanged();
             level.sendBlockUpdated(pos, level.getBlockState(pos), level.getBlockState(pos), 3);
         }
