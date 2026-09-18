@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.7.0 — 2026-09-18
+
+### Fixed
+
+- **Faction territory was missing from JourneyMap after every client restart**, and came back only
+  if you toggled the layer off and on. The server pushes overlays when a player logs in, which on a
+  cold start is before JourneyMap has begun drawing — so they were sent and silently dropped. The
+  map now says when it is ready and asks for the picture then.
+- **Claiming and unclaiming from the map were reversed on 26.3**, because JourneyMap hands over the
+  raw platform mouse button and 26.3's move from GLFW to SDL renumbered them.
+- **A standard kept its plain banner name until it was broken and replanted.** `/f standard` set the
+  name on the component map but never on the block entity's own field, so the block still read
+  "Black Banner" — visible in Jade, and invisible to the block-level identity check that is meant to
+  recognise a flag by what it is rather than by what has been recorded about it.
+- **The no-faction panel's text ran past its right border.** It was split into fixed lines by hand
+  and never measured against the pane; the font wraps it now, so a resource pack or a translation
+  cannot break it again.
+- **Minecraft 26.3 support**, and the JourneyMap API pinned per line.
+
+### Added
+
+- **`/f map refresh`** — sends your map the current territory again. The map runs it for you when it
+  starts drawing; it is silent on purpose, because it happens on every world load.
+
 ## 1.6.0 — 2026-09-13
 
 ### Added
