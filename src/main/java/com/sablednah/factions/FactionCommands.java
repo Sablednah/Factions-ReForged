@@ -127,6 +127,10 @@ public final class FactionCommands {
                                         .executes(ctx -> mapLayer(ctx, true)))
                                 .then(Commands.literal("off")
                                         .executes(ctx -> mapLayer(ctx, false))))
+                        // Sent by the map itself the moment it starts drawing. Typing it is
+                        // harmless and does the same thing.
+                        .then(Commands.literal("refresh")
+                                .executes(FactionCommands::mapRefresh))
                         .then(Commands.literal("item")
                                 .executes(ctx -> map(ctx, true, 0, false))
                                 // The terrain map is its own literal rather than a flag on zoom,
@@ -328,6 +332,24 @@ public final class FactionCommands {
         ServerPlayer player = ctx.getSource().getPlayerOrException();
         FactionsMapEvents.layerToggled(player, on);
         Feedback.chat(player, Lang.get(on ? "msg.factions.map_layer_on" : "msg.factions.map_layer_off"));
+        return 1;
+    }
+
+    /**
+     * Send this player the current map picture again.
+     *
+     * <p>⚠ <b>Deliberately silent</b>, which is a considered exception rather than an oversight.
+     * The map sends this on every world load, so a line of chat here would be exactly the spam the
+     * layer switch already refuses to print for the "on" case — a message on every join, for every
+     * player, saying something they did not ask about. The visible result is the territory
+     * appearing, which is the only confirmation worth having.</p>
+     *
+     * <p>Nothing is re-decided here: a player who turned the layer off is still skipped by the
+     * overlay code, so repeating this cannot override a preference.</p>
+     */
+    private static int mapRefresh(CommandContext<CommandSourceStack> ctx)
+            throws CommandSyntaxException {
+        FactionsMapEvents.refreshRequested(ctx.getSource().getPlayerOrException());
         return 1;
     }
 
