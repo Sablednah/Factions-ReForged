@@ -130,7 +130,8 @@ public final class FactionsEvents {
                 || !(event.getLevel() instanceof ServerLevel level)) {
             return;
         }
-        if (FactionProtection.mayInteract(player, level, event.getPos())) {
+        if (FactionProtection.isPublic(level, event.getPos())
+                || FactionProtection.mayInteract(player, level, event.getPos())) {
             return;
         }
         event.setCanceled(true);

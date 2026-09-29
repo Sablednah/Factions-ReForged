@@ -50,6 +50,7 @@ public final class FactionsConfig {
     public static final ModConfigSpec.DoubleValue CLAIM_COST;
     public static final ModConfigSpec.DoubleValue CLAIM_COST_MULTIPLIER;
     public static final ModConfigSpec.DoubleValue CLAIM_REFUND;
+    public static final ModConfigSpec.ConfigValue<java.util.List<? extends String>> REPUTATION_LINKS;
     public static final ModConfigSpec.BooleanValue OFFICERS_MAY_WITHDRAW;
 
     static {
@@ -404,6 +405,24 @@ public final class FactionsConfig {
                         "out loud — a warning, a public record, and a line in the victim's",
                         "/f status before anything is taken.")
                 .define("overclaimEnemiesOnly", true);
+        b.pop();
+
+        b.comment("Factions that answer alliances by reputation.").push("reputation");
+        REPUTATION_LINKS = b
+                .comment("Each entry: \"faction|standing|allyAt|revokeBelow\", for example",
+                        "\"Camp Okafor|camp|80|40\". The faction is a name, tag or id.",
+                        "When another faction offers that faction an alliance, it offers back by",
+                        "itself if the asking faction's LEADER holds at least allyAt in the named",
+                        "Standards reputation standing, and withdraws if that falls below",
+                        "revokeBelow. In between, nothing changes, so a leader sitting on a",
+                        "threshold does not flicker in and out of the alliance.",
+                        "Meant for NPC-run factions whose leader never logs in. Make them",
+                        "peaceful as well, which keeps them out of wars.",
+                        "EMPTY, and so off, by default: with nothing on the server granting",
+                        "reputation, a link would refuse every alliance it governs.")
+                .defineListAllowEmpty("links", java.util.List.of(),
+                        () -> "Faction Name|standing|80|40",
+                        o -> o instanceof String);
         b.pop();
 
         b.comment("Testing.").push("debug");
