@@ -103,6 +103,25 @@ public final class FactionProtection {
         return store.relation(mine.get().id(), flying.get()) == FactionStore.Relation.ENEMY;
     }
 
+    /**
+     * Blocks anybody may right-click in anybody's land: {@code #factions:public_interact}.
+     *
+     * <p><b>Ships empty.</b> A modpack that wants visitors walking through its gates adds
+     * {@code #minecraft:fence_gates}; a server that never asked keeps exactly the protection it
+     * had. The same hole as the pressure plate outside the door, opened by the pack author rather
+     * than by every landowner — which is what an NPC-run camp needs, since nobody will ever log in
+     * to place the plate.</p>
+     */
+    public static final net.minecraft.tags.TagKey<net.minecraft.world.level.block.Block> PUBLIC_INTERACT =
+            net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.BLOCK,
+                    net.minecraft.resources.Identifier.fromNamespaceAndPath("factions",
+                            "public_interact"));
+
+    /** Whether the block here is one of those — asked before any ownership question. */
+    public static boolean isPublic(ServerLevel level, BlockPos pos) {
+        return level.getBlockState(pos).is(PUBLIC_INTERACT);
+    }
+
     /** Right-clicking: doors, buttons, containers, item frames. */
     public static boolean mayInteract(ServerPlayer player, ServerLevel level, BlockPos pos) {
         if (!FactionsConfig.PROTECT_INTERACTION.get()) {

@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.8.0 — unreleased
+
+### Added
+
+- **Factions that answer alliances by reputation.** `[reputation] links`, empty by default, takes
+  entries like `"Camp Okafor|camp|80|40"`. Offer that faction an alliance and it offers back by
+  itself once your *leader* holds 80 in the Standards reputation standing `camp`; below that you are
+  told where you stand and the offer waits, completing by itself when the trust is earned. Fall
+  below 40 and it withdraws, and between the two nothing changes, so a leader sitting on a line does
+  not flicker in and out. Made for NPC-run factions whose leader never logs in; make them peaceful
+  too.
+- **`#factions:public_interact`**, a block tag anybody may right-click in anybody's land. It ships
+  **empty**, so no server's protection changes. A modpack adds `#minecraft:fence_gates` to let
+  visitors walk through a camp while its iron doors stay members-and-allies only.
+- **`com.sablednah.factions.api.FactionsApi`**, for another mod to create a faction and claim its
+  land in code: `ensureFaction` finds before it creates, so it is safe on every start, and `claim`
+  refuses a chunk somebody else holds rather than taking it.
+
 ## 1.7.0 — 2026-09-18
 
 ### Fixed

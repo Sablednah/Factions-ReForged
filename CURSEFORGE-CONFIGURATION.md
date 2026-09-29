@@ -192,6 +192,34 @@ brand-new one-person faction, and also exactly who can least afford to stand a b
 Do not set it so low that somebody's first evening is spent unable to claim anything. If you want a
 standard to feel essential, raise `regenWithStandard` above 1.0 instead of dropping the floor.
 
+## A faction run by the server
+
+A quest camp or a town guard: a faction whose leader never logs in, which players earn their way
+into alliance with. Create it in code (`FactionsApi.ensureFaction`, peaceful) or by hand, then:
+
+```toml
+[reputation]
+links = ["Camp Okafor|camp|80|40"]   # faction | Standards standing | ally at | withdraw below
+```
+
+A faction that offers it an alliance gets one back once its **leader** holds 80 in the `camp`
+standing, and loses it below 40. Between the two nothing changes, which is what stops a leader on
+the line flickering in and out. **Leave it empty unless something on the server grants that
+reputation** — with nothing granting it, every alliance the link governs is refused.
+
+Peaceful already keeps such a faction safe from everything that would hurt an absent leader: there
+is no inactivity rule, offline power stays where it was, and a peaceful faction can be neither
+raided nor overclaimed.
+
+To let visitors through its gates without letting them at anything else, add blocks to the
+`factions:public_interact` tag with a datapack — it ships empty:
+
+```json
+{ "replace": false, "values": ["#minecraft:fence_gates"] }
+```
+
+at `data/factions/tags/block/public_interact.json`.
+
 ## Borders on a modded client
 
 Two files, because two different people make the decision.
