@@ -657,6 +657,41 @@ public final class FactionsSelfTest {
             check("claim refuses a faction that does not exist",
                     !com.sablednah.factions.api.FactionsApi.claim(server, dim, cx + 2, cz,
                             "no-such-faction"));
+
+            // The read side, which a quest polls once a second to decide whether you have done it.
+            String id = first.get();
+            String rid = rival.get().id();
+            check("factionOf finds the leader's faction",
+                    com.sablednah.factions.api.FactionsApi.factionOf(server, npc)
+                            .equals(java.util.Optional.of(id)));
+            check("...and nothing for somebody in none",
+                    com.sablednah.factions.api.FactionsApi.factionOf(server,
+                            java.util.UUID.randomUUID()).isEmpty());
+            check("ownerOf reads the chunk it just claimed",
+                    com.sablednah.factions.api.FactionsApi.ownerOf(server, dim, cx, cz)
+                            .equals(java.util.Optional.of(id)));
+            check("...and wilderness as empty",
+                    com.sablednah.factions.api.FactionsApi.ownerOf(server, dim, cx + 5, cz)
+                            .isEmpty());
+            check("claimCount counts it", com.sablednah.factions.api.FactionsApi.claimCount(
+                    server, id) == 1);
+            check("nameOf gives the name back",
+                    com.sablednah.factions.api.FactionsApi.nameOf(server, id)
+                            .equals(java.util.Optional.of(name)));
+            check("no home until one is set",
+                    !com.sablednah.factions.api.FactionsApi.hasHome(server, id));
+            check("no standard until one is planted",
+                    !com.sablednah.factions.api.FactionsApi.hasStandard(server, id));
+            store.declare(id, rid, FactionStore.Relation.ALLY);
+            check("an unreturned offer is not an ally",
+                    com.sablednah.factions.api.FactionsApi.alliesOf(server, id).isEmpty());
+            store.declare(rid, id, FactionStore.Relation.ALLY);
+            check("a returned one is",
+                    com.sablednah.factions.api.FactionsApi.alliesOf(server, id)
+                            .equals(java.util.List.of(rid)));
+            check("...from both sides",
+                    com.sablednah.factions.api.FactionsApi.alliesOf(server, rid)
+                            .equals(java.util.List.of(id)));
         } finally {
             first.ifPresent(store::disband);
             rival.ifPresent(r -> store.disband(r.id()));
