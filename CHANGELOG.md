@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.9.0 — unreleased
+
+### Added
+
+- **`FactionsApi` can answer questions as well as act**: `factionOf`, `ownerOf`, `nameOf`,
+  `hasHome`, `hasStandard` (your own flag, planted), `claimCount` and `alliesOf` (mutual only). All
+  read-only and cheap enough to poll, for a quest that waits on a player founding a faction,
+  claiming land or setting a home.
+
 ## 1.8.0 — 2026-09-29
 
 ### Added
