@@ -42,6 +42,8 @@ public final class FactionsSelfTest {
         checkRaids();
         checkRaidRecords();
         checkMapPalette();
+        checkReputationLinks(server);
+        checkApi(server);
         if (failed == 0) {
             Factions.LOGGER.info("=== Factions self-test PASSED ({} checks) ===", passed);
         } else {
@@ -516,6 +518,149 @@ public final class FactionsSelfTest {
         // enemy's land look friendly.
         check("a faction with no standard is plain white",
                 FactionStandards.chatColour(net.minecraft.world.item.DyeColor.WHITE).equals("&f"));
+    }
+
+    /**
+     * A faction that answers alliances by its asker's leader's reputation.
+     *
+     * <p>Driven through the real store with two throwaway factions, and a reputation supplied by
+     * the test rather than a provider — registering a provider here would displace the server's
+     * own for the rest of its life. Both directions at every threshold, because the band between
+     * the two is the part that is easy to get backwards: it must leave things alone.</p>
+     */
+    private void checkReputationLinks(net.minecraft.server.MinecraftServer server) {
+        var parsed = FactionReputationLinks.Link.parse("Camp Okafor| Camp |80|40");
+        check("a reputation link parses", parsed.isPresent());
+        check("...with its standing normalised",
+                parsed.map(l -> l.standing().equals("camp")).orElse(false));
+        check("...and a name with a space intact",
+                parsed.map(l -> l.faction().equals("Camp Okafor")).orElse(false));
+        check("a link missing a field does not",
+                FactionReputationLinks.Link.parse("Camp|camp|80").isEmpty());
+        check("nor one that revokes above where it allies",
+                FactionReputationLinks.Link.parse("Camp|camp|40|80").isEmpty());
+        check("nor one with a word for a number",
+                FactionReputationLinks.Link.parse("Camp|camp|high|40").isEmpty());
+
+        FactionStore store = FactionStore.get(server);
+        String campName = "Selftest Camp " + java.util.UUID.randomUUID().toString().substring(0, 4);
+        java.util.Optional<String> campId = com.sablednah.factions.api.FactionsApi.ensureFaction(
+                server, campName, "", java.util.UUID.randomUUID(), true);
+        java.util.Optional<FactionStore.Faction> asker = store.create(
+                "Selftest Askers " + java.util.UUID.randomUUID().toString().substring(0, 4),
+                java.util.UUID.randomUUID());
+        if (campId.isEmpty() || asker.isEmpty()) {
+            check("the reputation-link fixtures could be created", false);
+            return;
+        }
+        String a = asker.get().id();
+        String c = campId.get();
+        var link = new FactionReputationLinks.Link(campName, "camp", 80, 40);
+        int[] rep = {0};
+        java.util.function.ToIntBiFunction<java.util.UUID, String> fake = (p, s) -> rep[0];
+        java.util.function.Supplier<FactionStore.Faction> fresh = () -> store.byId(a).orElseThrow();
+        try {
+            check("no offer, nothing to answer, whatever the reputation",
+                    FactionReputationLinks.reconcile(store, fresh.get(), link, (p, s) -> 100)
+                            .isEmpty());
+
+            store.declare(a, c, FactionStore.Relation.ALLY);
+            rep[0] = 79;
+            FactionReputationLinks.reconcile(store, fresh.get(), link, fake);
+            check("offered one short of allyAt: the camp does not answer",
+                    store.relation(a, c) == FactionStore.Relation.NEUTRAL);
+
+            rep[0] = 80;
+            FactionReputationLinks.reconcile(store, fresh.get(), link, fake);
+            check("at allyAt the camp offers back, and it is an alliance",
+                    store.relation(a, c) == FactionStore.Relation.ALLY);
+
+            rep[0] = 40;
+            FactionReputationLinks.reconcile(store, fresh.get(), link, fake);
+            check("falling to revokeBelow itself does not withdraw — the band holds",
+                    store.relation(a, c) == FactionStore.Relation.ALLY);
+
+            rep[0] = 39;
+            FactionReputationLinks.reconcile(store, fresh.get(), link, fake);
+            check("below revokeBelow the camp withdraws",
+                    store.relation(a, c) == FactionStore.Relation.NEUTRAL);
+            check("...but the asker's offer stands", store.allianceOffered(a, c));
+
+            rep[0] = 60;
+            FactionReputationLinks.reconcile(store, fresh.get(), link, fake);
+            check("climbing back into the band does not re-ally",
+                    store.relation(a, c) == FactionStore.Relation.NEUTRAL);
+
+            rep[0] = 95;
+            FactionReputationLinks.reconcile(store, fresh.get(), link, fake);
+            check("earning it again re-allies with nobody re-offering",
+                    store.relation(a, c) == FactionStore.Relation.ALLY);
+
+            store.declare(a, c, FactionStore.Relation.NEUTRAL);
+            FactionReputationLinks.reconcile(store, fresh.get(), link, fake);
+            check("the asker going neutral takes the camp's side back too",
+                    !store.byId(c).orElseThrow().allies().contains(a));
+
+            // The asker being the camp is a nonsense config, not a crash.
+            check("a link never answers its own faction",
+                    FactionReputationLinks.reconcile(store, store.byId(c).orElseThrow(), link,
+                            (p, s) -> 100).isEmpty());
+        } finally {
+            store.disband(a);
+            store.disband(c);
+        }
+    }
+
+    /**
+     * The API a pack's glue mod builds an NPC faction with — idempotent, and never a land-grab.
+     */
+    private void checkApi(net.minecraft.server.MinecraftServer server) {
+        FactionStore store = FactionStore.get(server);
+        java.util.UUID npc = java.util.UUID.nameUUIDFromBytes(
+                ("OfflinePlayer:SelftestNpc" + java.util.UUID.randomUUID())
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        String name = "Selftest Npc " + java.util.UUID.randomUUID().toString().substring(0, 4);
+        var dim = net.minecraft.world.level.Level.OVERWORLD;
+        String dimKey = dim.identifier().toString();
+        // Far out, where nobody's test world has land.
+        int cx = 1_800_000, cz = 1_800_001;
+        java.util.Optional<String> first = com.sablednah.factions.api.FactionsApi.ensureFaction(
+                server, name, "", npc, true);
+        java.util.Optional<FactionStore.Faction> rival = store.create(
+                "Selftest Rival " + java.util.UUID.randomUUID().toString().substring(0, 4),
+                java.util.UUID.randomUUID());
+        try {
+            check("ensureFaction creates a faction", first.isPresent());
+            if (first.isEmpty() || rival.isEmpty()) {
+                return;
+            }
+            check("...peaceful, as asked",
+                    store.byId(first.get()).map(FactionStore.Faction::peaceful).orElse(false));
+            java.util.Optional<String> again = com.sablednah.factions.api.FactionsApi.ensureFaction(
+                    server, name, "", npc, true);
+            check("ensureFaction again returns the same faction, not a second one",
+                    again.equals(first));
+            check("...and a stranger may not take the name over",
+                    com.sablednah.factions.api.FactionsApi.ensureFaction(server, name, "",
+                            java.util.UUID.randomUUID(), true).isEmpty());
+
+            check("claim takes unowned land", com.sablednah.factions.api.FactionsApi.claim(
+                    server, dim, cx, cz, first.get()));
+            check("...and says yes again for land already theirs",
+                    com.sablednah.factions.api.FactionsApi.claim(server, dim, cx, cz, first.get()));
+            store.claim(dimKey, cx + 1, cz, rival.get().id());
+            check("claim refuses land somebody else holds",
+                    !com.sablednah.factions.api.FactionsApi.claim(server, dim, cx + 1, cz,
+                            first.get()));
+            check("...and leaves it theirs", store.ownerOf(dimKey, cx + 1, cz)
+                    .map(rival.get().id()::equals).orElse(false));
+            check("claim refuses a faction that does not exist",
+                    !com.sablednah.factions.api.FactionsApi.claim(server, dim, cx + 2, cz,
+                            "no-such-faction"));
+        } finally {
+            first.ifPresent(store::disband);
+            rival.ifPresent(r -> store.disband(r.id()));
+        }
     }
 
     private void check(String what, boolean ok) {
