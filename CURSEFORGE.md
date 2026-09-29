@@ -94,6 +94,7 @@ exactly as much for anybody who types it.
 | **Blocks** | Break and place, members only. Allies do not build in your land by default — an alliance is a diplomatic position and those change. |
 | **Right-clicks** | Doors, buttons, levers, chests, furnaces. **Not a list of block types** — a list is something somebody has to maintain, and every modded block is missing from it. A stranger who cannot mine your chest could still *open* it, and that is the theft the claim was bought to prevent. |
 | **Pressure plates** | Still work, deliberately. Put one outside the door for visitors: protection you can open a hole in beats protection you have to switch off. |
+| **Gates, if you say so** | A block tag, `factions:public_interact`, that anybody may right-click in anybody's land. It ships empty; add fence gates and visitors can walk through while the iron doors stay shut. |
 | **Item frames, armour stands, paintings** | Covered separately, because none of them are blocks and every block-shaped guard misses them. |
 | **Mobs** | Cannot chew through claimed land, answered through Standards' claims seam so a mob mod does not have to guess — ZombieMod asked for that hook and uses it. |
 | **Explosions** | Filtered per block, so a creeper on the wilderness side of your wall craters the wilderness and leaves the wall standing. You still take the damage. TNT is a separate setting, because on a PvP server it *is* the siege tool. |
@@ -209,6 +210,12 @@ somebody's target by not filing the paperwork.
 both directions, so opting out is not the same as disarming yourself while everyone else keeps
 shooting.
 
+**A faction the server runs can answer by reputation.** A quest camp or a town guard has a leader
+who never logs in, so an alliance offered to it would wait for ever. Link it to a Standards
+reputation standing and it offers back once your leader has earned its trust, and withdraws if that
+trust is lost, with a gap between the two so nobody flickers in and out. Earn your way through the
+gate by doing the camp's quests. Off unless you configure a link.
+
 **`/f status`** answers the questions nothing else will. An offered alliance is announced once and
 never mentioned again, so an offer made while you were offline is otherwise invisible forever;
 being declared upon is worse, in that you find out by being killed. Everything is split by
@@ -253,6 +260,9 @@ mod never finds claiming silently impossible.
 Every behaviour above is a config value, and the comments say **why** rather than what. PvP between
 factions, PvP inside one, connected claims, chunks per member, border refresh rate and radius, the
 held tool, ally permissions, explosion handling, claim costs and refunds, who may accept a request.
+
+**A modpack can build a faction in code** with `FactionsApi` — create it, make it peaceful, claim
+its land — and the calls are safe to repeat on every start. They never take a chunk a player holds.
 
 **`/f fixture seed`** invents nine neighbour factions with every relation state — allied, offered,
 hostile, neutral, peaceful — because two people cannot test a relation system and inviting six
