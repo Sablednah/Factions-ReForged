@@ -113,5 +113,60 @@ public final class FactionsApi {
         return true;
     }
 
+    // --- reading ---
+    //
+    // Cheap enough to poll once a second per player: every one of these is a map lookup or a
+    // single pass over the claims, and none of them writes.
+
+    /** The faction this player belongs to, by id. */
+    public static Optional<String> factionOf(MinecraftServer server, UUID player) {
+        return FactionStore.get(server).of(player).map(FactionStore.Faction::id);
+    }
+
+    /** Who holds this chunk, by id. Empty is wilderness. */
+    public static Optional<String> ownerOf(MinecraftServer server, ResourceKey<Level> dimension,
+            int chunkX, int chunkZ) {
+        return FactionStore.get(server).ownerOf(dimension.identifier().toString(), chunkX, chunkZ);
+    }
+
+    /** A faction's display name. Empty if there is no such faction. */
+    public static Optional<String> nameOf(MinecraftServer server, String factionId) {
+        return FactionStore.get(server).byId(factionId).map(FactionStore.Faction::name);
+    }
+
+    /** Whether it has set a {@code /f home}. */
+    public static boolean hasHome(MinecraftServer server, String factionId) {
+        return FactionStore.get(server).byId(factionId).map(f -> f.home().isPresent())
+                .orElse(false);
+    }
+
+    /**
+     * Whether its <b>own</b> standard is planted, anywhere. A captured enemy flag does not count:
+     * that is somebody else's standard it happens to be flying.
+     */
+    public static boolean hasStandard(MinecraftServer server, String factionId) {
+        return FactionStore.get(server).hasStandard(factionId);
+    }
+
+    /** How many chunks it holds, across every dimension. */
+    public static int claimCount(MinecraftServer server, String factionId) {
+        return FactionStore.get(server).claimCount(factionId);
+    }
+
+    /**
+     * Its allies, by id — <b>mutual only</b>. An offer nobody has returned is not an alliance, and
+     * a quest that counted one would be rewarding a player for asking.
+     */
+    public static java.util.List<String> alliesOf(MinecraftServer server, String factionId) {
+        FactionStore store = FactionStore.get(server);
+        return store.byId(factionId)
+                .map(f -> f.allies().stream()
+                        .filter(other -> store.relation(factionId, other)
+                                == FactionStore.Relation.ALLY)
+                        .sorted()
+                        .toList())
+                .orElse(java.util.List.of());
+    }
+
     private FactionsApi() {}
 }
