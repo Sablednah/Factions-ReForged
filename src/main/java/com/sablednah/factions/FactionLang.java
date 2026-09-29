@@ -294,6 +294,14 @@ public final class FactionLang {
                 "{term.prefix} &7Offered. An alliance holds only when &f{name}&7 offers back.");
         Lang.contribute("msg.factions.alliance_offered",
                 "{term.prefix} &b{name}&7 has offered you an alliance. {term.dim}(/f ally {name})");
+        Lang.contribute("msg.factions.rep_link_waiting",
+                "{term.prefix} &f{name}&7 regards your leader as &f{band}&7. It allies with nobody"
+                        + " short of &f{need}&7 — the offer stands until then.");
+        Lang.contribute("msg.factions.rep_link_allied",
+                "{term.prefix} &f{name}&7 trusts your leader enough. You are now &aallies&7.");
+        Lang.contribute("msg.factions.rep_link_withdrawn",
+                "{term.prefix} &f{name}&7 no longer trusts your leader, and has withdrawn from"
+                        + " the alliance. Your offer stands, should that change.");
         Lang.contribute("msg.factions.now_peaceful",
                 "{term.prefix} &aYour {term.faction} is now peaceful — it cannot fight, and cannot be fought.");
         Lang.contribute("msg.factions.no_longer_peaceful",

@@ -1118,10 +1118,20 @@ public final class FactionCommands {
         }
         store(ctx).declare(mine.get().id(), them.get().id(), relation);
 
-        FactionStore.Relation now = store(ctx).relation(mine.get().id(), them.get().id());
         Feedback.chat(player, Lang.fmt("msg.factions.declared",
                 "name", them.get().name(),
                 "relation", Lang.get("msg.factions.relation." + relation.key())));
+        // A faction that answers by reputation answers now, and says why if it will not — its
+        // leader is nobody who will ever log in to reciprocate. See FactionReputationLinks.
+        if (relation == FactionStore.Relation.ALLY) {
+            if (FactionReputationLinks.afterOffer(ctx.getSource().getServer(), store(ctx), player,
+                    mine.get(), them.get())) {
+                return 1;
+            }
+        } else {
+            FactionReputationLinks.afterOtherDeclaration(store(ctx), mine.get(), them.get());
+        }
+        FactionStore.Relation now = store(ctx).relation(mine.get().id(), them.get().id());
         // An offered alliance is worth saying out loud to both sides — otherwise it looks like
         // nothing happened until, one day, the other faction happens to reciprocate.
         if (relation == FactionStore.Relation.ALLY && now != FactionStore.Relation.ALLY) {
