@@ -43,7 +43,7 @@ type = "required"
 # all; Standards' hard dependency happened to cover for it. See neo_version_min in the
 # root gradle.properties: it drops NeoForge's trailing build counter and tracks the
 # Minecraft range, so this stays permissive without being meaningless.
-versionRange = "[${neo_version_min},)"
+versionRange = "[${neo_version_min},${neo_version_max})"
 ordering = "NONE"
 side = "BOTH"
 
