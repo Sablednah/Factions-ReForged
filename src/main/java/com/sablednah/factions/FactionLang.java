@@ -353,8 +353,8 @@ public final class FactionLang {
         Lang.contribute("msg.factions.map_legend",
                 "{term.dim}  &a# yours  &b# allied  &c# hostile  &f# other  &8- wilderness  &e+ you");
         Lang.contribute("msg.factions.map_title", "&bClaims Atlas");
-        Lang.contribute("msg.factions.action_home", "Faction home");
-        Lang.contribute("msg.factions.action_panel", "Faction panel");
+        Lang.contribute("msg.factions.action.faction_home", "Faction home");
+        Lang.contribute("msg.factions.action.faction_panel", "Faction panel");
         Lang.contribute("msg.factions.panel_header", "{term.prefix} &f{name}&7 [&f{tag}&7]");
         Lang.contribute("msg.factions.panel_power", "&7Power &f{power}&7/&f{max}&7 — land &f{claims}&7 of &f{entitled}&7 entitled");
         Lang.contribute("msg.factions.panel_bank", "&7Bank &f{bank}&7 — standard: {standard}");
@@ -363,9 +363,9 @@ public final class FactionLang {
         Lang.contribute("msg.factions.panel_members", "&7Members: &f{members}");
         Lang.contribute("msg.factions.panel_no_client",
                 "{term.dim}(shown as text — this client is not running Factions, so there is no panel to draw)");
-        Lang.contribute("msg.factions.action_claim", "Claim this chunk");
-        Lang.contribute("msg.factions.action_autoclaim", "Auto-claim as you walk");
-        Lang.contribute("msg.factions.action_map", "Faction map");
+        Lang.contribute("msg.factions.action.claim_chunk", "Claim this chunk");
+        Lang.contribute("msg.factions.action.autoclaim", "Auto-claim as you walk");
+        Lang.contribute("msg.factions.action.faction_map", "Faction map");
         Lang.contribute("msg.factions.map_title_terrain", "&bClaims Survey");
         Lang.contribute("msg.factions.map_given_terrain",
                 "{term.prefix} &7A survey of the &f{blocks}&7 blocks around you, with claims washed over the ground. {term.dim}(only land already loaded is drawn — walk it and make another)");

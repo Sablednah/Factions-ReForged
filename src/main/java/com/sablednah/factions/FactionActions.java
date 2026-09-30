@@ -39,8 +39,13 @@ public final class FactionActions {
     private static void register() {
         // Below Standards' own switches (100–88) so the rows read Standards first, then us. The
         // bar groups by mod anyway, so this only orders us within our own row.
+        //
+        // ⚠ The tooltip KEY is the tooltip. The client has no copy of our catalogue, so Standards'
+        // ClientLang shows the key's last segment, prettified — "msg.factions.action_panel" drew
+        // "Action panel" on every button in the row. Name the tail for what the button says. The
+        // Lang text below still feeds `/actions`, which runs server-side.
         Actions.register(new Action("factions:home", 60,
-                Identifier.withDefaultNamespace("orange_bed"), "msg.factions.action_home",
+                Identifier.withDefaultNamespace("orange_bed"), "msg.factions.action.faction_home",
                 "f home",
                 // Only with a home set: /f home on a faction that has none is a refusal, and a
                 // button that can only refuse is worse than no button.
@@ -48,14 +53,14 @@ public final class FactionActions {
                         .of(p.getUUID()).map(f -> f.home().isPresent()).orElse(false)));
 
         Actions.register(new Action("factions:claim", 59,
-                Identifier.withDefaultNamespace("oak_fence"), "msg.factions.action_claim",
+                Identifier.withDefaultNamespace("oak_fence"), "msg.factions.action.claim_chunk",
                 "f claim",
                 FactionActions::inFaction));
 
         // A state, not an act — so the bar lights it while it is on, which is the whole reason
         // autoclaim is worth a button rather than a command you have to remember you left running.
         Actions.register(new Action("factions:autoclaim", 58,
-                Identifier.withDefaultNamespace("lead"), "msg.factions.action_autoclaim",
+                Identifier.withDefaultNamespace("lead"), "msg.factions.action.autoclaim",
                 "f autoclaim",
                 FactionActions::inFaction,
                 FactionAutoClaim::isOn));
@@ -70,12 +75,12 @@ public final class FactionActions {
         // because the only button left was the map. See the fourth bug family in Standards'
         // CLAUDE.md, and `/actions all`, which exists because of that day.
         Actions.register(new Action("factions:panel", 61,
-                Identifier.withDefaultNamespace("writable_book"), "msg.factions.action_panel",
+                Identifier.withDefaultNamespace("writable_book"), "msg.factions.action.faction_panel",
                 "f panel",
                 p -> true));
 
         Actions.register(new Action("factions:map", 57,
-                Identifier.withDefaultNamespace("filled_map"), "msg.factions.action_map",
+                Identifier.withDefaultNamespace("filled_map"), "msg.factions.action.faction_map",
                 "f map",
                 p -> true));
 
