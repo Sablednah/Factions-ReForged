@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.9.1 — 2026-10-01
+
+### Fixed
+
+- **Every Factions button on the inventory bar was labelled "Action …"** — "Action home",
+  "Action panel" — because the bar shows the last part of each button's message key. They read
+  "Faction home", "Claim chunk", "Autoclaim", "Faction panel" and "Faction map" now. A server that
+  customised those five strings in `messages.yml` should copy them to the new keys,
+  `msg.factions.action.*`.
+- **Minecraft 26.3 only: NeoForge 26.3.0.37-beta and later are refused with a clear message**
+  rather than a crash, for the same reason as Standards 1.10.1.
+
+Requires Standards 1.10.1, released alongside.
+
 ## 1.9.0 — 2026-09-29
 
 ### Added
