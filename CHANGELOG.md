@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.9.2 — 2026-10-08
+
+### Fixed
+
+- **Under a shader pack, claim borders lost their tinted floor and wall panels** — only the edge
+  lines were left. Iris had no program for the kind of surface they are drawn with, so they never
+  reached the screen. Factions now tells Iris which of the pack's programs to draw them with, when
+  Iris is installed; nothing changes without it. `shaderFillProgram` in `factions-client.toml`
+  picks the program, or `"off"`. Tested with Complementary Unbound.
+
+### Changed
+
+- **Minecraft 26.3 now needs NeoForge 26.3.0.58-beta or later**, as Standards 1.10.2 does. Your
+  existing `factions-common.toml` is still the file it reads.
+
+Requires Standards 1.10.2, released alongside.
+
 ## 1.9.1 — 2026-10-01
 
 ### Fixed
