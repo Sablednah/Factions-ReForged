@@ -43,8 +43,10 @@ public final class Factions {
     public Factions(IEventBus modEventBus, net.neoforged.fml.ModContainer container) {
         // Which bytes, not just which release — see BuildInfo. The only record of what actually ran.
         LOGGER.info("Factions ReForged {}", BuildInfo.describe());
-        container.registerConfig(net.neoforged.fml.config.ModConfig.Type.COMMON,
-                FactionsConfig.SPEC);
+        // LOCAL (renamed from COMMON in FML 12.0.8), named explicitly: its default is
+        // factions-local.toml, which no existing server has.
+        container.registerConfig(net.neoforged.fml.config.ModConfig.Type.LOCAL,
+                FactionsConfig.SPEC, "factions-common.toml");
 
         modEventBus.addListener(FactionsNetwork::register);
 
