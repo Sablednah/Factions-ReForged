@@ -30,6 +30,9 @@ public final class FactionsClientConfig {
     /** How far the tinted ground reaches. Much smaller, deliberately: it is 256 quads a chunk. */
     public static final ModConfigSpec.IntValue FLOOR_RADIUS;
 
+    /** Which Iris program draws the border's filled surfaces under a shader pack. */
+    public static final ModConfigSpec.ConfigValue<String> SHADER_FILL_PROGRAM;
+
     static {
         ModConfigSpec.Builder b = new ModConfigSpec.Builder();
         b.comment("How much of the faction border this machine draws.").push("borders");
@@ -51,6 +54,18 @@ public final class FactionsClientConfig {
                         "2 is where the cost stops being free. Measured from 100fps idle: 8 walls",
                         "with 2 of floor sits in the low 90s, and 4 of floor drops it to 70.")
                 .defineInRange("floorRadiusChunks", 2, 0, 4);
+        SHADER_FILL_PROGRAM = b
+                .comment("Under an Iris shader pack, which of the pack's programs draws the tinted",
+                        "ground and the wall panels. Without this they vanish under a pack and only",
+                        "the edge lines remain, because Iris has no program for vanilla's debug",
+                        "fills. Does nothing without Iris, or with Iris and no pack loaded.",
+                        "  basic  (default) plain coloured surfaces, the natural match",
+                        "  textured, entities_translucent, translucent, ...  other Iris programs,",
+                        "         worth trying if a pack lights 'basic' badly",
+                        "  off    leave Iris alone; the fills stay invisible under a pack",
+                        "This also affects other mods' gizmo fills, which were equally invisible.",
+                        "Read at start-up: restart the game after changing it.")
+                .define("shaderFillProgram", "basic");
         b.pop();
         SPEC = b.build();
     }

@@ -54,6 +54,9 @@ public class FactionsClient {
 
         modEventBus.addListener(FactionsClient::onRegisterDebugRenderers);
         modEventBus.addListener(FactionsClient::onRegisterKeys);
+        // After the client config has loaded, which the constructor is too early for.
+        modEventBus.addListener((net.neoforged.fml.event.lifecycle.FMLClientSetupEvent e) ->
+                e.enqueueWork(ShaderPackCompat::install));
         NeoForge.EVENT_BUS.register(ClaimGrid.class);
         NeoForge.EVENT_BUS.addListener(FactionsClient::onClientTick);
     }
