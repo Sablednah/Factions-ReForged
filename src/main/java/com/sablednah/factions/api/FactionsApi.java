@@ -26,6 +26,8 @@ import net.minecraft.world.level.Level;
  *       rather than silently moving it. A structure generated on top of a base is a conflict for
  *       a person to resolve, and a player who logs in to find their land reassigned by a mod
  *       they did not know was running would be right to call it a bug.</li>
+ *   <li>{@link #unclaim} is the same rule turned round: it releases only land the named faction
+ *       holds, so a pack cannot use it to clear a player's chunk either.</li>
  * </ul>
  *
  * <p>There is no colour: a faction has none of its own. Its colour is its planted standard's, and
@@ -111,6 +113,41 @@ public final class FactionsApi {
         }
         store.claim(dim, chunkX, chunkZ, factionId);
         return true;
+    }
+
+    /**
+     * Take a chunk back from a faction — the other half of {@link #claim}, for a pack that opens
+     * ground it built, such as a vault entrance handed over when a quest starts.
+     *
+     * <p>No refund and no message: the land was never bought. A captured flag standing in the
+     * chunk comes down with it, as it does for every other route land changes hands by. The chunk
+     * need not be loaded.</p>
+     *
+     * <p>⚠ It does <b>not</b> lift the chunk under the faction's own planted standard. That rule
+     * already had one second door closed ({@code unclaimAll}), and an API that walked through it
+     * would leave a flag standing in wilderness. A faction made by {@link #ensureFaction} plants
+     * none unless somebody plants one for it.</p>
+     *
+     * @return true only if the chunk was this faction's and now is not; false if somebody else
+     *         holds it, nobody does, the faction does not exist, or its own standard pins it.
+     *         Calling it twice is safe: the second answers false.
+     */
+    public static boolean unclaim(MinecraftServer server, ResourceKey<Level> dimension, int chunkX,
+            int chunkZ, String factionId) {
+        FactionStore store = FactionStore.get(server);
+        if (store.byId(factionId).isEmpty()) {
+            return false;
+        }
+        String dim = dimension.identifier().toString();
+        if (!store.ownerOf(dim, chunkX, chunkZ).map(factionId::equals).orElse(false)) {
+            return false;
+        }
+        if (store.ownStandardInChunk(factionId, dim, chunkX, chunkZ)) {
+            Factions.LOGGER.warn("FactionsApi: chunk {},{} in {} holds the faction's own standard; "
+                    + "not releasing it", chunkX, chunkZ, dim);
+            return false;
+        }
+        return store.unclaim(dim, chunkX, chunkZ);
     }
 
     // --- reading ---
