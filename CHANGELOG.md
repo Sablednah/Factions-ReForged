@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.10.0 — unreleased
+
+### Added
+
+- **`FactionsApi.unclaim`**, the other half of `claim`: a pack can give back ground it claimed for
+  an NPC faction — a vault entrance opened when a quest starts. It releases only land the named
+  faction holds, refunds nothing, says nothing, and leaves the chunk under that faction's own
+  standard alone, as `/f unclaim` does.
+
 ## 1.9.2 — 2026-10-08
 
 ### Fixed

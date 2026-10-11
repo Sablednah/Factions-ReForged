@@ -658,6 +658,39 @@ public final class FactionsSelfTest {
                     !com.sablednah.factions.api.FactionsApi.claim(server, dim, cx + 2, cz,
                             "no-such-faction"));
 
+            // unclaim: a pack opening ground it built. Only ever its own, and never twice.
+            com.sablednah.factions.api.FactionsApi.claim(server, dim, cx + 3, cz, first.get());
+            check("unclaim releases the faction's own chunk",
+                    com.sablednah.factions.api.FactionsApi.unclaim(server, dim, cx + 3, cz,
+                            first.get())
+                            && store.ownerOf(dimKey, cx + 3, cz).isEmpty());
+            check("...and answers false the second time",
+                    !com.sablednah.factions.api.FactionsApi.unclaim(server, dim, cx + 3, cz,
+                            first.get()));
+            check("unclaim refuses land somebody else holds, and leaves it theirs",
+                    !com.sablednah.factions.api.FactionsApi.unclaim(server, dim, cx + 1, cz,
+                            first.get())
+                            && store.ownerOf(dimKey, cx + 1, cz)
+                                    .map(rival.get().id()::equals).orElse(false));
+            check("unclaim refuses a faction that does not exist",
+                    !com.sablednah.factions.api.FactionsApi.unclaim(server, dim, cx, cz,
+                            "no-such-faction"));
+            net.minecraft.core.BlockPos flag = new net.minecraft.core.BlockPos(
+                    (cx + 4) * 16 + 8, 64, cz * 16 + 8);
+            com.sablednah.factions.api.FactionsApi.claim(server, dim, cx + 4, cz, first.get());
+            store.setStandard(first.get(), dimKey, flag, net.minecraft.world.item.DyeColor.RED,
+                    net.minecraft.world.level.block.entity.BannerPatternLayers.EMPTY,
+                    java.util.Optional.empty());
+            try {
+                check("unclaim leaves the chunk the faction's own standard pins",
+                        !com.sablednah.factions.api.FactionsApi.unclaim(server, dim, cx + 4, cz,
+                                first.get())
+                                && store.ownerOf(dimKey, cx + 4, cz).isPresent());
+            } finally {
+                store.clearStandardAt(dimKey, flag);
+                store.unclaim(dimKey, cx + 4, cz);
+            }
+
             // The read side, which a quest polls once a second to decide whether you have done it.
             String id = first.get();
             String rid = rival.get().id();
