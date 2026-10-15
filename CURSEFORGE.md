@@ -262,7 +262,8 @@ factions, PvP inside one, connected claims, chunks per member, border refresh ra
 held tool, ally permissions, explosion handling, claim costs and refunds, who may accept a request.
 
 **A modpack can build a faction in code** with `FactionsApi` — create it, make it peaceful, claim
-its land — and the calls are safe to repeat on every start. They never take a chunk a player holds.
+its land and give it back — and the calls are safe to repeat on every start. They never take a chunk
+a player holds.
 
 **`/f fixture seed`** invents nine neighbour factions with every relation state — allied, offered,
 hostile, neutral, peaceful — because two people cannot test a relation system and inviting six
