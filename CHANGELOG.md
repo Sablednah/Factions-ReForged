@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.10.0 — unreleased
+## 1.10.0 — 2026-10-15
 
 ### Added
 
@@ -8,6 +8,8 @@
   an NPC faction — a vault entrance opened when a quest starts. It releases only land the named
   faction holds, refunds nothing, says nothing, and leaves the chunk under that faction's own
   standard alone, as `/f unclaim` does.
+
+Requires Standards 1.11.1, released alongside.
 
 ## 1.9.2 — 2026-10-08
 
