@@ -541,6 +541,13 @@ public final class FactionsSelfTest {
                 FactionReputationLinks.Link.parse("Camp|camp|40|80").isEmpty());
         check("nor one with a word for a number",
                 FactionReputationLinks.Link.parse("Camp|camp|high|40").isEmpty());
+        check("a four-field link waits to be asked",
+                parsed.map(l -> !l.auto()).orElse(false));
+        check("|auto makes a link that forms the alliance itself",
+                FactionReputationLinks.Link.parse("Camp|camp|80|40| AUTO ")
+                        .map(FactionReputationLinks.Link::auto).orElse(false));
+        check("...and a misspelt fifth field is refused rather than ignored",
+                FactionReputationLinks.Link.parse("Camp|camp|80|40|automatic").isEmpty());
 
         FactionStore store = FactionStore.get(server);
         String campName = "Selftest Camp " + java.util.UUID.randomUUID().toString().substring(0, 4);
@@ -600,6 +607,41 @@ public final class FactionsSelfTest {
             FactionReputationLinks.reconcile(store, fresh.get(), link, fake);
             check("the asker going neutral takes the camp's side back too",
                     !store.byId(c).orElseThrow().allies().contains(a));
+
+            // auto: nobody offers. Reset both sides first, so this starts from strangers.
+            store.declare(a, c, FactionStore.Relation.NEUTRAL);
+            store.declare(c, a, FactionStore.Relation.NEUTRAL);
+            var auto = new FactionReputationLinks.Link(campName, "camp", 80, 40, true);
+            rep[0] = 79;
+            check("auto: one short of allyAt, nothing happens",
+                    FactionReputationLinks.reconcile(store, fresh.get(), auto, fake).isEmpty()
+                            && store.relation(a, c) == FactionStore.Relation.NEUTRAL);
+            rep[0] = 80;
+            FactionReputationLinks.reconcile(store, fresh.get(), auto, fake);
+            check("auto: at allyAt the alliance forms with nobody having offered",
+                    store.relation(a, c) == FactionStore.Relation.ALLY);
+            check("...declared on both sides",
+                    store.byId(a).orElseThrow().allies().contains(c)
+                            && store.byId(c).orElseThrow().allies().contains(a));
+            check("...and asking again changes nothing",
+                    FactionReputationLinks.reconcile(store, fresh.get(), auto, fake).isEmpty());
+            rep[0] = 40;
+            FactionReputationLinks.reconcile(store, fresh.get(), auto, fake);
+            check("auto: the band holds at revokeBelow",
+                    store.relation(a, c) == FactionStore.Relation.ALLY);
+            rep[0] = 39;
+            FactionReputationLinks.reconcile(store, fresh.get(), auto, fake);
+            check("auto: below revokeBelow it comes down on both sides",
+                    !store.byId(a).orElseThrow().allies().contains(c)
+                            && !store.byId(c).orElseThrow().allies().contains(a));
+            rep[0] = 60;
+            FactionReputationLinks.reconcile(store, fresh.get(), auto, fake);
+            check("auto: climbing back into the band does not re-form it",
+                    store.relation(a, c) == FactionStore.Relation.NEUTRAL);
+            rep[0] = 90;
+            FactionReputationLinks.reconcile(store, fresh.get(), auto, fake);
+            check("auto: earning it again re-forms it by itself",
+                    store.relation(a, c) == FactionStore.Relation.ALLY);
 
             // The asker being the camp is a nonsense config, not a crash.
             check("a link never answers its own faction",

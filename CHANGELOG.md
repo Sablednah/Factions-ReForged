@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.11.0 — unreleased
+
+### Added
+
+- **A server-run faction can form the alliance itself.** Add `auto` to a reputation link —
+  `"Camp Okafor|camp|80|40|auto"` — and nobody has to offer. The alliance forms on both sides the
+  moment a faction's leader is trusted, whether by turning in a quest, founding a faction, or the
+  server starting. It comes down on both sides when that trust is lost, and re-forms by itself if
+  it is earned back. While a link is `auto`, `/f neutral` towards that faction is refused with the
+  reason. Links without `auto` still wait to be asked.
+- **Reputation alliances are announced on screen**, not only in chat: "Camp Okafor trusts you —
+  its doors, chests and stores are yours to use now", and a quieter one when the trust is
+  withdrawn. Both are in `messages.yml`.
+
 ## 1.10.0 — 2026-10-15
 
 ### Added
