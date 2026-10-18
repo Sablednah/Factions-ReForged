@@ -207,6 +207,19 @@ standing, and loses it below 40. Between the two nothing changes, which is what 
 the line flickering in and out. **Leave it empty unless something on the server grants that
 reputation** — with nothing granting it, every alliance the link governs is refused.
 
+Players who do not know an alliance is something they must offer will never offer one. Add `auto`
+as a fifth field and the camp forms the alliance itself:
+
+```toml
+links = ["Camp Okafor|camp|80|40|auto"]
+```
+
+Now the alliance forms on both sides the moment a faction's leader reaches 80. It is checked when
+their standing changes, when they found a faction, and when the server starts. Below 40 it comes
+down on both sides, and it re-forms by itself if the trust is earned back. Every online member
+gets a title on screen either way. While a link is `auto`, `/f neutral` towards that faction is
+refused, because the standing decides and a typed relation would only last until the next quest.
+
 Peaceful already keeps such a faction safe from everything that would hurt an absent leader: there
 is no inactivity rule, offline power stays where it was, and a peaceful faction can be neither
 raided nor overclaimed.
