@@ -302,6 +302,21 @@ public final class FactionLang {
         Lang.contribute("msg.factions.rep_link_withdrawn",
                 "{term.prefix} &f{name}&7 no longer trusts your leader, and has withdrawn from"
                         + " the alliance. Your offer stands, should that change.");
+        Lang.contribute("msg.factions.rep_link_waiting_auto",
+                "{term.prefix} &f{name}&7 regards your leader as &f{band}&7. It allies by itself"
+                        + " once that reaches &f{need}&7 — nobody needs to ask.");
+        Lang.contribute("msg.factions.rep_link_withdrawn_auto",
+                "{term.prefix} &f{name}&7 no longer trusts your leader, and has withdrawn from"
+                        + " the alliance. It will return by itself if that trust is earned again.");
+        Lang.contribute("msg.factions.rep_link_auto_fixed",
+                "{term.prefix} &f{name}&7 decides its alliances by your leader's standing, not by"
+                        + " declaration. Earn its trust or lose it; there is nothing to type.");
+        Lang.contribute("msg.factions.rep_link_allied_title", "&a{name} trusts you");
+        Lang.contribute("msg.factions.rep_link_allied_subtitle",
+                "&7Its doors, chests and stores are yours to use now.");
+        Lang.contribute("msg.factions.rep_link_withdrawn_title", "&7{name} withdraws");
+        Lang.contribute("msg.factions.rep_link_withdrawn_subtitle",
+                "&8Its doors and chests are closed to you again.");
         Lang.contribute("msg.factions.now_peaceful",
                 "{term.prefix} &aYour {term.faction} is now peaceful — it cannot fight, and cannot be fought.");
         Lang.contribute("msg.factions.no_longer_peaceful",

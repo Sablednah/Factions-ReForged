@@ -47,24 +47,50 @@ import net.neoforged.neoforge.event.server.ServerStartedEvent;
  * so the relation falls to "offered, not returned" — and climbs back by itself if the leader earns
  * the trust again, with nobody having to remember to re-offer.</p>
  *
+ * <h2>Or nobody asks at all: {@code auto}</h2>
+ *
+ * <p>A link with a fifth field, {@code "Camp Okafor|camp|80|40|auto"}, forms the alliance itself:
+ * the moment a faction's leader reaches {@code allyAt}, both sides are declared, and below
+ * {@code revokeBelow} both are taken down again. Asked for by the ZARP pack, because a player who
+ * earns the camp's trust through quests has no reason to know that an alliance is something
+ * <em>they</em> have to offer — the camp's doors stayed shut long after the trust was earned.</p>
+ *
+ * <p>Under {@code auto} the relation belongs to the standing, not to anybody's declaration, so
+ * {@code /f neutral} towards the camp is refused with the reason rather than accepted: it would
+ * otherwise hold until the next quest turned in, and a relation that quietly comes back is a
+ * command reporting one thing while the world does another.</p>
+ *
  * <p>Nothing here touches war. A linked faction is expected to be peaceful, and peaceful already
  * refuses enemy declarations in both directions.</p>
  */
 public final class FactionReputationLinks {
 
     /** One configured link. Standing is normalised the way Standards normalises it. */
-    public record Link(String faction, String standing, int allyAt, int revokeBelow) {
+    public record Link(String faction, String standing, int allyAt, int revokeBelow,
+            boolean auto) {
+
+        /** A link that answers offers, the original kind. */
+        public Link(String faction, String standing, int allyAt, int revokeBelow) {
+            this(faction, standing, allyAt, revokeBelow, false);
+        }
 
         /**
-         * {@code "Camp Okafor|camp|80|40"}. Empty for anything malformed, which is logged by the
-         * caller rather than thrown — a typo in one link should not take the others down.
+         * {@code "Camp Okafor|camp|80|40"}, or with {@code |auto} on the end. Empty for anything
+         * malformed, which is logged by the caller rather than thrown — a typo in one link should
+         * not take the others down.
          */
         public static Optional<Link> parse(String raw) {
             if (raw == null) {
                 return Optional.empty();
             }
             String[] bits = raw.split("\\|", -1);
-            if (bits.length != 4) {
+            if (bits.length != 4 && bits.length != 5) {
+                return Optional.empty();
+            }
+            // Spelled out rather than "anything in the fifth field": a typo there would otherwise
+            // fall back to the handshake, and look like the option not working.
+            boolean auto = bits.length == 5;
+            if (auto && !bits[4].trim().equalsIgnoreCase("auto")) {
                 return Optional.empty();
             }
             String faction = bits[0].trim();
@@ -78,7 +104,7 @@ public final class FactionReputationLinks {
                 if (revokeBelow > allyAt) {
                     return Optional.empty(); // would ally and revoke at the same number
                 }
-                return Optional.of(new Link(faction, standing, allyAt, revokeBelow));
+                return Optional.of(new Link(faction, standing, allyAt, revokeBelow, auto));
             } catch (NumberFormatException e) {
                 return Optional.empty();
             }
@@ -96,6 +122,16 @@ public final class FactionReputationLinks {
      * @param rep      the asker's leader's standing
      */
     public static Decision decide(Link link, boolean offered, boolean returned, int rep) {
+        if (link.auto()) {
+            // Both sides, either way: nobody offered, so there is nobody's offer to leave standing.
+            if (rep >= link.allyAt() && !(offered && returned)) {
+                return Decision.ACCEPT;
+            }
+            if (rep < link.revokeBelow() && returned) {
+                return Decision.WITHDRAW;
+            }
+            return Decision.KEEP;
+        }
         if (offered && !returned && rep >= link.allyAt()) {
             return Decision.ACCEPT;
         }
@@ -114,7 +150,8 @@ public final class FactionReputationLinks {
         for (String raw : FactionsConfig.REPUTATION_LINKS.get()) {
             Link.parse(raw).ifPresentOrElse(out::add,
                     () -> Factions.LOGGER.warn("Ignoring reputation link '{}': expected "
-                            + "\"faction|standing|allyAt|revokeBelow\" with allyAt >= revokeBelow",
+                            + "\"faction|standing|allyAt|revokeBelow\" or the same with \"|auto\", "
+                            + "and allyAt >= revokeBelow",
                             raw));
         }
         return out;
@@ -159,14 +196,24 @@ public final class FactionReputationLinks {
         FactionStore.Faction camp = linked.get();
         boolean offered = asker.allies().contains(camp.id());
         boolean returned = camp.allies().contains(asker.id());
-        if (!offered && !returned) {
+        if (!offered && !returned && !link.auto()) {
             return Optional.empty(); // nothing to answer, and no reason to ask the provider
         }
         int standing = rep.applyAsInt(asker.leader(), link.standing());
         Decision d = decide(link, offered, returned, standing);
         switch (d) {
-            case ACCEPT -> store.declare(camp.id(), asker.id(), FactionStore.Relation.ALLY);
-            case WITHDRAW -> store.declare(camp.id(), asker.id(), FactionStore.Relation.NEUTRAL);
+            case ACCEPT -> {
+                store.declare(camp.id(), asker.id(), FactionStore.Relation.ALLY);
+                if (link.auto()) {
+                    store.declare(asker.id(), camp.id(), FactionStore.Relation.ALLY);
+                }
+            }
+            case WITHDRAW -> {
+                store.declare(camp.id(), asker.id(), FactionStore.Relation.NEUTRAL);
+                if (link.auto()) {
+                    store.declare(asker.id(), camp.id(), FactionStore.Relation.NEUTRAL);
+                }
+            }
             case KEEP -> {
                 return Optional.empty();
             }
@@ -202,13 +249,49 @@ public final class FactionReputationLinks {
         // Waiting on trust rather than on a person — say so, or the asker sits there expecting a
         // leader who will never log in to reply.
         int standing = liveRep(fresh.leader(), link.get().standing());
-        Feedback.chat(player, Lang.fmt("msg.factions.rep_link_waiting",
+        Feedback.chat(player, Lang.fmt(link.get().auto()
+                        ? "msg.factions.rep_link_waiting_auto" : "msg.factions.rep_link_waiting",
                 "name", them.name(),
                 "band", Reputation.band(link.get().standing(), standing)
                         .orElse(String.valueOf(standing)),
                 "need", Reputation.band(link.get().standing(), link.get().allyAt())
                         .orElse(String.valueOf(link.get().allyAt()))));
         return true;
+    }
+
+    /**
+     * Whether a declaration other than ally towards this faction should be refused, because an
+     * {@code auto} link owns the relation. Said to the player here, so the caller only stops.
+     */
+    static boolean refuseDeclaration(FactionStore store, ServerPlayer player,
+            FactionStore.Faction them) {
+        Optional<Link> link = linkFor(store, them);
+        if (link.isEmpty() || !link.get().auto()) {
+            return false;
+        }
+        Feedback.chat(player, Lang.fmt("msg.factions.rep_link_auto_fixed",
+                "name", them.name()));
+        return true;
+    }
+
+    /**
+     * A faction has just been founded, and its founder is its leader. Under an {@code auto} link
+     * a player who earned the trust before they had a faction to carry it is allied on the spot,
+     * rather than at the next quest they happen to turn in.
+     */
+    static void afterFounded(MinecraftServer server, FactionStore store,
+            FactionStore.Faction founded) {
+        if (!Reputation.isAvailable()) {
+            return;
+        }
+        for (Link link : links()) {
+            if (!link.auto()) {
+                continue;
+            }
+            FactionStore.Faction fresh = store.byId(founded.id()).orElse(founded);
+            reconcile(store, fresh, link, FactionReputationLinks::liveRep)
+                    .ifPresent(a -> announce(server, a));
+        }
     }
 
     /**
@@ -271,14 +354,42 @@ public final class FactionReputationLinks {
         }
     }
 
+    /**
+     * Tell every online member, on screen as well as in chat.
+     *
+     * <p>A title, because this is the moment the camp's doors and chests open — Sable's words were
+     * "a big 'you can use camp items now'". A chat line scrolls away under whatever else is being
+     * said, and a player who missed it goes on walking round the camp's chests. Chat as well,
+     * because a title is gone in seconds and chat is where somebody looks to find out what
+     * happened. Withdrawal gets a shorter, quieter one: it matters, but it is not a reward.</p>
+     */
     private static void announce(MinecraftServer server, Applied a) {
-        String key = a.decision() == Decision.ACCEPT
-                ? "msg.factions.rep_link_allied" : "msg.factions.rep_link_withdrawn";
+        boolean allied = a.decision() == Decision.ACCEPT;
+        String key = allied ? "msg.factions.rep_link_allied"
+                : a.link().auto() ? "msg.factions.rep_link_withdrawn_auto"
+                : "msg.factions.rep_link_withdrawn";
         String message = Lang.fmt(key, "name", a.linked().name());
+        String prefix = allied ? "msg.factions.rep_link_allied_" : "msg.factions.rep_link_withdrawn_";
+        var title = Feedback.colored(Lang.fmt(prefix + "title", "name", a.linked().name()));
+        var subtitle = Feedback.colored(Lang.fmt(prefix + "subtitle", "name", a.linked().name()));
+        var timing = allied
+                ? new net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket(
+                        10, 70, 20)
+                : new net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket(
+                        10, 40, 20);
         for (UUID member : a.asker().memberIds()) {
             ServerPlayer online = server.getPlayerList().getPlayer(member);
             if (online != null) {
                 Feedback.chat(online, message);
+                // Timing first, then subtitle, then title: the title packet is what shows them,
+                // and a subtitle sent after it waits for the next title.
+                online.connection.send(timing);
+                online.connection.send(
+                        new net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket(
+                                subtitle));
+                online.connection.send(
+                        new net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket(
+                                title));
             }
         }
     }
