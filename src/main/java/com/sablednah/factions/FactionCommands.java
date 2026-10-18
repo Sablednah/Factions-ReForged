@@ -396,6 +396,9 @@ public final class FactionCommands {
         // being factionless.
         FactionRequests.forgetPlayer(player.getUUID());
         Feedback.chat(player, Lang.fmt("msg.factions.created", "name", made.get().name()));
+        // After the "created" line, so a player already trusted reads them in order: founded,
+        // then allied.
+        FactionReputationLinks.afterFounded(ctx.getSource().getServer(), store(ctx), made.get());
         return 1;
     }
 
@@ -1114,6 +1117,10 @@ public final class FactionCommands {
                 && (mine.get().peaceful() || them.get().peaceful())) {
             // Peaceful is a declaration other factions can see, and it holds in both directions.
             Feedback.chat(player, Lang.get("msg.factions.peaceful_no_enemies"));
+            return 0;
+        }
+        if (relation != FactionStore.Relation.ALLY
+                && FactionReputationLinks.refuseDeclaration(store(ctx), player, them.get())) {
             return 0;
         }
         store(ctx).declare(mine.get().id(), them.get().id(), relation);

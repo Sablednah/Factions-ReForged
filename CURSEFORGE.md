@@ -214,7 +214,9 @@ shooting.
 who never logs in, so an alliance offered to it would wait for ever. Link it to a Standards
 reputation standing and it offers back once your leader has earned its trust, and withdraws if that
 trust is lost, with a gap between the two so nobody flickers in and out. Earn your way through the
-gate by doing the camp's quests. Off unless you configure a link.
+gate by doing the camp's quests. Or mark the link `auto` and nobody has to ask: the alliance forms
+the moment your leader is trusted, with a title on screen saying the camp's doors and chests are
+yours now. Off unless you configure a link.
 
 **`/f status`** answers the questions nothing else will. An offered alliance is announced once and
 never mentioned again, so an offer made while you were offline is otherwise invisible forever;
