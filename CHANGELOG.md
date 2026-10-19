@@ -13,6 +13,13 @@
 - **Reputation alliances are announced on screen**, not only in chat: "Camp Okafor trusts you —
   its doors, chests and stores are yours to use now", and a quieter one when the trust is
   withdrawn. Both are in `messages.yml`.
+- **Allies can pick your crops with a right-click.** With a harvest mod such as RightClickHarvest,
+  an ally could open your chests but was refused at the wheat, because the harvest arrives as a
+  block break and allies do not build. A break counts as a harvest when it comes from a right-click
+  and the block is in the new `factions:harvestable` tag (crops, nether wart, cocoa, sugar cane,
+  cactus; a pack can add to it). The replant counts too. That is all an ally may break, so they
+  still cannot dig a crop up or touch anything else. On by default;
+  `alliesMayHarvest = false` turns it off.
 
 ## 1.10.0 — 2026-10-15
 

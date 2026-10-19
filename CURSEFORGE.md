@@ -93,6 +93,7 @@ exactly as much for anybody who types it.
 |---|---|
 | **Blocks** | Break and place, members only. Allies do not build in your land by default — an alliance is a diplomatic position and those change. |
 | **Right-clicks** | Doors, buttons, levers, chests, furnaces. **Not a list of block types** — a list is something somebody has to maintain, and every modded block is missing from it. A stranger who cannot mine your chest could still *open* it, and that is the theft the claim was bought to prevent. |
+| **Allies' harvest** | An ally may pick a ripe crop with a right-click, using a mod such as RightClickHarvest, and it replants as usual. That is all they may break: the crop has to be in the `factions:harvestable` block tag, and the break has to come from a right-click. Turn it off with `alliesMayHarvest`. |
 | **Pressure plates** | Still work, deliberately. Put one outside the door for visitors: protection you can open a hole in beats protection you have to switch off. |
 | **Gates, if you say so** | A block tag, `factions:public_interact`, that anybody may right-click in anybody's land. It ships empty; add fence gates and visitors can walk through while the iron doors stay shut. |
 | **Item frames, armour stands, paintings** | Covered separately, because none of them are blocks and every block-shaped guard misses them. |

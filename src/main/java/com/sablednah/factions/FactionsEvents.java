@@ -51,6 +51,7 @@ public final class FactionsEvents {
         FactionAutoClaim.forget(event.getEntity().getUUID());
         FactionChat.forget(event.getEntity().getUUID());
         FactionPowerEvents.forget(event.getEntity().getUUID());
+        FactionHarvest.forget(event.getEntity().getUUID());
         // The one piece of state here that is MEANT to be lost. See FactionBypass: coming back
         // with the protection off, having forgotten, is the whole thing it exists to prevent.
         FactionBypass.forget(event.getEntity().getUUID());
@@ -93,6 +94,10 @@ public final class FactionsEvents {
         if (Claims.mayModify(player, level, event.getPos())) {
             return;
         }
+        // An ally picking a ripe crop with a right-click: interaction, not building.
+        if (FactionHarvest.mayBreak(player, level, event.getPos(), event.getState())) {
+            return;
+        }
         event.setCanceled(true);
         refuse(player, level, event.getPos());
     }
@@ -110,6 +115,10 @@ public final class FactionsEvents {
             // produced exactly the confusion it deserved: a player planted a trophy, nothing
             // happened, and there was no message to say why. The act is the declaration.
             FactionStandards.onPlaced(level, event.getPos(), player);
+            return;
+        }
+        // ...and the replant that follows it.
+        if (FactionHarvest.mayReplant(player, level, event.getPos(), event.getPlacedBlock())) {
             return;
         }
         event.setCanceled(true);

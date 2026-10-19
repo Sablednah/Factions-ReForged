@@ -38,6 +38,7 @@ mechanics are still worth having: shared homes, a bank, chat channels, and a bor
   protectInteraction = true
   alliesMayInteract = true
   alliesMayBuild = false
+  alliesMayHarvest = true       # right-click harvest; never digging up
   blockMobExplosions = true
   blockTnt = true               # nothing gets through a wall
 
@@ -134,6 +135,7 @@ turning costs on later lets established landholders release their way to a fortu
   protectInteraction = true
   alliesMayInteract = true
   alliesMayBuild = false
+  alliesMayHarvest = true       # right-click harvest; never digging up
   blockMobExplosions = true     # creepers are still not a raid
   blockTnt = false              # BUT TNT IS. This is the siege tool
   anyoneMayRotateFrames = true  # a calling card
