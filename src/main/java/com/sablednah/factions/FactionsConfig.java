@@ -12,6 +12,7 @@ public final class FactionsConfig {
     public static final ModConfigSpec.BooleanValue PROTECT_INTERACTION;
     public static final ModConfigSpec.BooleanValue ALLIES_MAY_INTERACT;
     public static final ModConfigSpec.BooleanValue ALLIES_MAY_BUILD;
+    public static final ModConfigSpec.BooleanValue ALLIES_MAY_HARVEST;
     public static final ModConfigSpec.BooleanValue ANYONE_MAY_ROTATE_FRAMES;
     public static final ModConfigSpec.BooleanValue BLOCK_MOB_EXPLOSIONS;
     public static final ModConfigSpec.BooleanValue BLOCK_TNT;
@@ -90,6 +91,17 @@ public final class FactionsConfig {
                         "is a diplomatic position and those change; your walls should not be",
                         "hostage to the week somebody fell out.")
                 .define("alliesMayBuild", false);
+        ALLIES_MAY_HARVEST = b
+                .comment("Allies may right-click-harvest ripe crops in your land, with a mod such as",
+                        "RightClickHarvest, even while alliesMayBuild is off.",
+                        "On by default. Picking the wheat and replanting it leaves the farm exactly",
+                        "as it was found, which is interaction by any reading that matters; without",
+                        "this an ally could open your chests but not pick your carrots.",
+                        "Only a break that happens INSIDE a right-click counts, and only of a block",
+                        "in #factions:harvestable (crops, nether wart, cocoa, sugar cane, cactus) —",
+                        "an ally still cannot dig a crop up, or break anything else. Members are",
+                        "unaffected (they may build anyway) and strangers are still refused.")
+                .define("alliesMayHarvest", true);
         ANYONE_MAY_ROTATE_FRAMES = b
                 .comment("Anybody may turn an item frame that already holds something.",
                         "Off by default. Rotation carries meaning where frames are used as",

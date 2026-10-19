@@ -44,6 +44,7 @@ public final class FactionsSelfTest {
         checkMapPalette();
         checkReputationLinks(server);
         checkApi(server);
+        checkHarvest();
         if (failed == 0) {
             Factions.LOGGER.info("=== Factions self-test PASSED ({} checks) ===", passed);
         } else {
@@ -771,6 +772,31 @@ public final class FactionsSelfTest {
             first.ifPresent(store::disband);
             rival.ifPresent(r -> store.disband(r.id()));
         }
+    }
+
+    /**
+     * Ally harvesting: that the tag actually loaded, and that the stack test says no off the
+     * right-click path.
+     *
+     * <p>The tag is read back rather than trusted, because a tag file that failed to load is an
+     * empty tag and an empty tag fails closed silently: allies would simply go on being refused,
+     * which is exactly the bug this exists to fix. Both directions, so a tag that matched
+     * everything would fail too.</p>
+     */
+    private void checkHarvest() {
+        check("wheat is harvestable", net.minecraft.world.level.block.Blocks.WHEAT
+                .defaultBlockState().is(FactionHarvest.HARVESTABLE));
+        check("...and sugar cane, which is not a crop by tag",
+                net.minecraft.world.level.block.Blocks.SUGAR_CANE.defaultBlockState()
+                        .is(FactionHarvest.HARVESTABLE));
+        check("...and nether wart", net.minecraft.world.level.block.Blocks.NETHER_WART
+                .defaultBlockState().is(FactionHarvest.HARVESTABLE));
+        check("a chest is not harvestable", !net.minecraft.world.level.block.Blocks.CHEST
+                .defaultBlockState().is(FactionHarvest.HARVESTABLE));
+        check("farmland is not harvestable", !net.minecraft.world.level.block.Blocks.FARMLAND
+                .defaultBlockState().is(FactionHarvest.HARVESTABLE));
+        // Server start is not a right-click. If this passed, every break would.
+        check("server start is not inside a right-click", !FactionHarvest.insideRightClick());
     }
 
     private void check(String what, boolean ok) {

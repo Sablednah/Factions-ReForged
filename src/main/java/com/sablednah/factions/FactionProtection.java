@@ -130,6 +130,18 @@ public final class FactionProtection {
         return may(player, level, pos, FactionsConfig.ALLIES_MAY_INTERACT.get());
     }
 
+    /**
+     * Picking a ripe crop with a right-click: the one break an ally may make.
+     *
+     * <p>Its own switch rather than {@link #mayInteract}, deliberately. With
+     * {@code protectInteraction} off, everybody may right-click everything — and a door anybody can
+     * open is a different promise from a field anybody can strip. So this asks only "member or
+     * ally", whatever the interaction rules say.</p>
+     */
+    public static boolean mayHarvest(ServerPlayer player, ServerLevel level, BlockPos pos) {
+        return FactionsConfig.ALLIES_MAY_HARVEST.get() && may(player, level, pos, true);
+    }
+
     private static boolean may(ServerPlayer player, ServerLevel level, BlockPos pos,
             boolean alliesToo) {
         FactionStore store = FactionStore.get(level.getServer());
