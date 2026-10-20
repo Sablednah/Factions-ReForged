@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.11.0 — unreleased
+## 1.11.0 — 2026-10-20
 
 ### Added
 
@@ -39,6 +39,8 @@ the title screen and opening another world without restarting.
   server.
 - The PvP rule was registered once more for every world. Its answer never changed, but it was
   worked out once per extra copy.
+
+Requires Standards 1.11.2, released alongside.
 
 ## 1.10.0 — 2026-10-15
 
