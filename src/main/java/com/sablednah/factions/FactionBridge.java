@@ -66,16 +66,24 @@ public final class FactionBridge implements GroupProvider, ClaimProvider {
         this.server = server;
     }
 
+    /**
+     * One instance, unregistered on stop. Install runs once per server, and in singleplayer that
+     * means once per world opened in the same game, so a fresh one each time added another
+     * provider per world. Standards older than 1.11.2 does not replace by id, so do it here too.
+     */
+    private static final Pvp PVP = new Pvp();
+
     public static void install(MinecraftServer server) {
         // Who may fight whom now goes through Standards, so a hostile SKILL is refused for the
         // same reasons a sword is. Cancelling damage ourselves only ever stopped swords.
-        com.sablednah.standards.api.combat.Harm.register(new Pvp());
+        com.sablednah.standards.api.combat.Harm.register(PVP);
         FactionBridge bridge = new FactionBridge(server);
         Groups.register(bridge);
         Claims.register(bridge);
     }
 
     public static void uninstall() {
+        com.sablednah.standards.api.combat.Harm.unregister(PVP);
         Groups.unregister(KIND);
         Claims.clear();
     }

@@ -93,6 +93,11 @@ public class FactionsJourneyMapClientPlugin implements IClientPlugin {
                 event -> safely(() -> onMapping(event)));
         // Refusals are chat, and chat is behind the fullscreen map. See MapNotices.
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.register(MapNotices.class);
+        // The client outlives the world, and this plugin with it. Claim mode left on in one world
+        // must not be waiting in the next, where right-clicking to pan would claim or unclaim.
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent.LoggingOut event) ->
+                        claimMode = false);
         Factions.LOGGER.info("JourneyMap client API found — faction claims layer and claim mode added");
     }
 
