@@ -31,6 +31,11 @@ public final class FactionPanelData {
 
     private static volatile FactionPanelPayload latest;
 
+    /** On disconnect, so the next world's panel says "asking" rather than showing this one's. */
+    public static void forget() {
+        latest = null;
+    }
+
     public static void accept(FactionPanelPayload payload) {
         latest = payload;
         // ⚠ Storing it is not enough, and thinking it was broke `/f panel` typed in chat.
