@@ -58,6 +58,9 @@ public class FactionsClient {
         modEventBus.addListener((net.neoforged.fml.event.lifecycle.FMLClientSetupEvent e) ->
                 e.enqueueWork(ShaderPackCompat::install));
         NeoForge.EVENT_BUS.register(ClaimGrid.class);
+        NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent.LoggingOut event) ->
+                        FactionPanelData.forget());
         NeoForge.EVENT_BUS.addListener(FactionsClient::onClientTick);
     }
 

@@ -78,10 +78,28 @@ public class FactionsJourneyMapPlugin implements IServerPlugin {
         return Factions.MODID;
     }
 
+    /** Whether the listeners below exist yet. They must be added once per game, not per world. */
+    private boolean listening;
+
+    /**
+     * Called by JourneyMap on every server start, which in singleplayer means every world opened
+     * in the same game, on the same plugin instance.
+     *
+     * <p>So the per-world state is replaced here every time, and the listeners are added only the
+     * first time. They read {@code claims} and {@code groups} when they fire, so they pick up the
+     * new world's. Before this, world B pushed every change twice and world C three times, and the
+     * group cache gave world B world A's waypoint groups. JourneyMap's per-world store had never
+     * heard of those groups, so the pins landed with no folder.</p>
+     */
     @Override
     public void initialize(IServerAPI serverApi) {
         this.api = serverApi;
         this.claims = new ClaimsOverlay(serverApi);
+        groups.clear();
+        if (listening) {
+            return;
+        }
+        listening = true;
 
         FactionsMapEvents.onClaimsChanged(change -> safely(() -> refreshClaims()));
         // ⚠ Standards changing means the TERRITORY has to be redrawn too, not just the pins.
