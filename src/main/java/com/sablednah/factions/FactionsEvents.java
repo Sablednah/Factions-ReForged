@@ -36,6 +36,8 @@ public final class FactionsEvents {
     @SubscribeEvent
     static void onServerStopping(ServerStoppingEvent event) {
         FactionBridge.uninstall();
+        // Statics outlive the server. In singleplayer the next world opens in the same game.
+        FactionStandards.unmarkAll(event.getServer());
     }
 
     @SubscribeEvent
@@ -52,6 +54,9 @@ public final class FactionsEvents {
         FactionChat.forget(event.getEntity().getUUID());
         FactionPowerEvents.forget(event.getEntity().getUUID());
         FactionHarvest.forget(event.getEntity().getUUID());
+        if (event.getEntity() instanceof ServerPlayer player) {
+            FactionStandards.unmark(player.level().getServer(), player);
+        }
         // The one piece of state here that is MEANT to be lost. See FactionBypass: coming back
         // with the protection off, having forgotten, is the whole thing it exists to prevent.
         FactionBypass.forget(event.getEntity().getUUID());

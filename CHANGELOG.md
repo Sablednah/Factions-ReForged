@@ -21,6 +21,25 @@
   still cannot dig a crop up or touch anything else. On by default;
   `alliesMayHarvest = false` turns it off.
 
+### Fixed
+
+These all needed a second world opened in the same game. In singleplayer that means quitting to
+the title screen and opening another world without restarting.
+
+- **The server could crash if you quit while carrying a captured standard.** The red carrier glow
+  remembered who it had marked across worlds. In the next world it tried to take the player off a
+  team they were not on, and the server tick threw. Carriers are now taken off the team when they
+  log out and when the server stops, and only ever from the team they are actually on.
+- **JourneyMap pushed everything twice in the second world, and three times in the third.** Its
+  standards could also land with no folder. The map plugin now adds its listeners once per game and
+  starts each world with fresh waypoint groups.
+- **Claim mode on the JourneyMap screen stayed on into the next world**, where right-clicking to pan
+  would claim or unclaim. It now switches off when you disconnect.
+- **The faction panel briefly showed the previous world's faction.** It now says it is asking the
+  server.
+- The PvP rule was registered once more for every world. Its answer never changed, but it was
+  worked out once per extra copy.
+
 ## 1.10.0 — 2026-10-15
 
 ### Added

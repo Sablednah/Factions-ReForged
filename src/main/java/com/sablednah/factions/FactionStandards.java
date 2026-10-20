@@ -338,9 +338,41 @@ public final class FactionStandards {
                     MARKED.add(player.getUUID());
                 }
             } else if (MARKED.remove(player.getUUID())) {
-                scoreboard.removePlayerFromTeam(player.getScoreboardName(), team);
+                unmark(scoreboard, team, player);
                 player.removeEffect(net.minecraft.world.effect.MobEffects.GLOWING);
             }
+        }
+    }
+
+    /**
+     * Off the marker team, but only if they are actually on it.
+     *
+     * <p>Removing a player from a team they are not on throws IllegalStateException inside the
+     * server tick, the crash {@link FactionRaidEvents} already guards against. It was reachable
+     * here: {@code MARKED} outlived the server, so quitting world A with a flag in hand and opening
+     * world B in the same game had this remove the host from world B's brand-new team.</p>
+     */
+    private static void unmark(net.minecraft.world.scores.Scoreboard scoreboard,
+            net.minecraft.world.scores.PlayerTeam team, ServerPlayer player) {
+        if (scoreboard.getPlayersTeam(player.getScoreboardName()) == team) {
+            scoreboard.removePlayerFromTeam(player.getScoreboardName(), team);
+        }
+    }
+
+    /**
+     * One player leaving: off the team now, while they are still online to be taken off.
+     *
+     * <p>Otherwise the team membership is saved with the world and they log back in still on it,
+     * with nothing remembering to remove them.</p>
+     */
+    public static void unmark(net.minecraft.server.MinecraftServer server, ServerPlayer player) {
+        if (!MARKED.remove(player.getUUID())) {
+            return;
+        }
+        var scoreboard = server.getScoreboard();
+        net.minecraft.world.scores.PlayerTeam team = scoreboard.getPlayerTeam(CARRIER_TEAM);
+        if (team != null) {
+            unmark(scoreboard, team, player);
         }
     }
 
@@ -350,17 +382,21 @@ public final class FactionStandards {
         return main.isPresent() ? main : standardMarker(player.getOffhandItem());
     }
 
-    /** Take everybody off the marker team, for a clean shutdown. */
+    /**
+     * Take everybody off the marker team, for a clean shutdown.
+     *
+     * <p>Clears {@code MARKED} even when there is no team. The set is static, so it outlives the
+     * server, and the next world opened in the same game must start with it empty.</p>
+     */
     public static void unmarkAll(net.minecraft.server.MinecraftServer server) {
         var scoreboard = server.getScoreboard();
         net.minecraft.world.scores.PlayerTeam team = scoreboard.getPlayerTeam(CARRIER_TEAM);
-        if (team == null) {
-            return;
-        }
-        for (java.util.UUID id : MARKED) {
-            ServerPlayer player = server.getPlayerList().getPlayer(id);
-            if (player != null) {
-                scoreboard.removePlayerFromTeam(player.getScoreboardName(), team);
+        if (team != null) {
+            for (java.util.UUID id : MARKED) {
+                ServerPlayer player = server.getPlayerList().getPlayer(id);
+                if (player != null) {
+                    unmark(scoreboard, team, player);
+                }
             }
         }
         MARKED.clear();
