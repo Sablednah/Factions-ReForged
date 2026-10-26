@@ -205,5 +205,45 @@ public final class FactionsApi {
                 .orElse(java.util.List.of());
     }
 
+    // --- for maps ---
+    //
+    // What a map that draws every faction needs, built for SableCraft Diorama's web map. All of it
+    // is what Factions' own JourneyMap layer already shows every player — territory, colour, name,
+    // tag, peaceful — and none of it is a faction's home or where its standard stands, which would
+    // hand a raider their target.
+
+    /** Every faction, by id, sorted. */
+    public static java.util.List<String> factions(MinecraftServer server) {
+        return FactionStore.get(server).all().stream().map(FactionStore.Faction::id).sorted().toList();
+    }
+
+    /**
+     * Every claim in one dimension, grouped by the faction holding it — in <b>one pass</b> over the
+     * claims, so a map can afford to ask for all of them on every refresh. Factions holding nothing
+     * here are absent.
+     */
+    public static java.util.Map<String, java.util.List<net.minecraft.world.level.ChunkPos>> claimsIn(
+            MinecraftServer server, ResourceKey<Level> dimension) {
+        return FactionStore.get(server).claimsByFaction(dimension.identifier().toString());
+    }
+
+    /** Its tag, or empty for none (and for no such faction). */
+    public static String tagOf(MinecraftServer server, String factionId) {
+        return FactionStore.get(server).byId(factionId).map(FactionStore.Faction::tag).orElse("");
+    }
+
+    /** Whether it is out of every war, raid and overclaim. */
+    public static boolean isPeaceful(MinecraftServer server, String factionId) {
+        return FactionStore.get(server).byId(factionId).map(FactionStore.Faction::peaceful).orElse(false);
+    }
+
+    /**
+     * Its colour as {@code 0xRRGGBB}: its own planted standard's, white without one — the same
+     * colour its land is filled with on JourneyMap. A captured flag never lends its colour.
+     */
+    public static int colourOf(MinecraftServer server, String factionId) {
+        return FactionStore.get(server).colourOf(factionId).getTextureDiffuseColor() & 0xFFFFFF;
+    }
+
     private FactionsApi() {}
 }
