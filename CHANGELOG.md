@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.12.0 — unreleased
+
+### Added
+
+- **`FactionsApi` can list territory for a map.** `factions`, `claimsIn` (every claim in a
+  dimension, grouped by faction, in one pass), `tagOf`, `isPeaceful` and `colourOf`. SableCraft
+  Diorama uses them to draw every faction's land on its web map, in banner colours. They expose
+  only what the JourneyMap layer already shows every player — never a faction's home or where
+  its standard stands.
+
 ## 1.11.0 — 2026-10-20
 
 ### Added
