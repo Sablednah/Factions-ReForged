@@ -927,6 +927,20 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
         return out;
     }
 
+    /** Every claim in {@code dimension}, by faction, in one pass. Each list is the caller's. */
+    public java.util.Map<String, List<ChunkPos>> claimsByFaction(String dimension) {
+        String prefix = dimension + "|";
+        java.util.Map<String, List<ChunkPos>> out = new java.util.HashMap<>();
+        claims.forEach((k, id) -> {
+            if (k.startsWith(prefix)) {
+                String[] bits = k.split("\\|");
+                out.computeIfAbsent(id, x -> new ArrayList<>())
+                        .add(new ChunkPos(Integer.parseInt(bits[1]), Integer.parseInt(bits[2])));
+            }
+        });
+        return out;
+    }
+
     public void claim(String dimension, int x, int z, String factionId) {
         claims.put(key(dimension, x, z), factionId);
         setDirty();
