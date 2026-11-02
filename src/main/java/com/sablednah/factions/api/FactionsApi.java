@@ -30,10 +30,25 @@ import net.minecraft.world.level.Level;
  *       holds, so a pack cannot use it to clear a player's chunk either.</li>
  * </ul>
  *
+ * <p>⚠ <b>Server thread only.</b> The store is plain maps and the map layer sends packets, so a
+ * call from a worker thread or an async callback is a {@code ConcurrentModificationException} at
+ * best and a quietly corrupted store at worst. The methods that change anything throw
+ * {@link IllegalStateException} off the server thread rather than gamble; from elsewhere, wrap
+ * the call in {@code server.execute(...)}.</p>
+ *
  * <p>There is no colour: a faction has none of its own. Its colour is its planted standard's, and
  * white without one.</p>
  */
 public final class FactionsApi {
+
+    /** Refuse, loudly, a change made from any thread but the server's. See the class note. */
+    private static void serverThread(MinecraftServer server, String method) {
+        if (!server.isSameThread()) {
+            throw new IllegalStateException("FactionsApi." + method + " must be called on the server "
+                    + "thread (it was called on '" + Thread.currentThread().getName()
+                    + "'); wrap it in server.execute(...)");
+        }
+    }
 
     /**
      * The faction by this name, creating it if there is none.
@@ -52,6 +67,7 @@ public final class FactionsApi {
      */
     public static Optional<String> ensureFaction(MinecraftServer server, String name, String tag,
             UUID leader, boolean peaceful) {
+        serverThread(server, "ensureFaction");
         FactionStore store = FactionStore.get(server);
         Optional<FactionStore.Faction> existing = store.byName(name);
         FactionStore.Faction f;
@@ -95,6 +111,7 @@ public final class FactionsApi {
      *         (this one included)
      */
     public static boolean addMember(MinecraftServer server, String factionId, UUID player) {
+        serverThread(server, "addMember");
         FactionStore store = FactionStore.get(server);
         Optional<FactionStore.Faction> f = store.byId(factionId);
         if (f.isEmpty()) {
@@ -142,6 +159,7 @@ public final class FactionsApi {
      */
     public static boolean claim(MinecraftServer server, ResourceKey<Level> dimension, int chunkX,
             int chunkZ, String factionId) {
+        serverThread(server, "claim");
         FactionStore store = FactionStore.get(server);
         if (store.byId(factionId).isEmpty()) {
             return false;
@@ -179,6 +197,7 @@ public final class FactionsApi {
      */
     public static boolean unclaim(MinecraftServer server, ResourceKey<Level> dimension, int chunkX,
             int chunkZ, String factionId) {
+        serverThread(server, "unclaim");
         FactionStore store = FactionStore.get(server);
         if (store.byId(factionId).isEmpty()) {
             return false;
