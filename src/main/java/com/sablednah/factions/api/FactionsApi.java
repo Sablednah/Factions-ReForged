@@ -81,6 +81,51 @@ public final class FactionsApi {
         return Optional.of(f.id());
     }
 
+    /**
+     * Put a player in a faction at the lowest rank, as if they had accepted an invite: the same
+     * membership, the same messages to them (if online) and to the faction's online members, and
+     * any invite or join request they had outstanding is cleared. The leader need not be online.
+     *
+     * <p>Built for ZARP's shared hut: a crew shares one party, one hut and one faction, so the
+     * second player to reach the hut joins the faction that claims it rather than founding one.
+     * A pack's glue decides <em>whether</em> somebody belongs; this only does the joining, through
+     * the one path every join takes.</p>
+     *
+     * @return false, and logged, if there is no such faction or the player is already in one
+     *         (this one included)
+     */
+    public static boolean addMember(MinecraftServer server, String factionId, UUID player) {
+        FactionStore store = FactionStore.get(server);
+        Optional<FactionStore.Faction> f = store.byId(factionId);
+        if (f.isEmpty()) {
+            Factions.LOGGER.warn("FactionsApi: addMember into '{}': no such faction", factionId);
+            return false;
+        }
+        if (!store.addMember(factionId, player, FactionStore.Rank.MEMBER)) {
+            Factions.LOGGER.warn("FactionsApi: addMember {} into '{}': already in a faction",
+                    player, f.get().name());
+            return false;
+        }
+        com.sablednah.factions.FactionInvites.revoke(factionId, player);
+        com.sablednah.factions.FactionRequests.forgetPlayer(player);
+        net.minecraft.server.level.ServerPlayer online = server.getPlayerList().getPlayer(player);
+        String who = online != null ? online.getName().getString()
+                : com.sablednah.standards.neoforge.StandardsData.get(server).nameOf(player)
+                        .orElse(player.toString());
+        if (online != null) {
+            com.sablednah.standards.neoforge.Feedback.chat(online, com.sablednah.standards.neoforge.Lang
+                    .fmt("msg.factions.joined", "name", f.get().name()));
+        }
+        String joined = com.sablednah.standards.neoforge.Lang.fmt("msg.factions.member_joined", "player", who);
+        for (UUID member : f.get().memberIds()) {
+            net.minecraft.server.level.ServerPlayer m = server.getPlayerList().getPlayer(member);
+            if (m != null && !member.equals(player)) {
+                com.sablednah.standards.neoforge.Feedback.chat(m, joined);
+            }
+        }
+        return true;
+    }
+
     /** A faction's id from its name or tag. */
     public static Optional<String> idOf(MinecraftServer server, String nameOrTag) {
         return FactionStore.get(server).lookup(nameOrTag).map(FactionStore.Faction::id);
