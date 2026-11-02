@@ -734,6 +734,24 @@ public final class FactionsSelfTest {
                 store.unclaim(dimKey, cx + 4, cz);
             }
 
+            // addMember: ZARP's shared hut. Through the same path as an accepted invite.
+            java.util.UUID recruit = java.util.UUID.randomUUID();
+            FactionInvites.offer(first.get(), recruit);
+            check("addMember puts a player in at the lowest rank",
+                    com.sablednah.factions.api.FactionsApi.addMember(server, first.get(), recruit)
+                            && store.of(recruit).map(f -> f.id().equals(first.get())).orElse(false)
+                            && store.byId(first.get())
+                                    .map(f -> f.rankOf(recruit) == FactionStore.Rank.MEMBER).orElse(false));
+            check("...and clears the invite they were holding",
+                    !FactionInvites.invited(first.get(), recruit));
+            check("addMember refuses someone already in a faction, this one or another",
+                    !com.sablednah.factions.api.FactionsApi.addMember(server, first.get(), recruit)
+                            && !com.sablednah.factions.api.FactionsApi.addMember(server, rival.get().id(), recruit));
+            check("addMember refuses a faction that does not exist",
+                    !com.sablednah.factions.api.FactionsApi.addMember(server, "no-such-faction",
+                            java.util.UUID.randomUUID()));
+            store.removeMember(first.get(), recruit);
+
             // The read side, which a quest polls once a second to decide whether you have done it.
             String id = first.get();
             String rid = rival.get().id();
