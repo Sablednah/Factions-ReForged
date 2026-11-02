@@ -126,16 +126,29 @@ final class ClaimsOverlay {
      * sent, which is state that can disagree with the map.</p>
      */
     void showFor(ServerPlayer viewer) {
+        showFor(viewer, new java.util.HashMap<>());
+    }
+
+    /**
+     * As above, sharing one read of the claims per dimension across every viewer in a refresh.
+     *
+     * <p>⚠ It used to ask {@code claimsOf} once per faction, and each of those walks every claim on
+     * the server — factions × claims per viewer, per change. ZARP's quest mod claims a camp a
+     * chunk at a time, and every chunk paid it for every player online.</p>
+     */
+    void showFor(ServerPlayer viewer, java.util.Map<String, java.util.Map<String, List<ChunkPos>>> byDimension) {
         if (hidden.contains(viewer.getUUID())) {
             return;
         }
         FactionStore store = FactionStore.get(viewer.level().getServer());
         String dimension = FactionBridge.dimensionOf(viewer.level());
         String mine = store.of(viewer.getUUID()).map(FactionStore.Faction::id).orElse(null);
+        java.util.Map<String, List<ChunkPos>> claimsHere =
+                byDimension.computeIfAbsent(dimension, store::claimsByFaction);
 
         List<ServerPolygon> polygons = new ArrayList<>();
         for (FactionStore.Faction faction : store.all()) {
-            List<ChunkPos> claims = store.claimsOf(faction.id(), dimension);
+            List<ChunkPos> claims = claimsHere.getOrDefault(faction.id(), List.of());
             if (claims.isEmpty()) {
                 continue;
             }

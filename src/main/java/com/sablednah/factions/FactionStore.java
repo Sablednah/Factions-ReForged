@@ -251,6 +251,13 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
                     "factions", FactionStore::new, CODEC, null);
 
     private final Map<String, Faction> factions = new LinkedHashMap<>();
+    /**
+     * Player → the id of their faction, kept in step by {@link #putFaction} and
+     * {@link #removeFaction}, the only places {@link #factions} changes. {@link #of} used to walk
+     * every member of every faction, and it is asked on every protected block event, every PvP hit
+     * and every claims check another mod makes.
+     */
+    private final Map<UUID, String> memberOf = new java.util.HashMap<>();
 
     /**
      * "dim|x|z" → faction id.
@@ -285,7 +292,7 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
     private final Map<String, RaidRecord> raidRecords = new LinkedHashMap<>();
 
     private FactionStore(Snapshot snapshot) {
-        snapshot.factions().forEach(f -> factions.put(f.id(), f));
+        snapshot.factions().forEach(this::putFaction);
         snapshot.claims().forEach(c -> claims.put(key(c.dimension(), c.x(), c.z()), c.faction()));
         snapshot.banks().forEach(b -> banks.put(b.faction(), b.balance()));
         snapshot.power().forEach(row -> power.put(row.player(), row.power()));
@@ -344,7 +351,24 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
     }
 
     public Optional<Faction> of(UUID player) {
-        return factions.values().stream().filter(f -> f.contains(player)).findFirst();
+        String id = memberOf.get(player);
+        return id == null ? Optional.empty() : Optional.ofNullable(factions.get(id));
+    }
+
+    private void putFaction(Faction f) {
+        Faction old = factions.put(f.id(), f);
+        if (old != null) {
+            old.memberIds().forEach(m -> memberOf.remove(m, f.id()));
+        }
+        f.memberIds().forEach(m -> memberOf.put(m, f.id()));
+    }
+
+    private Faction removeFaction(String id) {
+        Faction old = factions.remove(id);
+        if (old != null) {
+            old.memberIds().forEach(m -> memberOf.remove(m, id));
+        }
+        return old;
     }
 
     public List<Faction> all() {
@@ -358,14 +382,14 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
         Faction f = new Faction(UUID.randomUUID().toString().substring(0, 8), name, "", leader,
                 List.of(new Member(leader, Rank.LEADER)), Set.of(), Set.of(), false,
                 Optional.empty());
-        factions.put(f.id(), f);
+        putFaction(f);
         setDirty();
         return Optional.of(f);
     }
 
     /** Replace a faction wholesale. Every mutation below goes through here. */
     private void put(Faction f) {
-        factions.put(f.id(), f);
+        putFaction(f);
         setDirty();
     }
 
@@ -454,7 +478,7 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
     }
 
     public boolean disband(String id) {
-        if (factions.remove(id) == null) {
+        if (removeFaction(id) == null) {
             return false;
         }
         // The land goes with it. Orphaned claims would keep a dead faction's fences standing.
@@ -501,7 +525,7 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
             Set<String> enemies = new LinkedHashSet<>(f.enemies());
             allies.remove(id);
             enemies.remove(id);
-            factions.put(f.id(), new Faction(f.id(), f.name(), f.tag(), f.leader(), f.members(),
+            putFaction(new Faction(f.id(), f.name(), f.tag(), f.leader(), f.members(),
                     Set.copyOf(allies), Set.copyOf(enemies), f.peaceful(), f.home()));
         }
         setDirty();
