@@ -45,12 +45,39 @@ public final class FactionsSelfTest {
         checkReputationLinks(server);
         checkApi(server);
         checkHarvest();
+        checkApiThreadGuard(server);
+        // Last, after every check above has claimed, unclaimed, joined and disbanded through the
+        // real store: the indexes must still match the data.
+        check("the member and claim-count indexes agree with the store",
+                FactionStore.get(server).indexesAgree());
         if (failed == 0) {
             Factions.LOGGER.info("=== Factions self-test PASSED ({} checks) ===", passed);
         } else {
             Factions.LOGGER.error("=== Factions self-test FAILED ({} of {}) ===",
                     failed, passed + failed);
         }
+    }
+
+    /** A change from off the server thread is refused, and one from on it is not. */
+    private void checkApiThreadGuard(net.minecraft.server.MinecraftServer server) {
+        java.util.concurrent.atomic.AtomicReference<Throwable> thrown = new java.util.concurrent.atomic.AtomicReference<>();
+        Thread worker = new Thread(() -> {
+            try {
+                com.sablednah.factions.api.FactionsApi.addMember(server, "no-such-faction", java.util.UUID.randomUUID());
+            } catch (Throwable t) {
+                thrown.set(t);
+            }
+        }, "factions-selftest-worker");
+        worker.start();
+        try {
+            worker.join(5000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        check("FactionsApi refuses a change from another thread",
+                thrown.get() instanceof IllegalStateException);
+        check("...and accepts one on the server thread (an unknown faction is just false)",
+                !com.sablednah.factions.api.FactionsApi.addMember(server, "no-such-faction", java.util.UUID.randomUUID()));
     }
 
     /**
