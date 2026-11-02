@@ -259,6 +259,12 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
      * and every claims check another mod makes.
      */
     private final Map<UUID, String> memberOf = new java.util.HashMap<>();
+    /**
+     * Faction id → how many chunks it holds. {@link #claimCount} was a walk of every claim on the
+     * server, asked twice per claim attempt and by every autoclaim step. Kept in step at the four
+     * places the claims map changes: load, claim, unclaim, and the two bulk removals.
+     */
+    private final Map<String, Integer> claimCounts = new java.util.HashMap<>();
 
     /**
      * "dim|x|z" → faction id.
@@ -295,6 +301,7 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
     private FactionStore(Snapshot snapshot) {
         snapshot.factions().forEach(this::putFaction);
         snapshot.claims().forEach(c -> claims.put(key(c.dimension(), c.x(), c.z()), c.faction()));
+        claims.values().forEach(id -> claimCounts.merge(id, 1, Integer::sum));
         snapshot.banks().forEach(b -> banks.put(b.faction(), b.balance()));
         snapshot.power().forEach(row -> power.put(row.player(), row.power()));
         snapshot.standards().forEach(st -> standards
@@ -484,6 +491,7 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
         }
         // The land goes with it. Orphaned claims would keep a dead faction's fences standing.
         claims.values().removeIf(id::equals);
+        claimCounts.remove(id);
         // The bank too. Money in a disbanded faction's account is money nobody can ever reach,
         // and a recycled id inheriting it would be worse.
         banks.remove(id);
@@ -936,7 +944,24 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
     }
 
     public int claimCount(String factionId) {
-        return (int) claims.values().stream().filter(factionId::equals).count();
+        return claimCounts.getOrDefault(factionId, 0);
+    }
+
+    /**
+     * Whether both indexes agree with the data they index, by walking it the slow way. For the
+     * self-test only: an index that drifts reads exactly like a player in no faction, or a faction
+     * with land to spare.
+     */
+    public boolean indexesAgree() {
+        Map<String, Integer> counts = new java.util.HashMap<>();
+        claims.values().forEach(id -> counts.merge(id, 1, Integer::sum));
+        Map<UUID, String> members = new java.util.HashMap<>();
+        factions.values().forEach(f -> f.memberIds().forEach(m -> members.put(m, f.id())));
+        return counts.equals(claimCounts) && members.equals(memberOf);
+    }
+
+    private void countClaim(String factionId, int delta) {
+        claimCounts.merge(factionId, delta, (a, b) -> a + b == 0 ? null : a + b);
     }
 
     public List<ChunkPos> claimsOf(String factionId, String dimension) {
@@ -966,7 +991,13 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
     }
 
     public void claim(String dimension, int x, int z, String factionId) {
-        claims.put(key(dimension, x, z), factionId);
+        String was = claims.put(key(dimension, x, z), factionId);
+        if (!factionId.equals(was)) {
+            if (was != null) {
+                countClaim(was, -1);
+            }
+            countClaim(factionId, 1);
+        }
         setDirty();
         clearOrphanedTrophies(dimension, x, z);
         FactionsMapEvents.claimsChanged(factionId, dimension);
@@ -977,6 +1008,7 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
         if (was == null) {
             return false;
         }
+        countClaim(was, -1);
         setDirty();
         clearOrphanedTrophies(dimension, x, z);
         // Named with the faction that LOST it: a map redraws the owner's shape, and after the
@@ -1000,6 +1032,7 @@ public final class FactionStore extends net.minecraft.world.level.saveddata.Save
         });
         int removed = before - claims.size();
         if (removed > 0) {
+            countClaim(factionId, -removed);
             setDirty();
             // Dimension unknown and deliberately so — unclaimAll crosses every dimension a faction
             // held land in, and a listener that redraws one of them would leave the others stale.
