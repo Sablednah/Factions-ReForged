@@ -64,6 +64,12 @@ public final class FactionProtection {
         if (!FactionPower.Mode.of(FactionsConfig.POWER_MODE.get()).active()) {
             return false;
         }
+        // ⚠ Before any block read. Another mod's claims check may ask about a chunk nobody has
+        // loaded, and reading its block entity would load — or generate — it on the server thread.
+        // An unloaded block is not a flag anybody is in the middle of taking.
+        if (!level.isLoaded(pos)) {
+            return false;
+        }
         FactionStore store = FactionStore.get(level.getServer());
         String dim = FactionBridge.dimensionOf(level);
 

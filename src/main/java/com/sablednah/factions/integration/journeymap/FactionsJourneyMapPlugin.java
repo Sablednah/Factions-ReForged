@@ -80,6 +80,12 @@ public class FactionsJourneyMapPlugin implements IServerPlugin {
 
     /** Whether the listeners below exist yet. They must be added once per game, not per world. */
     private boolean listening;
+    /** Set from wherever a claim or standard changed; cleared by the tick flush. */
+    private volatile boolean claimsDirty;
+    private volatile boolean standardsDirty;
+    private int ticks;
+    /** At most one rebuild a second. A claim reaching the map a second late is not a fault. */
+    private static final int FLUSH_TICKS = 20;
 
     /**
      * Called by JourneyMap on every server start, which in singleplayer means every world opened
@@ -101,16 +107,33 @@ public class FactionsJourneyMapPlugin implements IServerPlugin {
         }
         listening = true;
 
-        FactionsMapEvents.onClaimsChanged(change -> safely(() -> refreshClaims()));
+        FactionsMapEvents.onClaimsChanged(change -> claimsDirty = true);
+        // ⚠ Changes only mark the map dirty; this pushes, at most once a second. Each push rebuilds
+        // every faction's shape for every player online, and it used to run once per change — so a
+        // pack claiming a camp chunk by chunk, or autoclaim walking a border, paid it per chunk.
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.event.tick.ServerTickEvent.Post event) -> {
+                    if (++ticks % FLUSH_TICKS != 0) {
+                        return;
+                    }
+                    if (standardsDirty) {
+                        standardsDirty = false;
+                        safely(this::refreshStandards);
+                    }
+                    if (claimsDirty) {
+                        claimsDirty = false;
+                        safely(this::refreshClaims);
+                    }
+                });
         // ⚠ Standards changing means the TERRITORY has to be redrawn too, not just the pins.
         // A faction's fill colour is its own standard's banner colour (colourOf reads ownFlag and
         // falls back to white), so planting the first flag repaints every chunk it holds. Pinning
         // alone left freshly-seeded factions drawn white until something else forced a rebuild —
         // toggling the layer off and on, which is how it was found.
-        FactionsMapEvents.onStandardsChanged(() -> safely(() -> {
-            refreshStandards();
-            refreshClaims();
-        }));
+        FactionsMapEvents.onStandardsChanged(() -> {
+            standardsDirty = true;
+            claimsDirty = true;
+        });
         // The layer switch. It arrives here as a command the player ran — the map's button sends
         // one — because the overlays are pushed from this side, and a client-side switch alone
         // changes a label and nothing else.
@@ -162,14 +185,14 @@ public class FactionsJourneyMapPlugin implements IServerPlugin {
      */
     private void refreshClaims() {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        if (server == null) {
+        if (server == null || claims == null) {
             return;
         }
-        server.execute(() -> {
-            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-                safely(() -> claims.showFor(player));
-            }
-        });
+        // On the server thread already: the tick flush calls this.
+        var byDimension = new java.util.HashMap<String, java.util.Map<String, java.util.List<net.minecraft.world.level.ChunkPos>>>();
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            safely(() -> claims.showFor(player, byDimension));
+        }
     }
 
     /** A player who just arrived has no overlays at all; give them the current picture. */
@@ -180,14 +203,12 @@ public class FactionsJourneyMapPlugin implements IServerPlugin {
 
     private void refreshStandards() {
         MinecraftServer server = ServerLifecycleHooks.getCurrentServer();
-        if (server == null) {
+        if (server == null || api == null) {
             return;
         }
-        server.execute(() -> {
-            for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-                safely(() -> standardsFor(player));
-            }
-        });
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
+            safely(() -> standardsFor(player));
+        }
     }
 
     /**
