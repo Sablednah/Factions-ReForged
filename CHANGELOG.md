@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.13.1 — 2026-11-03
+
+Requires SableCraft Standards 1.13.1.
+
+### Added
+
+- **`FactionsApi.addMember`** puts a player in a faction exactly as accepting an invite would: the
+  lowest rank, their invites and join requests cleared, and the faction told. Returns false (and
+  logs why) for a faction that doesn't exist or a player who is already in one. Made for a modpack
+  that lets the second player to reach a shared base join the faction that holds it.
+
+### Changed
+
+- **`FactionsApi`'s changes must be made on the server thread.** `ensureFaction`, `addMember`,
+  `claim` and `unclaim` now throw `IllegalStateException` from any other thread instead of risking
+  a corrupted faction store. Wrap a call from elsewhere in `server.execute(...)`.
+
+### Performance
+
+- **Claiming no longer redraws the JourneyMap layer once per chunk.** Every claim rebuilt every
+  faction's territory for every player online, so claiming land a chunk at a time — by hand, by
+  autoclaim or by another mod — could stall the server. The map now redraws at most once a second.
+- **Looking up a player's faction, and a faction's claim count, is one lookup** rather than a walk
+  of every member or every claim. Both are asked on every protected block break and every claim.
+- **Checking a standard never loads a chunk.** Another mod asking about a block in unloaded land
+  could load it on the server thread.
+
 ## 1.12.0 — 2026-10-29
 
 ### Added
