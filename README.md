@@ -377,7 +377,7 @@ Listed outermost-first, so a faction tag renders furthest from the name.
 - **`api/`** — the seams. Swappable: an FTB Chunks bridge must be able to answer anything Factions
   can. If Factions needs a seam to grow, the seam is wrong and should grow.
 - **Factions' own `api/FactionsApi`** is the one surface *other* mods may compile against: create a
-  faction, find one, claim a chunk, and ask read-only questions (whose land, which faction, home,
+  faction, find one, claim a chunk, add a member (server thread only, enforced), and ask read-only questions (whose land, which faction, home,
   standard, allies). `FactionStore` is storage and its shape moves; this does not.
 - **`neoforge/`** — shared utilities. Fair game for a hard dependant; reimplementing them would
   give one player two different messages about the same cooldown. What it may not do is reach past
